@@ -39,9 +39,11 @@ regel 3 leest daaruit.
 
 ## Skills
 
-De skills staan in `werkwijze-v2-multi-service/werkwijze/.claude/skills/`. Kopieer ze naar
-`<workspace-root>/.claude/skills/` zodat ze beschikbaar zijn vanuit elke submap (zie de
-methodologie-repo voor de volledige uitleg van deze workspace-indeling).
+De skills staan in `werkwijze-v2-multi-service/werkwijze/.claude/skills/` — niets kopiëren.
+Zolang die repo als sibling-map in dezelfde workspace staat als deze repo, ontdekt Claude Code
+`.claude/skills/` uit elke aanwezige repo zelf en scoped ze automatisch op pad (bv.
+`werkwijze-v2-multi-service/werkwijze:code-review`), ook als een andere, niet-verwante repo in
+dezelfde workspace toevallig een skill met dezelfde naam heeft.
 
 ## Volgende stap
 
