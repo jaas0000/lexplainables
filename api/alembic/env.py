@@ -1,8 +1,10 @@
 """Alembic-omgeving voor de api-service (werkwijze-ADR-0005).
 
-Eén migratiehistorie voor deze service. Het doelschema (`target_metadata`) komt uit de feature
-zelf (app/features/feedback/models.py) — er is geen apart, met de hand bijgehouden
-schemabestand om synchroon te houden met de migraties.
+Eén migratiehistorie voor deze service. Het doelschema (`target_metadata`) komt uit de features
+zelf (elke feature heeft zijn eigen `MetaData()` in zijn `models.py`, zie ADR-0011) — er is geen
+apart, met de hand bijgehouden schemabestand om synchroon te houden met de migraties. Alembic
+accepteert een lijst van `MetaData`-objecten voor autogenerate, dus elke nieuwe feature voegt
+hier alleen zijn eigen import toe.
 
 Migraties draaien synchroon (het gebruikelijke Alembic-patroon, ook als de app zelf async is
 via aiosqlite/asyncpg): `DATABASE_URL_SYNC` gebruikt daarom een sync-driver
@@ -22,7 +24,8 @@ from alembic import context
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.features.feedback.models import metadata  # noqa: E402
+from app.features.berichten.models import metadata as berichten_metadata  # noqa: E402
+from app.features.feedback.models import metadata as feedback_metadata  # noqa: E402
 
 config = context.config
 
@@ -33,7 +36,7 @@ database_url = os.environ.get("DATABASE_URL_SYNC")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 
-target_metadata = metadata
+target_metadata = [feedback_metadata, berichten_metadata]
 
 
 def run_migrations_offline() -> None:

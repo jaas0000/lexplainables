@@ -2,37 +2,22 @@
 §Feature-eenheid): auth-checks en validatie voorbij het schema. De schemaclasses (models.py)
 leggen vast WAT feedback is; ze leggen niet vast WIE iets mag — dat is gedrag, geen vorm.
 
-Auth hieronder is een STERK VEREENVOUDIGDE stand-in voor het echte, twee-gescheiden-schema's-
-auth-systeem van deze werkwijze (werkwijze-ADR-0009: gebruikerssessies vs. service-/admin-
-bearer-tokens). Deze demo simuleert beide met een simpele header, zonder sessies/JWT/bcrypt —
-het punt van deze referentie-implementatie is de featurestructuur (vertical slicing,
-store-abstractie, migraties), niet een volledig auth-domein namaken (dat is voorzien als latere
-stap, zie `BACKLOG.md` §Referentie-implementatie).
+Auth (`huidige_gebruiker`/`huidige_beheerder`) is een gedeelde, sterk vereenvoudigde stand-in —
+zie ../../shared/auth.py voor de volledige toelichting (werkwijze-ADR-0009, feature-bouwen
+regel 8: verplaatst hierheen zodra `berichten` hetzelfde patroon onafhankelijk nodig bleek).
 """
 
 from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from ...db import get_engine
+from ...shared.auth import huidige_beheerder, huidige_gebruiker
 from .models import FeedbackCreate, FeedbackRead
 from .store import FeedbackNietGevonden, FeedbackStore, SqlAlchemyFeedbackStore
-
-
-def huidige_gebruiker(x_user_id: str = Header(..., alias="X-User-Id")) -> str:
-    """Vereenvoudigde stand-in voor gebruikersauthenticatie (ADR-0009): een ingelogde
-    gebruiker wordt hier gesimuleerd via een header in plaats van een echte sessie."""
-    return x_user_id
-
-
-def huidige_beheerder(x_admin_id: str = Header(..., alias="X-Admin-Id")) -> str:
-    """Vereenvoudigde stand-in voor service-/adminauthenticatie (ADR-0009): een aparte header
-    in plaats van een bearer-token, om hetzelfde principe (twee gescheiden mechanismen) te
-    tonen zonder een echt tokensysteem te bouwen."""
-    return x_admin_id
 
 
 def get_store() -> FeedbackStore:
