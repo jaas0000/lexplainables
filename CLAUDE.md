@@ -37,6 +37,16 @@ verzamelaars, migraties, frontends, codestandaard) staan in
 [`docs/architectuur/stack-profiel.md`](docs/architectuur/stack-profiel.md) — `feature-bouwen`
 regel 3 leest daaruit.
 
+## Instellingen
+
+- **Autonome merge:** ja <!-- ja | nee -->
+  `ja` — `pr-triage` mergt direct zodra `code-review` niets blocking meer vindt (of bij een
+  mechanische dependency-bump met CI groen). Zie `pr-triage` regel 2a/4/5 voor de exacte
+  stappen bij het mergen.
+
+- **Simplify bij feature-bouwen:** ja <!-- ja | nee -->
+  `ja` — `feature-bouwen` regel 9 draait `/simplify` vóór elke aflevering.
+
 ## Skills
 
 De skills staan in `werkwijze-v2-multi-service/werkwijze/.claude/skills/` — niets kopiëren.
