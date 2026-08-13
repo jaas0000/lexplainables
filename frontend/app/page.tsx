@@ -14,8 +14,6 @@ const BERICHT_TYPES: BerichtType[] = [
   "kritiek",
 ];
 
-// Fase 2 (frontend-bouwen regel 4): de API-basis-URL komt uit een environment-variabele, niet
-// hardcoded — zie .env.example.
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const ADMIN_ID_OPSLAGSLEUTEL = "wetsanalyse.beheerder-id";
@@ -30,9 +28,6 @@ const LEEG_FORMULIER: Pick<
   versie: null,
 };
 
-/** Roept de API aan met de beheerder-id-stand-in als `X-Admin-Id`-header (zie
- * api/app/shared/auth.py) en gooit een leesbare fout bij een niet-2xx-status, zodat de
- * aanroeper die als zichtbare foutmelding kan tonen in plaats van stil te falen. */
 async function beheerFetch(
   pad: string,
   adminId: string,
@@ -57,20 +52,11 @@ async function beheerFetch(
   return response.json();
 }
 
-/** Foutmelding uit een `catch`-blok, met een fallback voor het geval het geen `Error` is
- * (bv. een non-Error throw). Was 4× letterlijk gekopieerd op elke foutafhandelingsplek. */
 function foutmelding(err: unknown, fallback: string) {
   return err instanceof Error ? err.message : fallback;
 }
 
-/** Vaste stijl voor de vier volledige-breedte-formuliervelden (titel, inhoud, type, versie) —
- * was 6× als los inline-object herhaald; de beheerder-id-input heeft een eigen, afwijkende
- * breedte en blijft dus buiten deze constante. */
-const veldStijl = { display: "block", width: "100%" } as const;
-
 export default function BerichtenAdminPagina() {
-  // Auth-stand-in (geen echt inlogscherm): een tekstveld voor de beheerder-id, bewaard in
-  // localStorage, dat bij elke aanroep als X-Admin-Id-header meegaat.
   const [adminId, setAdminId] = useState("");
   const [berichten, setBerichten] = useState<BerichtAdminRead[] | null>(null);
   const [laden, setLaden] = useState(false);
@@ -79,9 +65,6 @@ export default function BerichtenAdminPagina() {
   const [bewerktId, setBewerktId] = useState<number | null>(null);
 
   useEffect(() => {
-    // Synchronisatie met een extern systeem (localStorage) bij het laden van de pagina — de
-    // waarde kan pas ná mount bekend zijn (server-side rendering heeft geen `window`), dus een
-    // effect is hier het juiste, geen work-around zonder hydration-mismatch beschikbaar.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAdminId(window.localStorage.getItem(ADMIN_ID_OPSLAGSLEUTEL) ?? "");
   }, []);
@@ -108,8 +91,6 @@ export default function BerichtenAdminPagina() {
   }, [adminId]);
 
   useEffect(() => {
-    // Synchronisatie met een extern systeem (de API): berichten ophalen bij mount en bij elke
-    // wijziging van de beheerder-id.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     berichtenOphalen();
   }, [berichtenOphalen]);
@@ -124,8 +105,6 @@ export default function BerichtenAdminPagina() {
     };
     try {
       if (bewerktId === null) {
-        // De API geeft het aangemaakte bericht terug — direct aan de lokale lijst toevoegen
-        // i.p.v. de hele lijst opnieuw op te halen (was voorheen een volledige refetch).
         const nieuw: BerichtAdminRead = await beheerFetch(
           "/v1/admin/berichten",
           adminId,
@@ -205,42 +184,45 @@ export default function BerichtenAdminPagina() {
   }
 
   return (
-    <main
-      style={{
-        maxWidth: 900,
-        margin: "2rem auto",
-        padding: "0 1rem",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <h1>Berichten beheren</h1>
-
-      <label style={{ display: "block", marginTop: "1rem" }}>
-        Beheerder-id
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {/* Beheerder-id stand-in */}
+      <div className="card" style={{ maxWidth: 400 }}>
+        <label className="field-label" htmlFor="beheerder-id">
+          Beheerder-id
+        </label>
         <input
+          id="beheerder-id"
+          className="field-input"
           value={adminId}
           onChange={(e) => adminIdWijzigen(e.target.value)}
           placeholder="bv. beheerder-a"
-          style={{ display: "block", width: 260 }}
+          style={{ marginTop: "0.25rem" }}
         />
-      </label>
+        {!adminId && (
+          <p
+            style={{
+              marginTop: "0.5rem",
+              fontSize: "0.8rem",
+              color: "rgb(var(--muted))",
+            }}
+          >
+            Vul een beheerder-id in om berichten te beheren.
+          </p>
+        )}
+      </div>
 
+      {/* Foutmelding */}
       {fout && (
-        <p role="alert" style={{ color: "#b00020", marginTop: "1rem" }}>
-          {fout}
-        </p>
-      )}
-
-      {!adminId && (
-        <p style={{ marginTop: "1rem" }}>
-          Vul een beheerder-id in om berichten te beheren.
-        </p>
+        <div className="melding melding-fout" role="alert">
+          <span>{fout}</span>
+        </div>
       )}
 
       {adminId && (
         <>
-          <section style={{ marginTop: "2rem" }}>
-            <h2>
+          {/* Formulier */}
+          <div className="card">
+            <h2 style={{ marginBottom: "1rem", fontSize: "1.1rem" }}>
               {bewerktId === null
                 ? "Nieuw bericht"
                 : `Bericht #${bewerktId} bewerken`}
@@ -250,34 +232,46 @@ export default function BerichtenAdminPagina() {
                 e.preventDefault();
                 formulierVerzenden();
               }}
-              style={{ display: "grid", gap: "0.5rem", maxWidth: 500 }}
+              style={{ display: "grid", gap: "0.75rem", maxWidth: 480 }}
             >
-              <label>
-                Titel
+              <div>
+                <label className="field-label" htmlFor="titel">
+                  Titel
+                </label>
                 <input
+                  id="titel"
+                  className="field-input"
                   value={formulier.titel}
                   onChange={(e) =>
                     setFormulier((f) => ({ ...f, titel: e.target.value }))
                   }
                   required
-                  style={veldStijl}
+                  style={{ marginTop: "0.25rem" }}
                 />
-              </label>
-              <label>
-                Inhoud
+              </div>
+              <div>
+                <label className="field-label" htmlFor="inhoud">
+                  Inhoud
+                </label>
                 <textarea
+                  id="inhoud"
+                  className="field-input"
                   value={formulier.inhoud}
                   onChange={(e) =>
                     setFormulier((f) => ({ ...f, inhoud: e.target.value }))
                   }
                   required
                   rows={3}
-                  style={veldStijl}
+                  style={{ marginTop: "0.25rem", resize: "vertical" }}
                 />
-              </label>
-              <label>
-                Type
+              </div>
+              <div>
+                <label className="field-label" htmlFor="type">
+                  Type
+                </label>
                 <select
+                  id="type"
+                  className="field-input"
                   value={formulier.type}
                   onChange={(e) =>
                     setFormulier((f) => ({
@@ -285,7 +279,7 @@ export default function BerichtenAdminPagina() {
                       type: e.target.value as BerichtType,
                     }))
                   }
-                  style={veldStijl}
+                  style={{ marginTop: "0.25rem" }}
                 >
                   {BERICHT_TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -293,10 +287,17 @@ export default function BerichtenAdminPagina() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label>
-                Versie (optioneel)
+              </div>
+              <div>
+                <label className="field-label" htmlFor="versie">
+                  Versie{" "}
+                  <span style={{ color: "rgb(var(--faint))", fontWeight: 400 }}>
+                    (optioneel)
+                  </span>
+                </label>
                 <input
+                  id="versie"
+                  className="field-input"
                   value={formulier.versie ?? ""}
                   onChange={(e) =>
                     setFormulier((f) => ({
@@ -304,28 +305,65 @@ export default function BerichtenAdminPagina() {
                       versie: e.target.value || null,
                     }))
                   }
-                  style={veldStijl}
+                  style={{ marginTop: "0.25rem" }}
                 />
-              </label>
-              <button type="submit">
-                {bewerktId === null ? "Aanmaken" : "Opslaan"}
-              </button>{" "}
-              {bewerktId !== null && (
-                <button type="button" onClick={bewerkenAnnuleren}>
-                  Annuleren
+              </div>
+              <div
+                style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}
+              >
+                <button type="submit" className="btn btn-primary">
+                  {bewerktId === null ? "Aanmaken" : "Opslaan"}
                 </button>
-              )}
+                {bewerktId !== null && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={bewerkenAnnuleren}
+                  >
+                    Annuleren
+                  </button>
+                )}
+              </div>
             </form>
-          </section>
+          </div>
 
-          <section style={{ marginTop: "2rem" }}>
-            <h2>Alle berichten</h2>
-            {laden && <p>Laden…</p>}
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr
-                  style={{ textAlign: "left", borderBottom: "1px solid #ccc" }}
+          {/* Berichtenlijst */}
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <div
+              style={{
+                padding: "1.25rem 1.5rem",
+                borderBottom: "1px solid rgb(var(--line))",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h2 style={{ fontSize: "1.1rem" }}>
+                Alle berichten
+                {berichten !== null && (
+                  <span
+                    style={{
+                      marginLeft: "0.5rem",
+                      fontSize: "0.85rem",
+                      fontWeight: 400,
+                      color: "rgb(var(--muted))",
+                    }}
+                  >
+                    ({berichten.length})
+                  </span>
+                )}
+              </h2>
+              {laden && (
+                <span
+                  style={{ fontSize: "0.8rem", color: "rgb(var(--muted))" }}
                 >
+                  Laden…
+                </span>
+              )}
+            </div>
+            <table className="tabel">
+              <thead>
+                <tr>
                   <th>Titel</th>
                   <th>Type</th>
                   <th>Status</th>
@@ -335,34 +373,62 @@ export default function BerichtenAdminPagina() {
               </thead>
               <tbody>
                 {(berichten ?? []).map((b) => (
-                  <tr key={b.id} style={{ borderBottom: "1px solid #eee" }}>
-                    <td>{b.titel}</td>
-                    <td>{b.type}</td>
-                    <td>{b.gepubliceerd ? "gepubliceerd" : "concept"}</td>
-                    <td>{b.aangemaakt_door}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      <button onClick={() => bewerkenStarten(b)}>
-                        Bewerken
-                      </button>{" "}
-                      <button onClick={() => publicatieWisselen(b)}>
-                        {b.gepubliceerd ? "Depubliceren" : "Publiceren"}
-                      </button>{" "}
-                      <button onClick={() => berichtVerwijderen(b.id)}>
-                        Verwijderen
-                      </button>
+                  <tr key={b.id}>
+                    <td style={{ fontWeight: 500 }}>{b.titel}</td>
+                    <td style={{ color: "rgb(var(--muted))" }}>{b.type}</td>
+                    <td>
+                      <span
+                        className={`badge ${b.gepubliceerd ? "badge-gepubliceerd" : "badge-concept"}`}
+                      >
+                        {b.gepubliceerd ? "gepubliceerd" : "concept"}
+                      </span>
+                    </td>
+                    <td style={{ color: "rgb(var(--muted))" }}>
+                      {b.aangemaakt_door}
+                    </td>
+                    <td>
+                      <div className="acties">
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => bewerkenStarten(b)}
+                        >
+                          Bewerken
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => publicatieWisselen(b)}
+                        >
+                          {b.gepubliceerd ? "Depubliceren" : "Publiceren"}
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          onClick={() => berichtVerwijderen(b.id)}
+                        >
+                          Verwijderen
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {berichten?.length === 0 && (
                   <tr>
-                    <td colSpan={5}>Geen berichten.</td>
+                    <td
+                      colSpan={5}
+                      style={{
+                        color: "rgb(var(--muted))",
+                        textAlign: "center",
+                        padding: "2rem",
+                      }}
+                    >
+                      Geen berichten.
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
-          </section>
+          </div>
         </>
       )}
-    </main>
+    </div>
   );
 }
