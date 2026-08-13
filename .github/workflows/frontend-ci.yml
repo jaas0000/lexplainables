@@ -98,29 +98,40 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      - name: API opzetten en starten
-        working-directory: api
+      - name: API en frontend parallel opzetten en starten
+        # Onafhankelijk werk (API-boot, frontend-build) liep hiervoor als twee losse,
+        # sequentiële steps — de totale wachttijd was (API-boot + frontend-build) i.p.v.
+        # max(API-boot, frontend-build). Nu allebei als achtergrondsubshell, met een `wait`
+        # per subshell zodat een falende kant de job nog steeds laat falen (met logs).
         run: |
-          uv sync
-          uv run alembic upgrade head
-          uv run uvicorn app.main:app --port 8000 > /tmp/api.log 2>&1 &
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:8000/v1/admin/berichten -H "X-Admin-Id: ci-boot-check" > /dev/null && exit 0
-            sleep 1
-          done
-          echo "API niet op tijd gestart"; cat /tmp/api.log; exit 1
+          (
+            cd api
+            uv sync
+            uv run alembic upgrade head
+            uv run uvicorn app.main:app --port 8000 > /tmp/api.log 2>&1 &
+            for i in $(seq 1 30); do
+              curl -sf http://localhost:8000/v1/admin/berichten -H "X-Admin-Id: ci-boot-check" > /dev/null && exit 0
+              sleep 1
+            done
+            echo "API niet op tijd gestart"; cat /tmp/api.log; exit 1
+          ) &
+          api_pid=$!
 
-      - name: Frontend bouwen en starten (NEXT_PUBLIC_API_BASE_URL is build-time)
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-          npm run start > /tmp/frontend.log 2>&1 &
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:3001/ > /dev/null && exit 0
-            sleep 1
-          done
-          echo "Frontend niet op tijd gestart"; cat /tmp/frontend.log; exit 1
+          (
+            cd frontend
+            npm ci
+            npm run build
+            npm run start > /tmp/frontend.log 2>&1 &
+            for i in $(seq 1 30); do
+              curl -sf http://localhost:3001/ > /dev/null && exit 0
+              sleep 1
+            done
+            echo "Frontend niet op tijd gestart"; cat /tmp/frontend.log; exit 1
+          ) &
+          frontend_pid=$!
+
+          wait "$api_pid"
+          wait "$frontend_pid"
 
       - name: Playwright-browsers installeren
         working-directory: frontend

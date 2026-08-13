@@ -57,6 +57,17 @@ async function beheerFetch(
   return response.json();
 }
 
+/** Foutmelding uit een `catch`-blok, met een fallback voor het geval het geen `Error` is
+ * (bv. een non-Error throw). Was 4× letterlijk gekopieerd op elke foutafhandelingsplek. */
+function foutmelding(err: unknown, fallback: string) {
+  return err instanceof Error ? err.message : fallback;
+}
+
+/** Vaste stijl voor de vier volledige-breedte-formuliervelden (titel, inhoud, type, versie) —
+ * was 6× als los inline-object herhaald; de beheerder-id-input heeft een eigen, afwijkende
+ * breedte en blijft dus buiten deze constante. */
+const veldStijl = { display: "block", width: "100%" } as const;
+
 export default function BerichtenAdminPagina() {
   // Auth-stand-in (geen echt inlogscherm): een tekstveld voor de beheerder-id, bewaard in
   // localStorage, dat bij elke aanroep als X-Admin-Id-header meegaat.
@@ -89,9 +100,7 @@ export default function BerichtenAdminPagina() {
       setBerichten(pagina.items);
     } catch (err) {
       setFout(
-        err instanceof Error
-          ? err.message
-          : "Onbekende fout bij het ophalen van berichten.",
+        foutmelding(err, "Onbekende fout bij het ophalen van berichten."),
       );
     } finally {
       setLaden(false);
@@ -115,24 +124,29 @@ export default function BerichtenAdminPagina() {
     };
     try {
       if (bewerktId === null) {
-        await beheerFetch("/v1/admin/berichten", adminId, {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
+        // De API geeft het aangemaakte bericht terug — direct aan de lokale lijst toevoegen
+        // i.p.v. de hele lijst opnieuw op te halen (was voorheen een volledige refetch).
+        const nieuw: BerichtAdminRead = await beheerFetch(
+          "/v1/admin/berichten",
+          adminId,
+          { method: "POST", body: JSON.stringify(body) },
+        );
+        setBerichten((huidig) => [nieuw, ...(huidig ?? [])]);
       } else {
-        await beheerFetch(`/v1/admin/berichten/${bewerktId}`, adminId, {
-          method: "PUT",
-          body: JSON.stringify(body),
-        });
+        const bijgewerkt: BerichtAdminRead = await beheerFetch(
+          `/v1/admin/berichten/${bewerktId}`,
+          adminId,
+          { method: "PUT", body: JSON.stringify(body) },
+        );
+        setBerichten((huidig) =>
+          (huidig ?? []).map((b) => (b.id === bijgewerkt.id ? bijgewerkt : b)),
+        );
         setBewerktId(null);
       }
       setFormulier(LEEG_FORMULIER);
-      await berichtenOphalen();
     } catch (err) {
       setFout(
-        err instanceof Error
-          ? err.message
-          : "Onbekende fout bij het opslaan van het bericht.",
+        foutmelding(err, "Onbekende fout bij het opslaan van het bericht."),
       );
     }
   }
@@ -155,16 +169,23 @@ export default function BerichtenAdminPagina() {
   async function publicatieWisselen(b: BerichtAdminRead) {
     setFout(null);
     try {
-      await beheerFetch(`/v1/admin/berichten/${b.id}/publicatie`, adminId, {
-        method: "PATCH",
-        body: JSON.stringify({ gepubliceerd: !b.gepubliceerd }),
-      });
-      await berichtenOphalen();
+      const bijgewerkt: BerichtAdminRead = await beheerFetch(
+        `/v1/admin/berichten/${b.id}/publicatie`,
+        adminId,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ gepubliceerd: !b.gepubliceerd }),
+        },
+      );
+      setBerichten((huidig) =>
+        (huidig ?? []).map((r) => (r.id === bijgewerkt.id ? bijgewerkt : r)),
+      );
     } catch (err) {
       setFout(
-        err instanceof Error
-          ? err.message
-          : "Onbekende fout bij het wijzigen van de publicatiestatus.",
+        foutmelding(
+          err,
+          "Onbekende fout bij het wijzigen van de publicatiestatus.",
+        ),
       );
     }
   }
@@ -175,12 +196,10 @@ export default function BerichtenAdminPagina() {
       await beheerFetch(`/v1/admin/berichten/${id}`, adminId, {
         method: "DELETE",
       });
-      await berichtenOphalen();
+      setBerichten((huidig) => (huidig ?? []).filter((b) => b.id !== id));
     } catch (err) {
       setFout(
-        err instanceof Error
-          ? err.message
-          : "Onbekende fout bij het verwijderen van het bericht.",
+        foutmelding(err, "Onbekende fout bij het verwijderen van het bericht."),
       );
     }
   }
@@ -241,7 +260,7 @@ export default function BerichtenAdminPagina() {
                     setFormulier((f) => ({ ...f, titel: e.target.value }))
                   }
                   required
-                  style={{ display: "block", width: "100%" }}
+                  style={veldStijl}
                 />
               </label>
               <label>
@@ -253,7 +272,7 @@ export default function BerichtenAdminPagina() {
                   }
                   required
                   rows={3}
-                  style={{ display: "block", width: "100%" }}
+                  style={veldStijl}
                 />
               </label>
               <label>
@@ -266,7 +285,7 @@ export default function BerichtenAdminPagina() {
                       type: e.target.value as BerichtType,
                     }))
                   }
-                  style={{ display: "block" }}
+                  style={veldStijl}
                 >
                   {BERICHT_TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -285,7 +304,7 @@ export default function BerichtenAdminPagina() {
                       versie: e.target.value || null,
                     }))
                   }
-                  style={{ display: "block" }}
+                  style={veldStijl}
                 />
               </label>
               <button type="submit">
