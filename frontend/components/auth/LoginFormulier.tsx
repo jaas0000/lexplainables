@@ -26,7 +26,9 @@ export function LoginFormulier() {
         return;
       }
       // Harde navigatie zodat de middleware-sessiecheck opnieuw loopt.
-      window.location.href = params.get("callbackUrl") ?? "/";
+      // Alleen relatieve URLs toestaan om open redirect te voorkomen.
+      const callback = params.get("callbackUrl");
+      window.location.href = callback?.startsWith("/") ? callback : "/";
     } finally {
       setBezig(false);
     }
