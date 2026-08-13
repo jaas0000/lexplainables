@@ -213,8 +213,8 @@ export default function BerichtenAdminPagina() {
 
       {/* Foutmelding */}
       {fout && (
-        <div className="melding melding-fout" role="alert">
-          <span>{fout}</span>
+        <div className="melding melding-fout">
+          <p role="alert">{fout}</p>
         </div>
       )}
 
