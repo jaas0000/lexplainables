@@ -504,6 +504,12 @@
         "title": "ValidationError",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
@@ -538,15 +544,6 @@
               "title": "Limit",
               "type": "integer"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-Admin-Id",
-            "required": true,
-            "schema": {
-              "title": "X-Admin-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -571,6 +568,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Lijst Alle Berichten",
         "tags": [
           "berichten-admin"
@@ -578,17 +580,6 @@
       },
       "post": {
         "operationId": "maak_bericht_v1_admin_berichten_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-Admin-Id",
-            "required": true,
-            "schema": {
-              "title": "X-Admin-Id",
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -621,6 +612,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Maak Bericht",
         "tags": [
           "berichten-admin"
@@ -639,15 +635,6 @@
               "title": "Bericht Id",
               "type": "integer"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-Admin-Id",
-            "required": true,
-            "schema": {
-              "title": "X-Admin-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -665,6 +652,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Verwijder Bericht",
         "tags": [
           "berichten-admin"
@@ -680,15 +672,6 @@
             "schema": {
               "title": "Bericht Id",
               "type": "integer"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-Admin-Id",
-            "required": true,
-            "schema": {
-              "title": "X-Admin-Id",
-              "type": "string"
             }
           }
         ],
@@ -724,6 +707,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Bewerk Bericht",
         "tags": [
           "berichten-admin"
@@ -741,15 +729,6 @@
             "schema": {
               "title": "Bericht Id",
               "type": "integer"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-Admin-Id",
-            "required": true,
-            "schema": {
-              "title": "X-Admin-Id",
-              "type": "string"
             }
           }
         ],
@@ -785,6 +764,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Zet Publicatie",
         "tags": [
           "berichten-admin"
@@ -817,15 +801,6 @@
               "title": "Limit",
               "type": "integer"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-Admin-Id",
-            "required": true,
-            "schema": {
-              "title": "X-Admin-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -850,6 +825,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Lijst Feedback",
         "tags": [
           "feedback-admin"
@@ -859,17 +839,6 @@
     "/v1/admin/feedback/markeer-gezien": {
       "post": {
         "operationId": "markeer_gezien_v1_admin_feedback_markeer_gezien_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-Admin-Id",
-            "required": true,
-            "schema": {
-              "title": "X-Admin-Id",
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -895,6 +864,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Markeer Gezien",
         "tags": [
           "feedback-admin"
@@ -904,17 +878,6 @@
     "/v1/admin/feedback/ongelezen-aantal": {
       "get": {
         "operationId": "get_ongelezen_aantal_v1_admin_feedback_ongelezen_aantal_get",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-Admin-Id",
-            "required": true,
-            "schema": {
-              "title": "X-Admin-Id",
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "content": {
@@ -925,18 +888,13 @@
               }
             },
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Ongelezen Aantal",
         "tags": [
           "feedback-admin"
@@ -955,15 +913,6 @@
               "title": "Feedback Id",
               "type": "integer"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-Admin-Id",
-            "required": true,
-            "schema": {
-              "title": "X-Admin-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -981,6 +930,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Verwijder Feedback",
         "tags": [
           "feedback-admin"

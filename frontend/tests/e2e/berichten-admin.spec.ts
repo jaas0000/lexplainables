@@ -20,10 +20,20 @@ async function getKeycloakToken(): Promise<string> {
         client_id: KEYCLOAK_CLIENT_ID,
         username: "beheerder",
         password: "beheerder123",
+        scope: "openid",
       }).toString(),
     },
   );
-  const data = (await response.json()) as { access_token: string };
+  const data = (await response.json()) as {
+    access_token?: string;
+    error?: string;
+    error_description?: string;
+  };
+  if (!data.access_token) {
+    throw new Error(
+      `Keycloak token mislukt: ${data.error} — ${data.error_description}`,
+    );
+  }
   return data.access_token;
 }
 

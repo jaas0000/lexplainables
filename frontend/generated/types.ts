@@ -414,9 +414,7 @@ export interface operations {
                 offset?: number;
                 limit?: number;
             };
-            header: {
-                "X-Admin-Id": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -445,9 +443,7 @@ export interface operations {
     maak_bericht_v1_admin_berichten_post: {
         parameters: {
             query?: never;
-            header: {
-                "X-Admin-Id": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -480,9 +476,7 @@ export interface operations {
     bewerk_bericht_v1_admin_berichten__bericht_id__put: {
         parameters: {
             query?: never;
-            header: {
-                "X-Admin-Id": string;
-            };
+            header?: never;
             path: {
                 bericht_id: number;
             };
@@ -517,9 +511,7 @@ export interface operations {
     verwijder_bericht_v1_admin_berichten__bericht_id__delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-Admin-Id": string;
-            };
+            header?: never;
             path: {
                 bericht_id: number;
             };
@@ -548,9 +540,7 @@ export interface operations {
     zet_publicatie_v1_admin_berichten__bericht_id__publicatie_patch: {
         parameters: {
             query?: never;
-            header: {
-                "X-Admin-Id": string;
-            };
+            header?: never;
             path: {
                 bericht_id: number;
             };
@@ -588,9 +578,7 @@ export interface operations {
                 offset?: number;
                 limit?: number;
             };
-            header: {
-                "X-Admin-Id": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -619,9 +607,7 @@ export interface operations {
     markeer_gezien_v1_admin_feedback_markeer_gezien_post: {
         parameters: {
             query?: never;
-            header: {
-                "X-Admin-Id": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -652,9 +638,7 @@ export interface operations {
     get_ongelezen_aantal_v1_admin_feedback_ongelezen_aantal_get: {
         parameters: {
             query?: never;
-            header: {
-                "X-Admin-Id": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -669,23 +653,12 @@ export interface operations {
                     "application/json": components["schemas"]["OngelezenFeedbackOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     verwijder_feedback_v1_admin_feedback__feedback_id__delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-Admin-Id": string;
-            };
+            header?: never;
             path: {
                 feedback_id: number;
             };
