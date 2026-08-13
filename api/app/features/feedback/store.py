@@ -14,7 +14,8 @@ from typing import Protocol
 from sqlalchemy import ColumnElement, delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from .models import FeedbackRead, feedback_leesbewijzen, feedback_uit_rij, nu, user_feedback
+from ...shared.tijd import nu
+from .models import FeedbackRead, feedback_leesbewijzen, feedback_uit_rij, user_feedback
 
 
 class FeedbackNietGevonden(LookupError):

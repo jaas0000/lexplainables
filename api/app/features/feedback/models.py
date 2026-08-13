@@ -15,7 +15,7 @@ mapping-functie ertussen:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -24,12 +24,6 @@ from sqlalchemy import Column, DateTime, Index, Integer, MetaData, String, Table
 Categorie = Literal["verbeteridee", "probleemmelding", "compliment", "vraag"]
 
 metadata = MetaData()
-
-
-def nu() -> datetime:
-    """Huidig moment, tz-aware (UTC). Openbaar zodat store.py en tests hetzelfde tijdsbegrip
-    delen in plaats van elk hun eigen `datetime.now(UTC)`-aanroep te doen."""
-    return datetime.now(UTC)
 
 
 # --- user_feedback --------------------------------------------------------------
