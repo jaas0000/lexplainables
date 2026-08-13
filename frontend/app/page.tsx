@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { components } from "@/generated/types";
 
 type BerichtAdminRead = components["schemas"]["BerichtAdminRead"];
-type BerichtType = components["schemas"]["BerichtCreate"]["type"];
+type BerichtCreate = components["schemas"]["BerichtCreate"];
+type BerichtType = BerichtCreate["type"];
 
 const BERICHT_TYPES: BerichtType[] = [
   "info",
@@ -13,35 +14,11 @@ const BERICHT_TYPES: BerichtType[] = [
   "kritiek",
 ];
 
-// Fase 1 (frontend-bouwen regel 2): nepdata op basis van het gegenereerde `BerichtAdminRead`-
-// type, ter visuele validatie vóór de echte API-aanroepen (fase 2) erbij komen.
-const NEPDATA: BerichtAdminRead[] = [
-  {
-    id: 1,
-    titel: "Onderhoud gepland op zaterdag",
-    inhoud:
-      "De omgeving is zaterdag 10:00-12:00 niet bereikbaar wegens onderhoud.",
-    type: "waarschuwing",
-    versie: null,
-    gepubliceerd: true,
-    gepubliceerd_op: "2026-08-01T09:00:00Z",
-    aangemaakt_door: "beheerder-a",
-    created: "2026-07-30T14:00:00Z",
-    updated: "2026-08-01T09:00:00Z",
-  },
-  {
-    id: 2,
-    titel: "Nieuwe versie 2.4.0",
-    inhoud: "Verbeterde zoekfunctie en een aantal bugfixes.",
-    type: "update",
-    versie: "2.4.0",
-    gepubliceerd: false,
-    gepubliceerd_op: null,
-    aangemaakt_door: "beheerder-b",
-    created: "2026-08-05T11:00:00Z",
-    updated: "2026-08-05T11:00:00Z",
-  },
-];
+// Fase 2 (frontend-bouwen regel 4): de API-basis-URL komt uit een environment-variabele, niet
+// hardcoded — zie .env.example.
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const ADMIN_ID_OPSLAGSLEUTEL = "wetsanalyse.beheerder-id";
 
 const LEEG_FORMULIER: Pick<
   BerichtAdminRead,
@@ -53,44 +30,111 @@ const LEEG_FORMULIER: Pick<
   versie: null,
 };
 
+/** Roept de API aan met de beheerder-id-stand-in als `X-Admin-Id`-header (zie
+ * api/app/shared/auth.py) en gooit een leesbare fout bij een niet-2xx-status, zodat de
+ * aanroeper die als zichtbare foutmelding kan tonen in plaats van stil te falen. */
+async function beheerFetch(
+  pad: string,
+  adminId: string,
+  init: RequestInit = {},
+) {
+  const response = await fetch(`${API_BASE_URL}${pad}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      "X-Admin-Id": adminId,
+      ...init.headers,
+    },
+  });
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((data) => data.detail)
+      .catch(() => null);
+    throw new Error(detail ?? `${response.status} ${response.statusText}`);
+  }
+  if (response.status === 204) return undefined;
+  return response.json();
+}
+
 export default function BerichtenAdminPagina() {
-  const [berichten, setBerichten] = useState<BerichtAdminRead[]>(NEPDATA);
+  // Auth-stand-in (geen echt inlogscherm): een tekstveld voor de beheerder-id, bewaard in
+  // localStorage, dat bij elke aanroep als X-Admin-Id-header meegaat.
+  const [adminId, setAdminId] = useState("");
+  const [berichten, setBerichten] = useState<BerichtAdminRead[] | null>(null);
+  const [laden, setLaden] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
   const [formulier, setFormulier] = useState(LEEG_FORMULIER);
   const [bewerktId, setBewerktId] = useState<number | null>(null);
 
-  function formulierVerzenden() {
-    if (bewerktId === null) {
-      const nieuw: BerichtAdminRead = {
-        id: Math.max(0, ...berichten.map((b) => b.id)) + 1,
-        titel: formulier.titel,
-        inhoud: formulier.inhoud,
-        type: formulier.type,
-        versie: formulier.versie || null,
-        gepubliceerd: false,
-        gepubliceerd_op: null,
-        aangemaakt_door: "jij",
-        created: new Date().toISOString(),
-        updated: new Date().toISOString(),
-      };
-      setBerichten((huidig) => [nieuw, ...huidig]);
-    } else {
-      setBerichten((huidig) =>
-        huidig.map((b) =>
-          b.id === bewerktId
-            ? {
-                ...b,
-                titel: formulier.titel,
-                inhoud: formulier.inhoud,
-                type: formulier.type,
-                versie: formulier.versie || null,
-                updated: new Date().toISOString(),
-              }
-            : b,
-        ),
+  useEffect(() => {
+    // Synchronisatie met een extern systeem (localStorage) bij het laden van de pagina — de
+    // waarde kan pas ná mount bekend zijn (server-side rendering heeft geen `window`), dus een
+    // effect is hier het juiste, geen work-around zonder hydration-mismatch beschikbaar.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAdminId(window.localStorage.getItem(ADMIN_ID_OPSLAGSLEUTEL) ?? "");
+  }, []);
+
+  function adminIdWijzigen(waarde: string) {
+    setAdminId(waarde);
+    window.localStorage.setItem(ADMIN_ID_OPSLAGSLEUTEL, waarde);
+  }
+
+  const berichtenOphalen = useCallback(async () => {
+    if (!adminId) return;
+    setLaden(true);
+    setFout(null);
+    try {
+      const pagina = await beheerFetch("/v1/admin/berichten", adminId);
+      setBerichten(pagina.items);
+    } catch (err) {
+      setFout(
+        err instanceof Error
+          ? err.message
+          : "Onbekende fout bij het ophalen van berichten.",
       );
-      setBewerktId(null);
+    } finally {
+      setLaden(false);
     }
-    setFormulier(LEEG_FORMULIER);
+  }, [adminId]);
+
+  useEffect(() => {
+    // Synchronisatie met een extern systeem (de API): berichten ophalen bij mount en bij elke
+    // wijziging van de beheerder-id.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    berichtenOphalen();
+  }, [berichtenOphalen]);
+
+  async function formulierVerzenden() {
+    setFout(null);
+    const body: BerichtCreate = {
+      titel: formulier.titel,
+      inhoud: formulier.inhoud,
+      type: formulier.type,
+      versie: formulier.versie || null,
+    };
+    try {
+      if (bewerktId === null) {
+        await beheerFetch("/v1/admin/berichten", adminId, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+      } else {
+        await beheerFetch(`/v1/admin/berichten/${bewerktId}`, adminId, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        setBewerktId(null);
+      }
+      setFormulier(LEEG_FORMULIER);
+      await berichtenOphalen();
+    } catch (err) {
+      setFout(
+        err instanceof Error
+          ? err.message
+          : "Onbekende fout bij het opslaan van het bericht.",
+      );
+    }
   }
 
   function bewerkenStarten(b: BerichtAdminRead) {
@@ -108,16 +152,37 @@ export default function BerichtenAdminPagina() {
     setFormulier(LEEG_FORMULIER);
   }
 
-  function publicatieWisselen(id: number) {
-    setBerichten((huidig) =>
-      huidig.map((b) =>
-        b.id === id ? { ...b, gepubliceerd: !b.gepubliceerd } : b,
-      ),
-    );
+  async function publicatieWisselen(b: BerichtAdminRead) {
+    setFout(null);
+    try {
+      await beheerFetch(`/v1/admin/berichten/${b.id}/publicatie`, adminId, {
+        method: "PATCH",
+        body: JSON.stringify({ gepubliceerd: !b.gepubliceerd }),
+      });
+      await berichtenOphalen();
+    } catch (err) {
+      setFout(
+        err instanceof Error
+          ? err.message
+          : "Onbekende fout bij het wijzigen van de publicatiestatus.",
+      );
+    }
   }
 
-  function berichtVerwijderen(id: number) {
-    setBerichten((huidig) => huidig.filter((b) => b.id !== id));
+  async function berichtVerwijderen(id: number) {
+    setFout(null);
+    try {
+      await beheerFetch(`/v1/admin/berichten/${id}`, adminId, {
+        method: "DELETE",
+      });
+      await berichtenOphalen();
+    } catch (err) {
+      setFout(
+        err instanceof Error
+          ? err.message
+          : "Onbekende fout bij het verwijderen van het bericht.",
+      );
+    }
   }
 
   return (
@@ -131,120 +196,154 @@ export default function BerichtenAdminPagina() {
     >
       <h1>Berichten beheren</h1>
 
-      <section style={{ marginTop: "2rem" }}>
-        <h2>
-          {bewerktId === null
-            ? "Nieuw bericht"
-            : `Bericht #${bewerktId} bewerken`}
-        </h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            formulierVerzenden();
-          }}
-          style={{ display: "grid", gap: "0.5rem", maxWidth: 500 }}
-        >
-          <label>
-            Titel
-            <input
-              value={formulier.titel}
-              onChange={(e) =>
-                setFormulier((f) => ({ ...f, titel: e.target.value }))
-              }
-              required
-              style={{ display: "block", width: "100%" }}
-            />
-          </label>
-          <label>
-            Inhoud
-            <textarea
-              value={formulier.inhoud}
-              onChange={(e) =>
-                setFormulier((f) => ({ ...f, inhoud: e.target.value }))
-              }
-              required
-              rows={3}
-              style={{ display: "block", width: "100%" }}
-            />
-          </label>
-          <label>
-            Type
-            <select
-              value={formulier.type}
-              onChange={(e) =>
-                setFormulier((f) => ({
-                  ...f,
-                  type: e.target.value as BerichtType,
-                }))
-              }
-              style={{ display: "block" }}
-            >
-              {BERICHT_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Versie (optioneel)
-            <input
-              value={formulier.versie ?? ""}
-              onChange={(e) =>
-                setFormulier((f) => ({ ...f, versie: e.target.value || null }))
-              }
-              style={{ display: "block" }}
-            />
-          </label>
-          <button type="submit">
-            {bewerktId === null ? "Aanmaken" : "Opslaan"}
-          </button>{" "}
-          {bewerktId !== null && (
-            <button type="button" onClick={bewerkenAnnuleren}>
-              Annuleren
-            </button>
-          )}
-        </form>
-      </section>
+      <label style={{ display: "block", marginTop: "1rem" }}>
+        Beheerder-id
+        <input
+          value={adminId}
+          onChange={(e) => adminIdWijzigen(e.target.value)}
+          placeholder="bv. beheerder-a"
+          style={{ display: "block", width: 260 }}
+        />
+      </label>
 
-      <section style={{ marginTop: "2rem" }}>
-        <h2>Alle berichten</h2>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "1px solid #ccc" }}>
-              <th>Titel</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Aangemaakt door</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {berichten.map((b) => (
-              <tr key={b.id} style={{ borderBottom: "1px solid #eee" }}>
-                <td>{b.titel}</td>
-                <td>{b.type}</td>
-                <td>{b.gepubliceerd ? "gepubliceerd" : "concept"}</td>
-                <td>{b.aangemaakt_door}</td>
-                <td style={{ whiteSpace: "nowrap" }}>
-                  <button onClick={() => bewerkenStarten(b)}>Bewerken</button>{" "}
-                  <button onClick={() => publicatieWisselen(b.id)}>
-                    {b.gepubliceerd ? "Depubliceren" : "Publiceren"}
-                  </button>{" "}
-                  <button onClick={() => berichtVerwijderen(b.id)}>
-                    Verwijderen
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {berichten.length === 0 && (
-              <tr>
-                <td colSpan={5}>Geen berichten.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
+      {fout && (
+        <p role="alert" style={{ color: "#b00020", marginTop: "1rem" }}>
+          {fout}
+        </p>
+      )}
+
+      {!adminId && (
+        <p style={{ marginTop: "1rem" }}>
+          Vul een beheerder-id in om berichten te beheren.
+        </p>
+      )}
+
+      {adminId && (
+        <>
+          <section style={{ marginTop: "2rem" }}>
+            <h2>
+              {bewerktId === null
+                ? "Nieuw bericht"
+                : `Bericht #${bewerktId} bewerken`}
+            </h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                formulierVerzenden();
+              }}
+              style={{ display: "grid", gap: "0.5rem", maxWidth: 500 }}
+            >
+              <label>
+                Titel
+                <input
+                  value={formulier.titel}
+                  onChange={(e) =>
+                    setFormulier((f) => ({ ...f, titel: e.target.value }))
+                  }
+                  required
+                  style={{ display: "block", width: "100%" }}
+                />
+              </label>
+              <label>
+                Inhoud
+                <textarea
+                  value={formulier.inhoud}
+                  onChange={(e) =>
+                    setFormulier((f) => ({ ...f, inhoud: e.target.value }))
+                  }
+                  required
+                  rows={3}
+                  style={{ display: "block", width: "100%" }}
+                />
+              </label>
+              <label>
+                Type
+                <select
+                  value={formulier.type}
+                  onChange={(e) =>
+                    setFormulier((f) => ({
+                      ...f,
+                      type: e.target.value as BerichtType,
+                    }))
+                  }
+                  style={{ display: "block" }}
+                >
+                  {BERICHT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Versie (optioneel)
+                <input
+                  value={formulier.versie ?? ""}
+                  onChange={(e) =>
+                    setFormulier((f) => ({
+                      ...f,
+                      versie: e.target.value || null,
+                    }))
+                  }
+                  style={{ display: "block" }}
+                />
+              </label>
+              <button type="submit">
+                {bewerktId === null ? "Aanmaken" : "Opslaan"}
+              </button>{" "}
+              {bewerktId !== null && (
+                <button type="button" onClick={bewerkenAnnuleren}>
+                  Annuleren
+                </button>
+              )}
+            </form>
+          </section>
+
+          <section style={{ marginTop: "2rem" }}>
+            <h2>Alle berichten</h2>
+            {laden && <p>Laden…</p>}
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr
+                  style={{ textAlign: "left", borderBottom: "1px solid #ccc" }}
+                >
+                  <th>Titel</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Aangemaakt door</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {(berichten ?? []).map((b) => (
+                  <tr key={b.id} style={{ borderBottom: "1px solid #eee" }}>
+                    <td>{b.titel}</td>
+                    <td>{b.type}</td>
+                    <td>{b.gepubliceerd ? "gepubliceerd" : "concept"}</td>
+                    <td>{b.aangemaakt_door}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <button onClick={() => bewerkenStarten(b)}>
+                        Bewerken
+                      </button>{" "}
+                      <button onClick={() => publicatieWisselen(b)}>
+                        {b.gepubliceerd ? "Depubliceren" : "Publiceren"}
+                      </button>{" "}
+                      <button onClick={() => berichtVerwijderen(b.id)}>
+                        Verwijderen
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {berichten?.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>Geen berichten.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+        </>
+      )}
     </main>
   );
 }
