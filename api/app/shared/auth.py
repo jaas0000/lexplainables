@@ -1,58 +1,31 @@
-"""Gedeelde authenticatie via Keycloak JWKS (ADR-0002).
+"""Gedeelde authenticatie via API_TOKEN-gate en X-User-Id-header (ADR-0003).
 
-`huidige_beheerder` verifieert een Keycloak-JWT via het JWKS-endpoint en levert een
-`GebruikerContext` op. De JWKS worden gecached en elke 5 minuten ververst, zodat de
-verificatie niet bij elke request het netwerk op gaat.
+`huidige_beheerder` verifieert het machine-token van de BFF (constant-time vergelijking)
+en leest de gebruikersidentiteit uit de X-User-Id-header die de BFF zet vanuit de
+Auth.js-sessie. De BFF is verantwoordelijk voor rolautorisatie.
 
-`huidige_gebruiker` is nog een tijdelijke stand-in (header-based); vervangen in een
-latere story zodra ook de gebruikersroutes Keycloak-auth krijgen.
+`vereist_api_token` is een losse dependency voor routes die wel de token maar niet de
+gebruikersidentiteit nodig hebben (bijv. /v1/auth/verify).
+
+`huidige_gebruiker` is een tijdelijke stand-in voor publieke routes (nog ongewijzigd).
 """
 
 from __future__ import annotations
 
-import asyncio
+import hmac
 import os
-import time
-from typing import Any
 
-import httpx
-from fastapi import Depends, Header, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from fastapi import Header, HTTPException, status
 from pydantic import BaseModel
 
-KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL", "http://localhost:8080")
-KEYCLOAK_REALM = os.environ.get("KEYCLOAK_REALM", "wetsanalyse")
-_ALGORITHM = "RS256"
-_JWKS_TTL = 300
-
-_jwks_cache: dict[str, Any] = {}
-_jwks_fetched_at: float = 0.0
-_jwks_lock = asyncio.Lock()
-
-_bearer = HTTPBearer(auto_error=False)
+API_TOKEN = os.environ.get("API_TOKEN", "")
 
 
 class GebruikerContext(BaseModel):
     gebruikersnaam: str
+    # rol is een toekomstig extensiepunt (X-Role-header zodra meerdere rollen nodig zijn).
+    # Huidige waarde is altijd "beheerder" — de BFF draagt de rolautorisatie, niet de API.
     rol: str
-
-
-async def _haal_jwks_op() -> dict[str, Any]:
-    global _jwks_cache, _jwks_fetched_at
-    now = time.monotonic()
-    if _jwks_cache and (now - _jwks_fetched_at) < _JWKS_TTL:
-        return _jwks_cache
-    async with _jwks_lock:
-        if _jwks_cache and (time.monotonic() - _jwks_fetched_at) < _JWKS_TTL:
-            return _jwks_cache
-        jwks_url = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(jwks_url, timeout=5.0)
-            response.raise_for_status()
-            _jwks_cache = response.json()
-            _jwks_fetched_at = time.monotonic()
-    return _jwks_cache
 
 
 def _niet_geautoriseerd(detail: str = "Niet geautoriseerd.") -> HTTPException:
@@ -63,49 +36,33 @@ def _niet_geautoriseerd(detail: str = "Niet geautoriseerd.") -> HTTPException:
     )
 
 
-async def huidige_beheerder(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-) -> GebruikerContext:
-    if not credentials:
-        raise _niet_geautoriseerd()
-    # Valideer JWT-structuur vóórdat we het netwerk op gaan voor JWKS.
-    try:
-        jwt.get_unverified_header(credentials.credentials)
-    except JWTError as exc:
-        raise _niet_geautoriseerd("Ongeldig token.") from exc
-    try:
-        jwks = await _haal_jwks_op()
-        payload = jwt.decode(
-            credentials.credentials,
-            jwks,
-            algorithms=[_ALGORITHM],
-            options={"verify_aud": False},
-        )
-    except JWTError as exc:
-        bericht = str(exc).lower()
-        if "expired" in bericht:
-            raise _niet_geautoriseerd("Token verlopen.") from exc
-        raise _niet_geautoriseerd("Ongeldig token.") from exc
-    except httpx.HTTPError as exc:
+def vereist_api_token(
+    authorization: str | None = Header(None),
+) -> None:
+    """Verifieert de API_TOKEN uit de Authorization-header (constant-time)."""
+    if not API_TOKEN:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authenticatieservice tijdelijk niet beschikbaar.",
-        ) from exc
-
-    rollen = payload.get("realm_access", {}).get("roles", [])
-    if "beheerder" not in rollen:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Onvoldoende rechten.",
+            detail="API-token niet geconfigureerd.",
         )
+    if not authorization:
+        raise _niet_geautoriseerd()
+    token = authorization.removeprefix("Bearer ").strip()
+    if not hmac.compare_digest(token.encode(), API_TOKEN.encode()):
+        raise _niet_geautoriseerd()
 
-    return GebruikerContext(
-        gebruikersnaam=payload.get("preferred_username", "onbekend"),
-        rol="beheerder",
-    )
+
+def huidige_beheerder(
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-Id"),
+) -> GebruikerContext:
+    """Verifieert API_TOKEN + leest gebruikersidentiteit uit X-User-Id-header."""
+    vereist_api_token(authorization)
+    if not x_user_id:
+        raise _niet_geautoriseerd()
+    return GebruikerContext(gebruikersnaam=x_user_id, rol="beheerder")
 
 
 def huidige_gebruiker(x_user_id: str = Header(..., alias="X-User-Id")) -> str:
-    """Tijdelijke stand-in voor gebruikersauthenticatie — wordt in een latere story
-    vervangen door Keycloak-JWT-verificatie."""
+    """Tijdelijke stand-in voor gebruikersauthenticatie op publieke routes."""
     return x_user_id

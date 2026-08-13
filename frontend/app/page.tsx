@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { components } from "@/generated/types";
-import { getToken, clearAuth } from "@/lib/auth";
 
 type BerichtAdminRead = components["schemas"]["BerichtAdminRead"];
 type BerichtCreate = components["schemas"]["BerichtCreate"];
@@ -16,9 +14,6 @@ const BERICHT_TYPES: BerichtType[] = [
   "kritiek",
 ];
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-
 const LEEG_FORMULIER: Pick<
   BerichtAdminRead,
   "titel" | "inhoud" | "type" | "versie"
@@ -29,17 +24,15 @@ const LEEG_FORMULIER: Pick<
   versie: null,
 };
 
-async function beheerFetch(pad: string, token: string, init: RequestInit = {}) {
-  const response = await fetch(`${API_BASE_URL}${pad}`, {
+async function beheerFetch(pad: string, init: RequestInit = {}) {
+  const response = await fetch(pad, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
       ...init.headers,
     },
   });
   if (response.status === 401) {
-    clearAuth();
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = "/login";
     throw new Error("Niet geautoriseerd.");
@@ -60,30 +53,17 @@ function foutmelding(err: unknown, fallback: string) {
 }
 
 export default function BerichtenAdminPagina() {
-  const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
   const [berichten, setBerichten] = useState<BerichtAdminRead[] | null>(null);
   const [laden, setLaden] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [formulier, setFormulier] = useState(LEEG_FORMULIER);
   const [bewerktId, setBewerktId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const t = getToken();
-    if (!t) {
-      router.replace("/login");
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setToken(t);
-  }, [router]);
-
   const berichtenOphalen = useCallback(async () => {
-    if (!token) return;
     setLaden(true);
     setFout(null);
     try {
-      const pagina = await beheerFetch("/v1/admin/berichten", token);
+      const pagina = await beheerFetch("/api/admin/berichten");
       setBerichten((pagina as { items: BerichtAdminRead[] }).items);
     } catch (err) {
       setFout(
@@ -92,7 +72,7 @@ export default function BerichtenAdminPagina() {
     } finally {
       setLaden(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -100,7 +80,6 @@ export default function BerichtenAdminPagina() {
   }, [berichtenOphalen]);
 
   async function formulierVerzenden() {
-    if (!token) return;
     setFout(null);
     const body: BerichtCreate = {
       titel: formulier.titel,
@@ -111,15 +90,13 @@ export default function BerichtenAdminPagina() {
     try {
       if (bewerktId === null) {
         const nieuw: BerichtAdminRead = await beheerFetch(
-          "/v1/admin/berichten",
-          token,
+          "/api/admin/berichten",
           { method: "POST", body: JSON.stringify(body) },
         );
         setBerichten((huidig) => [nieuw, ...(huidig ?? [])]);
       } else {
         const bijgewerkt: BerichtAdminRead = await beheerFetch(
-          `/v1/admin/berichten/${bewerktId}`,
-          token,
+          `/api/admin/berichten/${bewerktId}`,
           { method: "PUT", body: JSON.stringify(body) },
         );
         setBerichten((huidig) =>
@@ -151,12 +128,10 @@ export default function BerichtenAdminPagina() {
   }
 
   async function publicatieWisselen(b: BerichtAdminRead) {
-    if (!token) return;
     setFout(null);
     try {
       const bijgewerkt: BerichtAdminRead = await beheerFetch(
-        `/v1/admin/berichten/${b.id}/publicatie`,
-        token,
+        `/api/admin/berichten/${b.id}/publicatie`,
         {
           method: "PATCH",
           body: JSON.stringify({ gepubliceerd: !b.gepubliceerd }),
@@ -176,10 +151,9 @@ export default function BerichtenAdminPagina() {
   }
 
   async function berichtVerwijderen(id: number) {
-    if (!token) return;
     setFout(null);
     try {
-      await beheerFetch(`/v1/admin/berichten/${id}`, token, {
+      await beheerFetch(`/api/admin/berichten/${id}`, {
         method: "DELETE",
       });
       setBerichten((huidig) => (huidig ?? []).filter((b) => b.id !== id));
@@ -189,8 +163,6 @@ export default function BerichtenAdminPagina() {
       );
     }
   }
-
-  if (!token) return null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>

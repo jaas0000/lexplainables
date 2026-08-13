@@ -13,12 +13,13 @@ from .features.berichten.router import admin_router as berichten_admin_router
 from .features.berichten.router import router as berichten_router
 from .features.feedback.router import admin_router as feedback_admin_router
 from .features.feedback.router import router as feedback_router
+from .features.identiteit_toegang.router import router as auth_router
 
 app = FastAPI(title="wetsanalyse-api (referentie-implementatie)")
 
-# CORS: `frontend` (ADR-0017) roept deze API rechtstreeks vanuit de browser aan. Origins
-# komen uit een env-var; default "*" voor lokale ontwikkeling. Stel CORS_ALLOW_ORIGINS in
-# op de frontend-origin in productie (bijv. "https://app.example.com").
+# CORS: publieke routes zijn toegankelijk vanuit de browser. Admin-routes gaan via de BFF
+# (ADR-0003). Origins komen uit een env-var; default "*" voor lokale ontwikkeling.
+# Stel CORS_ALLOW_ORIGINS in op de frontend-origin in productie (bijv. "https://app.example.com").
 _cors_origins = os.environ.get("CORS_ALLOW_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -38,3 +39,4 @@ app.include_router(feedback_router, prefix="/v1")
 app.include_router(feedback_admin_router, prefix="/v1")
 app.include_router(berichten_router, prefix="/v1")
 app.include_router(berichten_admin_router, prefix="/v1")
+app.include_router(auth_router, prefix="/v1")

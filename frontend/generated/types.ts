@@ -125,6 +125,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify */
+        post: operations["verify_v1_auth_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/berichten": {
         parameters: {
             query?: never;
@@ -399,6 +416,28 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** VerifyRequest */
+        VerifyRequest: {
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Wachtwoord */
+            wachtwoord: string;
+        };
+        /** VerifyResult */
+        VerifyResult: {
+            /**
+             * Gebruikersnaam
+             * @default
+             */
+            gebruikersnaam: string;
+            /** Ok */
+            ok: boolean;
+            /**
+             * Rol
+             * @default
+             */
+            rol: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -414,7 +453,10 @@ export interface operations {
                 offset?: number;
                 limit?: number;
             };
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -443,7 +485,10 @@ export interface operations {
     maak_bericht_v1_admin_berichten_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -476,7 +521,10 @@ export interface operations {
     bewerk_bericht_v1_admin_berichten__bericht_id__put: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
             path: {
                 bericht_id: number;
             };
@@ -511,7 +559,10 @@ export interface operations {
     verwijder_bericht_v1_admin_berichten__bericht_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
             path: {
                 bericht_id: number;
             };
@@ -540,7 +591,10 @@ export interface operations {
     zet_publicatie_v1_admin_berichten__bericht_id__publicatie_patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
             path: {
                 bericht_id: number;
             };
@@ -578,7 +632,10 @@ export interface operations {
                 offset?: number;
                 limit?: number;
             };
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -607,7 +664,10 @@ export interface operations {
     markeer_gezien_v1_admin_feedback_markeer_gezien_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -638,7 +698,10 @@ export interface operations {
     get_ongelezen_aantal_v1_admin_feedback_ongelezen_aantal_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -653,12 +716,24 @@ export interface operations {
                     "application/json": components["schemas"]["OngelezenFeedbackOut"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     verwijder_feedback_v1_admin_feedback__feedback_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
             path: {
                 feedback_id: number;
             };
@@ -672,6 +747,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_v1_auth_verify_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyResult"];
+                };
             };
             /** @description Validation Error */
             422: {
