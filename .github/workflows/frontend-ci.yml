@@ -132,13 +132,13 @@ jobs:
             -H "Content-Type: application/json" \
             "http://localhost:8080/admin/realms/wetsanalyse/users/$USER_ID/reset-password" \
             -d '{"type":"password","value":"beheerder123","temporary":false}'
-          # Required actions wissen (anders: "Account is not fully set up" bij ROPC)
+          # Required actions + firstName/lastName zetten zodat VERIFY_PROFILE niet blokkeert
           curl -sf -X PUT \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
             -H "Content-Type: application/json" \
             "http://localhost:8080/admin/realms/wetsanalyse/users/$USER_ID" \
-            -d '{"requiredActions":[]}'
-          echo "Beheerder-wachtwoord ingesteld en required actions gewist"
+            -d '{"enabled":true,"emailVerified":true,"firstName":"Beheerder","lastName":"Test","requiredActions":[]}'
+          echo "Beheerder-wachtwoord ingesteld en profiel bijgewerkt"
 
       - name: API en frontend parallel opzetten en starten
         run: |

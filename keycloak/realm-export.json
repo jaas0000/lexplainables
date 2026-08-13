@@ -49,6 +49,8 @@
   "users": [
     {
       "username": "beheerder",
+      "firstName": "Beheerder",
+      "lastName": "Test",
       "enabled": true,
       "emailVerified": true,
       "email": "beheerder@example.com",
