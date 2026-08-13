@@ -7,15 +7,25 @@ methodologie, skills en achtergrond staan in
 **Stand van zaken:** topologie en stack-profiel liggen vast (zie hieronder). Gebouwde features:
 - `api/app/features/feedback/` — indienen, admin-lijst, verwijderen, ongelezen-aantal, markeer-gezien
 - `api/app/features/berichten/` — aanmaken, bewerken, publiceren/depubliceren, verwijderen (admin); lezen, ongelezen-status, lees-alles (analist)
-- `api/app/shared/auth.py` — Keycloak OIDC-auth (JWT-verificatie via JWKS, RS256, beheerder-rol)
-- `frontend/` — login (OIDC/PKCE), beheerscherm berichten, auth-guard, uitloggen
-- `keycloak/` — realm-export (wetsanalyse, client lexplainables, realm-rollen beheerder/analist)
+- `api/app/features/identiteit_toegang/` — eigen `gebruikers`-tabel, bcrypt, `POST /v1/auth/verify` achter API_TOKEN
+- `api/app/shared/auth.py` — API_TOKEN-gate + X-User-Id-header (geen Keycloak meer)
+- `frontend/` — login via gebruikersnaam/wachtwoord-formulier (Auth.js v5 Credentials, httpOnly cookie), beheerscherm berichten, BFF-routes, NavigatieHeader, uitloggen
+
+Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in docker-compose of CI.
 
 De overige zes domeinen van `api` en de vijf andere services uit de topologie hieronder staan nog niet.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
-SQLite-db (migratie draait).
+SQLite-db (migratie draait). Seed een dev-gebruiker:
+```bash
+uv run python -c "
+import asyncio
+from app.db import get_engine
+from app.features.identiteit_toegang.store import maak_gebruiker_indien_ontbreekt
+asyncio.run(maak_gebruiker_indien_ontbreekt(get_engine(), 'beheerder', 'beheerder123', 'beheerder'))
+"
+```
 
 ## Structuur (topologie vastgelegd, `api`/feedback gebouwd, rest nog niet)
 
