@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from ...db import get_engine
-from ...shared.auth import huidige_beheerder, huidige_gebruiker
+from ...shared.auth import GebruikerContext, huidige_beheerder, huidige_gebruiker
 from .models import FeedbackCreate, FeedbackRead
 from .store import FeedbackNietGevonden, FeedbackStore, SqlAlchemyFeedbackStore
 
@@ -70,7 +70,7 @@ async def dien_feedback_in(
 @admin_router.delete("/{feedback_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def verwijder_feedback(
     feedback_id: int,
-    _admin_userid: str = Depends(huidige_beheerder),
+    _admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: FeedbackStore = Depends(get_store),
 ) -> None:
     try:
@@ -81,26 +81,26 @@ async def verwijder_feedback(
 
 @admin_router.get("/ongelezen-aantal", response_model=OngelezenFeedbackOut)
 async def get_ongelezen_aantal(
-    admin_userid: str = Depends(huidige_beheerder),
+    admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: FeedbackStore = Depends(get_store),
 ) -> OngelezenFeedbackOut:
-    return OngelezenFeedbackOut(aantal=await store.ongelezen_aantal(admin_userid))
+    return OngelezenFeedbackOut(aantal=await store.ongelezen_aantal(admin_userid.gebruikersnaam))
 
 
 @admin_router.post("/markeer-gezien", status_code=status.HTTP_204_NO_CONTENT)
 async def markeer_gezien(
     body: MarkeerGezienIn = MarkeerGezienIn(),
-    admin_userid: str = Depends(huidige_beheerder),
+    admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: FeedbackStore = Depends(get_store),
 ) -> None:
-    await store.markeer_gezien(admin_userid, body.tot)
+    await store.markeer_gezien(admin_userid.gebruikersnaam, body.tot)
 
 
 @admin_router.get("", response_model=FeedbackPaginaOut)
 async def lijst_feedback(
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    _admin_userid: str = Depends(huidige_beheerder),
+    _admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: FeedbackStore = Depends(get_store),
 ) -> FeedbackPaginaOut:
     items = await store.lijst(offset, limit)

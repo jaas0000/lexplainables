@@ -25,6 +25,8 @@ from app.features.berichten.models import metadata
 from app.features.berichten.router import get_store
 from app.features.berichten.store import SqlAlchemyBerichtenStore
 from app.main import app
+from app.shared.auth import huidige_beheerder
+from conftest import TEST_BEHEERDER
 
 
 @pytest.fixture
@@ -41,8 +43,10 @@ def client(db_pad) -> Iterator[TestClient]:
     async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
     store = SqlAlchemyBerichtenStore(async_engine)
     app.dependency_overrides[get_store] = lambda: store
+    app.dependency_overrides[huidige_beheerder] = lambda: TEST_BEHEERDER
 
     with TestClient(app) as test_client:
         yield test_client
 
     app.dependency_overrides.pop(get_store, None)
+    app.dependency_overrides.pop(huidige_beheerder, None)

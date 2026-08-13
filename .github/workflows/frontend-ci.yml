@@ -82,13 +82,18 @@ jobs:
 
   test-frontend-e2e:
     # ADR-0016 stap 4: deze service bedient een frontend, dus hoort de Playwright-E2E-test
-    # hier te draaien — met de API én de frontend-devserver allebei opgestart in deze job
-    # (frontend-bouwen regel 6b), geen `webServer`-config in playwright.config.ts.
+    # hier te draaien — met de API, Keycloak én de frontend-devserver allebei opgestart in
+    # deze job (frontend-bouwen regel 6b), geen `webServer`-config in playwright.config.ts.
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: "sqlite+aiosqlite:///./ci-e2e.db"
       DATABASE_URL_SYNC: "sqlite:///./ci-e2e.db"
       NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
+      KEYCLOAK_URL: "http://localhost:8080"
+      KEYCLOAK_REALM: "wetsanalyse"
+      NEXT_PUBLIC_KEYCLOAK_URL: "http://localhost:8080"
+      NEXT_PUBLIC_KEYCLOAK_REALM: "wetsanalyse"
+      NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: "lexplainables"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
@@ -98,11 +103,44 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Keycloak opstarten en wachten tot gereed
+        run: |
+          docker run -d --name keycloak \
+            -p 8080:8080 \
+            -e KEYCLOAK_ADMIN=admin \
+            -e KEYCLOAK_ADMIN_PASSWORD=admin \
+            -v "$GITHUB_WORKSPACE/keycloak:/opt/keycloak/data/import" \
+            quay.io/keycloak/keycloak:26.0 \
+            start-dev --import-realm
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/realms/wetsanalyse > /dev/null && echo "Keycloak gereed" && break
+            sleep 3
+          done
+          curl -sf http://localhost:8080/realms/wetsanalyse > /dev/null || { echo "Keycloak niet op tijd gestart"; docker logs keycloak; exit 1; }
+
+          # Zet beheerder-wachtwoord expliciet via admin API (realm-export zet plain-text
+          # credentials niet betrouwbaar in alle Keycloak-versies).
+          ADMIN_TOKEN=$(curl -sf -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=admin&password=admin&grant_type=password&client_id=admin-cli" | \
+            python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+          USER_ID=$(curl -sf -H "Authorization: Bearer $ADMIN_TOKEN" \
+            "http://localhost:8080/admin/realms/wetsanalyse/users?username=beheerder" | \
+            python3 -c "import sys,json; data=json.load(sys.stdin); print(data[0]['id'])")
+          curl -sf -X PUT \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -H "Content-Type: application/json" \
+            "http://localhost:8080/admin/realms/wetsanalyse/users/$USER_ID/reset-password" \
+            -d '{"type":"password","value":"beheerder123","temporary":false}'
+          # Required actions + firstName/lastName zetten zodat VERIFY_PROFILE niet blokkeert
+          curl -sf -X PUT \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -H "Content-Type: application/json" \
+            "http://localhost:8080/admin/realms/wetsanalyse/users/$USER_ID" \
+            -d '{"enabled":true,"emailVerified":true,"firstName":"Beheerder","lastName":"Test","requiredActions":[]}'
+          echo "Beheerder-wachtwoord ingesteld en profiel bijgewerkt"
+
       - name: API en frontend parallel opzetten en starten
-        # Onafhankelijk werk (API-boot, frontend-build) liep hiervoor als twee losse,
-        # sequentiële steps — de totale wachttijd was (API-boot + frontend-build) i.p.v.
-        # max(API-boot, frontend-build). Nu allebei als achtergrondsubshell, met een `wait`
-        # per subshell zodat een falende kant de job nog steeds laat falen (met logs).
         run: |
           (
             cd api
@@ -110,7 +148,7 @@ jobs:
             uv run alembic upgrade head
             uv run uvicorn app.main:app --port 8000 > /tmp/api.log 2>&1 &
             for i in $(seq 1 30); do
-              curl -sf http://localhost:8000/v1/admin/berichten -H "X-Admin-Id: ci-boot-check" > /dev/null && exit 0
+              curl -sf http://localhost:8000/health > /dev/null && exit 0
               sleep 1
             done
             echo "API niet op tijd gestart"; cat /tmp/api.log; exit 1

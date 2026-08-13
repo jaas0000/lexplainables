@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from ...db import get_engine
-from ...shared.auth import huidige_beheerder, huidige_gebruiker
+from ...shared.auth import GebruikerContext, huidige_beheerder, huidige_gebruiker
 from .models import BerichtAdminRead, BerichtCreate, BerichtRead
 from .store import BerichtenStore, BerichtNietGevonden, SqlAlchemyBerichtenStore
 
@@ -93,7 +93,7 @@ async def lijst_alle_berichten(
     # beheeroverzicht, geen doorlopend leesscherm — overgenomen redenering uit het externe
     # project (daar roept een extern tool dit endpoint ongepagineerd aan).
     limit: int = Query(100, ge=1, le=500),
-    _admin_userid: str = Depends(huidige_beheerder),
+    _admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: BerichtenStore = Depends(get_store),
 ) -> AdminBerichtenPaginaOut:
     items, totaal = await asyncio.gather(store.lijst_admin(offset, limit), store.totaal_admin())
@@ -103,17 +103,19 @@ async def lijst_alle_berichten(
 @admin_router.post("", response_model=BerichtAdminRead, status_code=status.HTTP_201_CREATED)
 async def maak_bericht(
     body: BerichtCreate,
-    admin_userid: str = Depends(huidige_beheerder),
+    admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: BerichtenStore = Depends(get_store),
 ) -> BerichtAdminRead:
-    return await store.maak(body.titel, body.inhoud, body.type, body.versie, admin_userid)
+    return await store.maak(
+        body.titel, body.inhoud, body.type, body.versie, admin_userid.gebruikersnaam
+    )
 
 
 @admin_router.put("/{bericht_id}", response_model=BerichtAdminRead)
 async def bewerk_bericht(
     bericht_id: int,
     body: BerichtCreate,
-    _admin_userid: str = Depends(huidige_beheerder),
+    _admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: BerichtenStore = Depends(get_store),
 ) -> BerichtAdminRead:
     try:
@@ -126,7 +128,7 @@ async def bewerk_bericht(
 async def zet_publicatie(
     bericht_id: int,
     body: BerichtPublicatieIn,
-    _admin_userid: str = Depends(huidige_beheerder),
+    _admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: BerichtenStore = Depends(get_store),
 ) -> BerichtAdminRead:
     try:
@@ -138,7 +140,7 @@ async def zet_publicatie(
 @admin_router.delete("/{bericht_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def verwijder_bericht(
     bericht_id: int,
-    _admin_userid: str = Depends(huidige_beheerder),
+    _admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: BerichtenStore = Depends(get_store),
 ) -> None:
     try:

@@ -1,0 +1,68 @@
+{
+  "realm": "wetsanalyse",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "clients": [
+    {
+      "clientId": "lexplainables",
+      "name": "Wetsanalyse beheer",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "redirectUris": [
+        "http://localhost:3001/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3001"
+      ],
+      "protocol": "openid-connect"
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "beheerder",
+        "description": "Beheerdersrol — toegang tot admin-endpoints",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "wetsanalyse"
+      },
+      {
+        "name": "analist",
+        "description": "Analistenrol — leestoegang tot gepubliceerde content",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "wetsanalyse"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "beheerder",
+      "firstName": "Beheerder",
+      "lastName": "Test",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "beheerder@example.com",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "beheerder123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["beheerder"]
+    }
+  ]
+}
