@@ -7,6 +7,7 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .features.berichten.router import admin_router as berichten_admin_router
 from .features.berichten.router import router as berichten_router
@@ -15,13 +16,9 @@ from .features.feedback.router import router as feedback_router
 
 app = FastAPI(title="wetsanalyse-api (referentie-implementatie)")
 
-# CORS: `frontend` (ADR-0017) roept deze API rechtstreeks vanuit de browser aan (geen
-# same-origin BFF-proxyroute), dus zonder dit blokkeert de browser elke fetch vanaf een ander
-# poortnummer. Origins komen uit een env-var (zelfde `os.environ.get`-patroon als
-# db.py's DATABASE_URL), default "*" passend bij de vereenvoudigde auth-stand-in
-# (shared/auth.py) — een echte origin-allowlist zet je via CORS_ALLOW_ORIGINS zonder
-# codewijziging/redeploy, en hoort verplicht te worden zodra het latere, echte auth-domein
-# er is.
+# CORS: `frontend` (ADR-0017) roept deze API rechtstreeks vanuit de browser aan. Origins
+# komen uit een env-var; default "*" voor lokale ontwikkeling. Stel CORS_ALLOW_ORIGINS in
+# op de frontend-origin in productie (bijv. "https://app.example.com").
 _cors_origins = os.environ.get("CORS_ALLOW_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +26,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health", include_in_schema=False)
+async def health() -> JSONResponse:
+    return JSONResponse({"status": "ok"})
+
 
 # Versieprefix zoals werkwijze-ADR-0010: elk contract van deze service onder /v1.
 app.include_router(feedback_router, prefix="/v1")

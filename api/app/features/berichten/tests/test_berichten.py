@@ -8,12 +8,11 @@ from __future__ import annotations
 import sqlite3
 
 GEBRUIKER = {"X-User-Id": "analist-1"}
-BEHEERDER = {"X-Admin-Id": "beheerder-1"}
 
 
 def _maak(client, titel: str = "Nieuwe functie", type: str = "update") -> dict:
     body = {"titel": titel, "inhoud": "Er is iets veranderd.", "type": type}
-    response = client.post("/v1/admin/berichten", json=body, headers=BEHEERDER)
+    response = client.post("/v1/admin/berichten", json=body)
     assert response.status_code == 201
     return response.json()
 
@@ -23,7 +22,6 @@ def _maak_en_publiceer(client, titel: str = "Nieuwe functie") -> dict:
     response = client.patch(
         f"/v1/admin/berichten/{bericht['id']}/publicatie",
         json={"gepubliceerd": True},
-        headers=BEHEERDER,
     )
     assert response.status_code == 200
     return response.json()
@@ -39,7 +37,7 @@ def test_aanmaken_is_altijd_concept(client):
     assert lijst["totaal"] == 0
 
     # De beheerder ziet het concept wel terug in de admin-lijst.
-    admin_lijst = client.get("/v1/admin/berichten", headers=BEHEERDER).json()
+    admin_lijst = client.get("/v1/admin/berichten", headers={}).json()
     assert admin_lijst["totaal"] == 1
     assert admin_lijst["items"][0]["id"] == bericht["id"]
 
@@ -48,7 +46,7 @@ def test_aanmaken_met_ongeldig_type_geeft_422(client):
     response = client.post(
         "/v1/admin/berichten",
         json={"titel": "X", "inhoud": "Y", "type": "onbekend"},
-        headers=BEHEERDER,
+        headers={},
     )
     assert response.status_code == 422
 
@@ -59,7 +57,7 @@ def test_bewerken(client):
     response = client.put(
         f"/v1/admin/berichten/{bericht['id']}",
         json={"titel": "Nieuwe titel", "inhoud": "Bijgewerkte inhoud.", "type": "info"},
-        headers=BEHEERDER,
+        headers={},
     )
     assert response.status_code == 200
     bijgewerkt = response.json()
@@ -71,7 +69,7 @@ def test_bewerken_onbekend_id_geeft_404(client):
     response = client.put(
         "/v1/admin/berichten/999",
         json={"titel": "X", "inhoud": "Y", "type": "info"},
-        headers=BEHEERDER,
+        headers={},
     )
     assert response.status_code == 404
 
@@ -82,7 +80,7 @@ def test_publiceren_en_depubliceren(client):
     gepubliceerd = client.patch(
         f"/v1/admin/berichten/{bericht['id']}/publicatie",
         json={"gepubliceerd": True},
-        headers=BEHEERDER,
+        headers={},
     ).json()
     assert gepubliceerd["gepubliceerd"] is True
     assert gepubliceerd["gepubliceerd_op"] is not None
@@ -94,7 +92,7 @@ def test_publiceren_en_depubliceren(client):
     gedepubliceerd = client.patch(
         f"/v1/admin/berichten/{bericht['id']}/publicatie",
         json={"gepubliceerd": False},
-        headers=BEHEERDER,
+        headers={},
     ).json()
     assert gedepubliceerd["gepubliceerd"] is False
     assert gedepubliceerd["gepubliceerd_op"] is None
@@ -106,13 +104,13 @@ def test_publiceren_en_depubliceren(client):
 
 def test_publicatie_onbekend_id_geeft_404(client):
     response = client.patch(
-        "/v1/admin/berichten/999/publicatie", json={"gepubliceerd": True}, headers=BEHEERDER
+        "/v1/admin/berichten/999/publicatie", json={"gepubliceerd": True}, headers={}
     )
     assert response.status_code == 404
 
 
 def test_verwijderen_onbekend_id_geeft_404(client):
-    response = client.delete("/v1/admin/berichten/999", headers=BEHEERDER)
+    response = client.delete("/v1/admin/berichten/999", headers={})
     assert response.status_code == 404
 
 
@@ -192,7 +190,7 @@ def test_verwijderen_cascadeert_leesbewijzen(client, db_pad):
     conn.close()
     assert voor == 1
 
-    response = client.delete(f"/v1/admin/berichten/{bericht['id']}", headers=BEHEERDER)
+    response = client.delete(f"/v1/admin/berichten/{bericht['id']}", headers={})
     assert response.status_code == 204
 
     conn = sqlite3.connect(db_pad)
@@ -202,5 +200,5 @@ def test_verwijderen_cascadeert_leesbewijzen(client, db_pad):
     conn.close()
     assert na == 0
 
-    admin_lijst = client.get("/v1/admin/berichten", headers=BEHEERDER).json()
+    admin_lijst = client.get("/v1/admin/berichten", headers={}).json()
     assert admin_lijst["totaal"] == 0
