@@ -12,13 +12,14 @@ invullen) verdwijnt.
 
 ## Aanpak
 
-Keycloak als identity provider (OIDC, Authorization Code + PKCE):
+Keycloak als identity provider (OIDC, Authorization Code + PKCE — geen next-auth):
 
 - Keycloak-container in de lokale stack (poort 8080), realm `wetsanalyse` importeerbaar
   via `keycloak/realm-export.json`
-- Frontend: `next-auth@5` met Keycloak-provider; `/login` toont een kaart met een
-  "Inloggen"-knop die de OIDC-flow start (redirect naar Keycloak); na succesvolle auth
-  terug naar `/`
+- Frontend: handmatige PKCE-implementatie via SubtleCrypto (`lib/auth.ts`); `/login` start
+  de flow (redirect naar Keycloak), `/auth/callback` wisselt de code in voor een
+  access-token dat in localStorage staat; `app/layout.tsx` bewaakt routes en toont
+  gebruikersnaam + uitlogknop
 - Backend: verifieer Keycloak-JWT via JWKS-endpoint, lees `preferred_username` +
   `realm_access.roles` uit het token; geen eigen gebruikerstabel nodig
 - `shared/auth.py` vervangt de header-stand-ins door JWT-verificatie; routercode
@@ -59,10 +60,10 @@ class GebruikerContext(BaseModel):
 
 | Var | Voorbeeld | Verplicht |
 |---|---|---|
-| `NEXTAUTH_URL` | `http://localhost:3001` | ja |
-| `NEXTAUTH_SECRET` | (willekeurige string, min 32 chars) | ja |
-| `KEYCLOAK_CLIENT_ID` | `lexplainables` | ja |
-| `KEYCLOAK_ISSUER` | `http://localhost:8080/realms/wetsanalyse` | ja |
+| `NEXT_PUBLIC_KEYCLOAK_URL` | `http://localhost:8080` | ja |
+| `NEXT_PUBLIC_KEYCLOAK_REALM` | `wetsanalyse` | ja |
+| `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | `lexplainables` | ja |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` | ja |
 
 ## Acceptatiecriteria
 
@@ -100,8 +101,8 @@ class GebruikerContext(BaseModel):
   - Bij een `401`-respons: sessie wissen en doorsturen naar `/login`.
 - [ ] Bestaande Playwright-E2E-tests aangepast: de `beforeEach`-hook logt in via de
       Keycloak-loginpagina (directe POST op het Keycloak-token-endpoint, niet via de UI) met
-      `beheerder`/`beheerder123`; het verkregen token wordt als cookie of header
-      doorgegeven aan de pagina. Data-isolatie via unieke titels.
+      `beheerder`/`beheerder123`; het verkregen token wordt via `page.addInitScript`
+      in localStorage gezet vóór de eerste navigatie. Data-isolatie via unieke titels.
 
 ## Edge cases
 
@@ -112,8 +113,8 @@ class GebruikerContext(BaseModel):
   elke beveiligde aanroep geeft `503 Service Unavailable` zolang de JWKS-cache leeg is.
 - `aangemaakt_door` in de `berichten`-tabel: bestaande rijen met de oude vrije string-waarden
   blijven ongewijzigd (geen datamigrate, alleen schemawijzigingen zijn buiten scope).
-- Dubbel inloggen (meerdere tabs): `next-auth` beheert de sessie — beide tabs zijn ingelogd,
-  het token van de laatste refresh geldt.
+- Dubbel inloggen (meerdere tabs): localStorage wordt gedeeld; beide tabs lezen hetzelfde
+  token. Bij uitloggen in één tab worden beide tabs bij de volgende API-call omgeleid.
 
 ## Auth / rollen
 
