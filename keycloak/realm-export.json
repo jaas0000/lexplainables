@@ -52,6 +52,7 @@
       "enabled": true,
       "emailVerified": true,
       "email": "beheerder@example.com",
+      "requiredActions": [],
       "credentials": [
         {
           "type": "password",
