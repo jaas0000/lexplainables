@@ -4,6 +4,13 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #5 — auth-eigen-gebruikers (story 006)
+
+- `docs/architectuur/c4-model.md` bijwerken: L1/L2 vermelden Keycloak nog als externe service; L3 toont de oude PKCE-componenten en mist `identiteit_toegang` en de BFF-routes.
+- BFF-routes controleren `session.user.rol` niet — momenteel geen `analist`-gebruikers, maar de architectuur (story 006) zegt dat de BFF de rolautorisatie draagt. Toevoegen zodra meerdere rollen in gebruik komen.
+
+---
+
 ## PR #3 — huisstijl-frontend (story 004)
 
 - **MEDIUM** — `.melding-fout` bypast het token-systeem: `color: rgb(213 43 30)` in

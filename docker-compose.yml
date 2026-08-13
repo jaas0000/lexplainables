@@ -1,17 +1,1 @@
-services:
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.0
-    command: start-dev --import-realm
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./keycloak:/opt/keycloak/data/import
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/realms/wetsanalyse || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
+services: {}

@@ -1,17 +1,13 @@
-"use client";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { auth } from "@/auth";
+import { LoginFormulier } from "@/components/auth/LoginFormulier";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { startLogin, getToken } from "@/lib/auth";
+export const metadata = { title: "Inloggen · Wetsanalyse" };
 
-export default function LoginPagina() {
-  const router = useRouter();
-
-  useEffect(() => {
-    if (getToken()) {
-      router.replace("/");
-    }
-  }, [router]);
+export default async function LoginPagina() {
+  const session = await auth();
+  if (session?.user) redirect("/");
 
   return (
     <div
@@ -29,15 +25,9 @@ export default function LoginPagina() {
         <h2 style={{ marginBottom: "1.25rem", textAlign: "center" }}>
           Inloggen
         </h2>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            startLogin().catch(console.error);
-          }}
-          style={{ width: "100%" }}
-        >
-          Inloggen
-        </button>
+        <Suspense>
+          <LoginFormulier />
+        </Suspense>
       </div>
     </div>
   );
