@@ -1,0 +1,58 @@
+name: api-ci
+
+# Eén workflow per service (werkwijze-ADR-0016) — triggert alleen op wijzigingen binnen api/,
+# zodat een toekomstige service (frontend/, tools/*) zijn eigen, onafhankelijke CI krijgt in
+# plaats van deze workflow te delen.
+on:
+  pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+  push:
+    branches: [master, main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Tests
+        working-directory: api
+        run: |
+          uv sync
+          uv run pytest -q
+
+  check-python-style:
+    # Zie werkwijze-ADR-0003. --no-project + --with ruff installeert alleen ruff (geverifieerd:
+    # 1 pakket i.p.v. de volledige projectomgeving) — zonder --no-project synct `uv run` eerst
+    # gewoon de hele projectomgeving, --with voegt dan alleen iets toe aan die sync.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: ruff
+        working-directory: api
+        run: |
+          uv run --no-project --with ruff ruff check .
+          uv run --no-project --with ruff ruff format --check .
+
+  check-migraties:
+    # Alembic is verplicht zodra een service een productiedatabase heeft (werkwijze-ADR-0005).
+    # Draai de volledige historie heen én terug tegen een schone SQLite-db, zodat een migratie
+    # die niet cleanroom toepasbaar is hier faalt, niet pas bij een echte deploy.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: alembic upgrade + downgrade
+        working-directory: api
+        env:
+          DATABASE_URL: "sqlite+aiosqlite:///./ci-migratie-check.db"
+        run: |
+          uv sync
+          uv run alembic upgrade head
+          uv run alembic downgrade base
