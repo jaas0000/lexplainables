@@ -1,6 +1,37 @@
+import Link from "next/link";
+
 export default function StartPagina() {
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <nav
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+          padding: "1rem 1.5rem",
+          background: "rgb(var(--surface))",
+          borderRadius: "6px",
+          border: "1px solid rgb(var(--line))",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.75rem",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            color: "rgb(var(--faint))",
+            alignSelf: "center",
+            marginRight: "0.5rem",
+          }}
+        >
+          Mockups
+        </span>
+        <Link href="/mockup/feedback" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+          Feedback (story 009)
+        </Link>
+      </nav>
+
       <div
         style={{
           background: "rgb(var(--lint))",
@@ -44,3 +75,4 @@ export default function StartPagina() {
     </div>
   );
 }
+
