@@ -82,6 +82,26 @@ test("maak_bericht met ongeldig type gooit Zod-validatiefout vóór API-aanroep"
   );
 });
 
+test("list_berichten_admin geeft items-array terug uit gepagineerde respons", async () => {
+  const tool = vindTool("list_berichten_admin");
+  const mockItems = [
+    { id: 1, titel: "Bericht A", type: "info", versie: null, gepubliceerd: true, created: "2026-08-14T10:00:00Z" },
+    { id: 2, titel: "Bericht B", type: "update", versie: "v1.0", gepubliceerd: false, created: "2026-08-13T10:00:00Z" },
+  ];
+
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = mockFetch({ items: mockItems, totaal: 2 });
+  try {
+    const result = await tool.run({});
+    const resultStr = JSON.stringify(result);
+    assert.ok(resultStr.includes("Bericht A"), "Resultaat moet items bevatten");
+    assert.ok(resultStr.includes("Bericht B"), "Resultaat moet alle items bevatten");
+    assert.ok(!resultStr.includes('"totaal"'), "Resultaat mag geen wrapper-object met 'totaal' bevatten");
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+
 test("publiceer_bericht met onbekend id geeft leesbare 404-foutmelding", async () => {
   const tool = vindTool("publiceer_bericht");
 
