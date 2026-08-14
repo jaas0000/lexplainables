@@ -1,0 +1,25 @@
+{
+  "name": "lexplainables-admin-mcp",
+  "version": "0.1.0",
+  "description": "MCP-server die de admin-API van lexplainables (/v1/admin/berichten*) als agent-tools ontsluit",
+  "type": "module",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.3"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "node --import tsx/esm --test src/index.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.11",
+    "typescript": "^7.0.2"
+  }
+}
