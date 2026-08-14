@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import type { components } from "@/generated/types";
 import { TypeBadge } from "@/components/berichten/TypeBadge";
 import { SectieHeader, LeegePlaceholder } from "@/components/beheer/SectieHeader";
+import { beheerFetch } from "@/lib/beheer-fetch";
 
 type BerichtAdminRead = components["schemas"]["BerichtAdminRead"];
 type BerichtCreate = components["schemas"]["BerichtCreate"];
@@ -11,20 +13,6 @@ type BerichtType = BerichtCreate["type"];
 
 const BERICHT_TYPES: BerichtType[] = ["info", "update", "waarschuwing", "kritiek"];
 const LEEG = { titel: "", inhoud: "", type: "info" as BerichtType, versie: null as string | null };
-
-async function beheerFetch(pad: string, init: RequestInit = {}) {
-  const res = await fetch(pad, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init.headers },
-  });
-  if (res.status === 401) { window.location.href = "/login"; throw new Error("Niet geautoriseerd."); }
-  if (!res.ok) {
-    const detail = await res.json().then((d: { detail?: string }) => d.detail).catch(() => null);
-    throw new Error(detail ?? `${res.status} ${res.statusText}`);
-  }
-  if (res.status === 204) return undefined;
-  return res.json();
-}
 
 type EditState = false | null | number;
 
@@ -37,6 +25,7 @@ export default function BeheerPagina() {
   const [editState, setEditState] = useState<EditState>(false);
   const [formulier, setFormulier] = useState(LEEG);
   const [opgeslagen, setOpgeslagen] = useState(false);
+  const [feedbackOngelezen, setFeedbackOngelezen] = useState<number | null>(null);
 
   const laadBerichten = useCallback(async () => {
     setLaden(true);
@@ -49,6 +38,15 @@ export default function BeheerPagina() {
     } finally {
       setLaden(false);
     }
+  }, []);
+
+  useEffect(() => {
+    beheerFetch("/api/admin/feedback/ongelezen-aantal")
+      .then((data: unknown) => {
+        const d = data as { aantal: number };
+        setFeedbackOngelezen(d.aantal);
+      })
+      .catch(() => {/* niet-kritiek */});
   }, []);
 
   function toggleUitgeklapt(id: number) {
@@ -222,8 +220,45 @@ export default function BeheerPagina() {
 
       {/* ---- Sectie: Gebruikersfeedback ---- */}
       <section>
-        <SectieHeader titel="Gebruikersfeedback" subtitel="nog niet gebouwd" />
-        <LeegePlaceholder tekst="Ingezonden feedback van analisten verschijnt hier." />
+        <SectieHeader titel="Gebruikersfeedback" />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "1rem",
+            background: "rgb(var(--surface))",
+            border: "1px solid rgb(var(--line))",
+            borderRadius: "6px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+            <span style={{ fontSize: "0.875rem", color: "rgb(var(--ink))" }}>
+              Ingezonden feedbackitems
+            </span>
+            {feedbackOngelezen !== null && feedbackOngelezen > 0 && (
+              <span
+                style={{
+                  fontSize: "0.6875rem",
+                  fontWeight: 700,
+                  padding: "0.125rem 0.4rem",
+                  borderRadius: "99px",
+                  background: "rgb(var(--fout))",
+                  color: "white",
+                }}
+              >
+                {feedbackOngelezen} ongelezen
+              </span>
+            )}
+          </div>
+          <Link
+            href="/beheer/feedback"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.8125rem" }}
+          >
+            Bekijk feedback →
+          </Link>
+        </div>
       </section>
 
       {/* ---- Sectie: Instellingen ---- */}

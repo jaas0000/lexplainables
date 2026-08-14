@@ -6,6 +6,7 @@ import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { NavigatieHeader } from "@/components/NavigatieHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { FeedbackKnop } from "@/components/feedback/FeedbackKnop";
 import "./globals.css";
 
 const firaSans = Fira_Sans({
@@ -80,6 +81,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </div>
           </header>
           <main className="main">{children}</main>
+          {session && <FeedbackKnop />}
           <SiteFooter />
         </SessionProvider>
       </body>
