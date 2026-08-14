@@ -25,8 +25,6 @@ export function LoginFormulier() {
         setFout("Onjuiste gebruikersnaam of wachtwoord.");
         return;
       }
-      // Harde navigatie zodat de middleware-sessiecheck opnieuw loopt.
-      // Alleen relatieve URLs toestaan om open redirect te voorkomen.
       const callback = params.get("callbackUrl");
       window.location.href = callback?.startsWith("/") ? callback : "/";
     } finally {
@@ -35,17 +33,15 @@ export function LoginFormulier() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       {fout && (
-        <p role="alert" style={{ color: "rgb(213 43 30)", margin: 0 }}>
+        <p role="alert" className="melding melding-fout" style={{ margin: 0 }}>
           {fout}
         </p>
       )}
+
       <div>
-        <label
-          htmlFor="gebruikersnaam"
-          style={{ display: "block", marginBottom: "0.25rem" }}
-        >
+        <label className="field-label" htmlFor="gebruikersnaam">
           Gebruikersnaam
         </label>
         <input
@@ -57,14 +53,11 @@ export function LoginFormulier() {
           value={gebruikersnaam}
           onChange={(e) => setGebruikersnaam(e.target.value)}
           className="field-input"
-          style={{ width: "100%" }}
         />
       </div>
+
       <div>
-        <label
-          htmlFor="wachtwoord"
-          style={{ display: "block", marginBottom: "0.25rem" }}
-        >
+        <label className="field-label" htmlFor="wachtwoord">
           Wachtwoord
         </label>
         <input
@@ -75,15 +68,10 @@ export function LoginFormulier() {
           value={wachtwoord}
           onChange={(e) => setWachtwoord(e.target.value)}
           className="field-input"
-          style={{ width: "100%" }}
         />
       </div>
-      <button
-        type="submit"
-        disabled={bezig}
-        className="btn btn-primary"
-        style={{ width: "100%" }}
-      >
+
+      <button type="submit" disabled={bezig} className="btn btn-primary" style={{ width: "100%" }}>
         {bezig ? "Bezig met inloggen…" : "Inloggen"}
       </button>
     </form>

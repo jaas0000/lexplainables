@@ -5,7 +5,15 @@ import { test, expect } from "@playwright/test";
 // Elke test gebruikt een eigen, unieke titel, zodat tests onafhankelijk van elkaar (en van
 // eerder achtergebleven testdata) blijven werken.
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, context }) => {
+  await context.addCookies([
+    {
+      name: "disclaimer_geaccepteerd",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
   await page.goto("/login");
   await page.getByLabel("Gebruikersnaam").fill("beheerder");
   await page.getByLabel("Wachtwoord").fill("beheerder123");
