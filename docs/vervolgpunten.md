@@ -6,7 +6,8 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ## Werkwijze
 
-- **Mockup-stap in `frontend-bouwen` verbeteren**: de mockup-fase begint nu met een lege lei, terwijl het wetsanalyse-designsysteem (logobalk, navigatiebalk, kleurpalet, CSS-klassen) al vastligt. De stap zou die bestaande basis als startpunt moeten nemen zodat mockups meteen in de juiste huisstijl landen en er geen losse herstelslag nodig is.
+- **"Ingelogd blijven"-checkbox functioneel maken**: de checkbox staat visueel op de loginpagina maar doet nog niets. Zodra de sessieduur-logica gebouwd wordt (story nog aan te maken), hier de `remember`-vlag doorgeven aan de Auth.js Credentials-provider (zoals wetsanalyse dat doet met `rememberMe` in de JWT-callback).
+- **Mockup-stap in `frontend-bouwen` verbeterd en vastgelegd** ✓: dev-server als canvas, `/mockup/<feature>/`-pad, interactieve nepdata-component, badge, promotie naar definitief pad. Vastgelegd in `werkwijze-v2-multi-service/werkwijze/.claude/skills/frontend-bouwen/SKILL.md` (regels 2-4 + §Mockup-structuur).
 
 ---
 
@@ -21,9 +22,21 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 - **MEDIUM** — `.melding-fout` bypast het token-systeem: `color: rgb(213 43 30)` in
   `frontend/app/globals.css:234` is hardcoded. Fix: `color: rgb(var(--fout))`.
-- **MEDIUM** — Geen `<h1>` op de pagina: de originele `<h1>Berichten beheren</h1>` is
-  verwijderd; heading-hiërarchie begint nu bij `<h2>`. Accessibility-regressie voor
-  screen readers. Fix: visueel verborgen `<h1>` of paginatitel boven het formulier.
+- **MEDIUM** — Geen `<h1>` op de pagina (opgelost in `app/beheer/page.tsx` en `app/berichten/page.tsx`; nog open voor de mockup-pagina's).
 - **LAAG** — `border-color` in de universele `*`-reset (`globals.css:26`) preset de
   randkleur op alle elementen; ongebruikelijk en kan onverwachte randen geven op
   elementen zonder CSS-klasse.
+
+---
+
+## PR #6 — admin-mcp (story 007)
+
+- **Simplify-definitie nalopen**: de `n.v.t.`-uitzondering in `feature-bouwen` regel 9 is bedoeld voor "geen productiecode" (puur docs/CI), niet voor "geen bestaande code". Bij de volgende story die `tools/` raakt, `/simplify` ook op nieuwe TypeScript-productiecode draaien.
+
+---
+
+## Frontend — berichten fase 2
+
+- **BFF-rolautorisatie**: `app/api/admin/berichten/` controleert `session.user.rol` niet — momenteel alleen beheerders actief, maar de BFF hoort rolautorisatie te dragen zodra analisten bestaan.
+- **Gebruikers-sectie op `/beheer`**: placeholder; geen API nog. Story aanmaken zodra gebruikersbeheer gebouwd wordt.
+- **E2E-tests voor `/beheer` en `/berichten`**: ontbreken nog (`frontend-bouwen` regel 6). Aanmaken vóór de feature in productie gaat.
