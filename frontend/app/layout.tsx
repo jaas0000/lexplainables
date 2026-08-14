@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Link from "next/link";
 import { Fira_Sans } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
@@ -11,18 +13,45 @@ const firaSans = Fira_Sans({
   variable: "--font-sans",
 });
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
+export const metadata = {
+  title: "Wetsanalyse | Belastingdienst",
+  description: "Beheerscherm voor wetsanalyse",
+};
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
 
   return (
     <html lang="nl" className={firaSans.variable}>
-      <head>
-        <title>Wetsanalyse — beheer</title>
-        <meta name="description" content="Beheerscherm voor wetsanalyse" />
-      </head>
-      <body style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}>
+      <body>
         <SessionProvider session={session}>
-          <NavigatieHeader />
+          <header>
+            {/* Logobalk — wit, logo gecentreerd (Rijkshuisstijl) */}
+            <div className="logobalk">
+              <div className="logobalk-inner">
+                <Link href="/" aria-label="Belastingdienst, naar startpagina" className="logobalk-link">
+                  <Image
+                    src="/belastingdienst-logo.svg"
+                    alt="Belastingdienst"
+                    width={275}
+                    height={125}
+                    priority
+                    unoptimized
+                    className="logobalk-logo"
+                  />
+                </Link>
+              </div>
+            </div>
+            {/* Navigatiebalk — wit, applicatienaam + nav */}
+            <div className="navbalk">
+              <div className="navbalk-inner">
+                <Link href="/" className="navbalk-titel">
+                  Wetsanalyse
+                </Link>
+                <NavigatieHeader />
+              </div>
+            </div>
+          </header>
           <main className="main">{children}</main>
         </SessionProvider>
       </body>

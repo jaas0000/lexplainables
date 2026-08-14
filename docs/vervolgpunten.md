@@ -4,6 +4,12 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## Werkwijze
+
+- **Mockup-stap in `frontend-bouwen` verbeteren**: de mockup-fase begint nu met een lege lei, terwijl het wetsanalyse-designsysteem (logobalk, navigatiebalk, kleurpalet, CSS-klassen) al vastligt. De stap zou die bestaande basis als startpunt moeten nemen zodat mockups meteen in de juiste huisstijl landen en er geen losse herstelslag nodig is.
+
+---
+
 ## PR #5 — auth-eigen-gebruikers (story 006)
 
 - `docs/architectuur/c4-model.md` bijwerken: L1/L2 vermelden Keycloak nog als externe service; L3 toont de oude PKCE-componenten en mist `identiteit_toegang` en de BFF-routes.

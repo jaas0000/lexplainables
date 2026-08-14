@@ -23,7 +23,17 @@
 }
 
 html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   font-size: 100%;
+}
+
+@media (max-width: 1023px) {
+  html { font-size: 90%; }
+}
+
+@media (max-width: 639px) {
+  html { font-size: 80%; }
 }
 
 html,
@@ -37,9 +47,8 @@ body {
   display: flex;
   flex-direction: column;
   color: rgb(var(--ink));
-  background: rgb(var(--surface));
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  background: rgb(var(--paper));
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 h1,
@@ -47,6 +56,7 @@ h2,
 h3 {
   color: rgb(var(--lint));
   letter-spacing: -0.01em;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 a {
@@ -54,15 +64,43 @@ a {
   text-decoration: none;
 }
 
-/* ---- Layout ---- */
+/* ---- Logobalk ---- */
 
-.header {
-  background: rgb(var(--lint));
-  color: rgb(var(--paper));
-  border-bottom: none;
+.logobalk {
+  background: rgb(var(--paper));
+  border-bottom: 1px solid rgb(var(--line));
 }
 
-.header-inner {
+.logobalk-inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.logobalk-link {
+  position: relative;
+  left: 50%;
+  display: block;
+  width: fit-content;
+  max-width: calc(50% + 1.5625rem);
+  transform: translateX(-1.5625rem);
+}
+
+.logobalk-logo {
+  display: block;
+  height: auto;
+  width: 17.1875rem;
+  max-width: 100%;
+}
+
+/* ---- Navigatiebalk ---- */
+
+.navbalk {
+  background: rgb(var(--paper));
+  border-bottom: 1px solid rgb(var(--line));
+}
+
+.navbalk-inner {
   max-width: 72rem;
   margin: 0 auto;
   padding: 0 1.5rem;
@@ -70,14 +108,15 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  height: 3.5rem;
 }
 
-.logo {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: rgb(var(--paper));
-  letter-spacing: -0.01em;
+.navbalk-titel {
+  flex-shrink: 0;
+  padding: 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(var(--lint));
+  text-decoration: none;
 }
 
 .nav {
@@ -89,41 +128,59 @@ a {
 .nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 0.375rem 0.875rem;
-  border-radius: 5px;
+  padding: 0.875rem 0.875rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: rgb(var(--paper));
+  color: rgb(var(--muted));
   background: transparent;
   border: none;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
 }
 
 .nav-link:hover {
-  background: rgba(255 255 255 / 0.12);
+  color: rgb(var(--lint));
 }
 
 .nav-link--active {
-  background: rgba(255 255 255 / 0.18);
+  color: rgb(var(--lint));
+  border-bottom-color: rgb(var(--lint));
 }
 
 .nav-link--placeholder {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .nav-link--placeholder:hover {
-  background: transparent;
+  color: rgb(var(--muted));
+  border-bottom-color: transparent;
 }
+
+.nav-gebruiker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 1rem;
+  padding-left: 1rem;
+  border-left: 1px solid rgb(var(--line));
+}
+
+.nav-gebruiker-naam {
+  font-size: 0.875rem;
+  color: rgb(var(--muted));
+}
+
+/* ---- Main ---- */
 
 .main {
   flex: 1;
-  max-width: 60rem;
+  max-width: 72rem;
   width: 100%;
-  margin: 2rem auto;
-  padding: 0 1.5rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
 }
 
 /* ---- Knoppen ---- */
@@ -139,6 +196,7 @@ a {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+  font-family: inherit;
   transition:
     background 0.15s,
     color 0.15s,
@@ -231,7 +289,7 @@ a {
 .melding-fout {
   background: rgb(var(--fout) / 0.07);
   border: 1px solid rgb(var(--fout) / 0.3);
-  color: rgb(213 43 30);
+  color: rgb(var(--fout));
 }
 
 /* ---- Kaart/sectie ---- */
