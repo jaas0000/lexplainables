@@ -9,11 +9,17 @@ methodologie, skills en achtergrond staan in
 - `api/app/features/berichten/` — aanmaken, bewerken, publiceren/depubliceren, verwijderen (admin); lezen, ongelezen-status, lees-alles (analist)
 - `api/app/features/identiteit_toegang/` — eigen `gebruikers`-tabel, bcrypt, `POST /v1/auth/verify` achter API_TOKEN
 - `api/app/shared/auth.py` — API_TOKEN-gate + X-User-Id-header (geen Keycloak meer)
-- `frontend/` — login via gebruikersnaam/wachtwoord-formulier (Auth.js v5 Credentials, httpOnly cookie), beheerscherm berichten, BFF-routes, NavigatieHeader, uitloggen
+- `frontend/` — login (Auth.js v5 Credentials, httpOnly cookie); navigatie (logobalk, nav met Beheer-tab + bel-icoon popover); pagina's:
+  - `app/page.tsx` — startpagina (banner)
+  - `app/beheer/page.tsx` — beheer (berichten CRUD via BFF; gebruikers/feedback/instellingen placeholder)
+  - `app/berichten/page.tsx` — berichten lees-weergave voor analisten (gepubliceerde berichten + lees-alles)
+  - `app/mockup/` — interactieve mockups met nepdata (fase 1 `frontend-bouwen`); staan los van de echte routes
+  - BFF-routes: `app/api/admin/berichten/`, `app/api/berichten/` (inclusief ongelezen-aantal en lees-alles)
+- `tools/wetsanalyse-admin-mcp/` — Admin-MCP (PR #6, story 007): 4 tools (`list_berichten_admin`, `maak_bericht`, `update_bericht`, `publiceer_bericht`); registreerbaar in `.mcp.json`
 
 Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in docker-compose of CI.
 
-De overige zes domeinen van `api` en de vijf andere services uit de topologie hieronder staan nog niet.
+De overige zes domeinen van `api` en de vier andere services uit de topologie hieronder staan nog niet (`tools/wetsanalyse-admin-mcp/` is gebouwd, PR #6).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -27,7 +33,7 @@ asyncio.run(maak_gebruiker_indien_ontbreekt(get_engine(), 'beheerder', 'beheerde
 "
 ```
 
-## Structuur (topologie vastgelegd, `api`/feedback gebouwd, rest nog niet)
+## Structuur (topologie vastgelegd; gebouwd: `api`, `frontend`, `tools/wetsanalyse-admin-mcp`)
 
 Zes services, zie [`docs/architectuur/adr/0001-multi-service-topologie.md`](docs/architectuur/adr/0001-multi-service-topologie.md)
 voor de volledige afweging:
@@ -68,6 +74,7 @@ dezelfde workspace toevallig een skill met dezelfde naam heeft.
 
 De overige zes domeinen van `api` (analyse/jobs, LLM-configuratie, wetcatalogus, runtime-config,
 annotatie, orkestratie) als evenzoveel feature-mappen herbouwen — dat is nog steeds de grootste
-stap, zie het topologie-ADR §Consequenties — daarna de vijf andere services opzetten, het
-CI/CD-sjabloon invullen, en cross-service-contracten instantiëren zodra er meer dan één service
-is om te verbinden.
+stap, zie het topologie-ADR §Consequenties — daarna de vier resterende services opzetten
+(`frontend-chat`, `tools/wettenbank-mcp`, `tools/graph-qa`; `tools/wetsanalyse-admin-mcp` is
+klaar), het CI/CD-sjabloon invullen, en cross-service-contracten instantiëren zodra er meer dan
+één service is om te verbinden.
