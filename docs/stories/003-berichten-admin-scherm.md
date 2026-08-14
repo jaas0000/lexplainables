@@ -12,13 +12,13 @@ Als beheerder wil ik via een webscherm berichten kunnen aanmaken, bewerken, publ
 
 ## Acceptatiecriteria
 
-- [ ] De beheerder vult een beheerder-id in (auth-stand-in, opgeslagen in localStorage, meegestuurd als `X-Admin-Id`-header); zonder id worden geen berichten geladen.
-- [ ] Een overzichtstabel toont alle berichten (ook concepten) met titel, type, status en aangemaakt-door.
-- [ ] Een beheerder kan een nieuw bericht aanmaken via een formulier (titel, inhoud, type, versie); het bericht verschijnt direct in de tabel zonder page-reload.
-- [ ] Een beheerder kan een bestaand bericht bewerken; de tabel toont de bijgewerkte waarden direct na opslaan.
-- [ ] Een beheerder kan een bericht publiceren of depubliceren; de statuskolom in de tabel past zich direct aan.
-- [ ] Een beheerder kan een bericht verwijderen; de rij verdwijnt direct uit de tabel.
-- [ ] Bij een foutrespons van de API (bv. 404 bij verwijderen van een al verwijderd bericht) toont de pagina een zichtbare foutmelding (`role="alert"`), zonder stil te falen.
+- [x] De beheerder vult een beheerder-id in (auth-stand-in, opgeslagen in localStorage, meegestuurd als `X-Admin-Id`-header); zonder id worden geen berichten geladen.
+- [x] Een overzichtstabel toont alle berichten (ook concepten) met titel, type, status en aangemaakt-door.
+- [x] Een beheerder kan een nieuw bericht aanmaken via een formulier (titel, inhoud, type, versie); het bericht verschijnt direct in de tabel zonder page-reload.
+- [x] Een beheerder kan een bestaand bericht bewerken; de tabel toont de bijgewerkte waarden direct na opslaan.
+- [x] Een beheerder kan een bericht publiceren of depubliceren; de statuskolom in de tabel past zich direct aan.
+- [x] Een beheerder kan een bericht verwijderen; de rij verdwijnt direct uit de tabel.
+- [x] Bij een foutrespons van de API (bv. 404 bij verwijderen van een al verwijderd bericht) toont de pagina een zichtbare foutmelding (`role="alert"`), zonder stil te falen.
 
 ## Schemabeslissing
 
@@ -43,3 +43,5 @@ Geen `shared/`-modules voor de frontend (eerste scherm — niets te delen nog).
 ## Bijhouden
 
 Update deze story als de auth-stand-in vervangen wordt door een echte sessie/loginflow, of als het scherm uitgebreid wordt met analist-functionaliteit (gelezen/ongelezen).
+
+**Gebouwd:** ja (gemerged)

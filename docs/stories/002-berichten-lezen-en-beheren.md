@@ -19,20 +19,20 @@ hoeven na te lopen.
 
 ## Acceptatiecriteria
 
-- [ ] Een beheerder kan een bericht aanmaken (`titel`, `inhoud`, `type`, optioneel `versie`) —
+- [x] Een beheerder kan een bericht aanmaken (`titel`, `inhoud`, `type`, optioneel `versie`) —
       het komt altijd als concept (`gepubliceerd=False`) binnen, nooit direct live.
-- [ ] Een beheerder kan een bestaand bericht bewerken (titel/inhoud/type/versie); leesbewijzen
+- [x] Een beheerder kan een bestaand bericht bewerken (titel/inhoud/type/versie); leesbewijzen
       van analisten blijven daarbij intact.
-- [ ] Een beheerder kan een bericht publiceren en depubliceren; publiceren zet
+- [x] Een beheerder kan een bericht publiceren en depubliceren; publiceren zet
       `gepubliceerd_op`, depubliceren wist het weer.
-- [ ] Een beheerder ziet alle berichten (ook concepten) in een gepagineerde admin-lijst, met
+- [x] Een beheerder ziet alle berichten (ook concepten) in een gepagineerde admin-lijst, met
       het totaal aantal.
-- [ ] Een beheerder kan een bericht verwijderen op id; de leesbewijzen van dat bericht
+- [x] Een beheerder kan een bericht verwijderen op id; de leesbewijzen van dat bericht
       verdwijnen in dezelfde transactie (cascade).
-- [ ] Een analist ziet alleen gepubliceerde berichten, gepagineerd, met een `gelezen`-vlag per
+- [x] Een analist ziet alleen gepubliceerde berichten, gepagineerd, met een `gelezen`-vlag per
       item en een `ongelezen`-filter.
-- [ ] Een analist kan het aantal ongelezen gepubliceerde berichten opvragen.
-- [ ] Een analist kan in één keer alle zichtbare gepubliceerde berichten als gelezen markeren
+- [x] Een analist kan het aantal ongelezen gepubliceerde berichten opvragen.
+- [x] Een analist kan in één keer alle zichtbare gepubliceerde berichten als gelezen markeren
       (`lees-alles`); dit is idempotent — twee keer aanroepen geeft geen fout.
 
 ## Schemabeslissing
@@ -120,3 +120,5 @@ Gebruikt `shared/auth.py` (`huidige_gebruiker`/`huidige_beheerder`), zie
 ## UI
 
 Geen UI. Deze story demonstreert uitsluitend de `api`-service (werkwijze-ADR-0002).
+
+**Gebouwd:** ja (gemerged)

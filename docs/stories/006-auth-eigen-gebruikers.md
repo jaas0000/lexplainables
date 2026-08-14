@@ -64,22 +64,22 @@ Vervallen: `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `NEXT_PUBLIC_KEYCLOAK_*`, `KEYCLOAK
 
 ## Acceptatiecriteria
 
-- [ ] Tabel `gebruikers` wordt aangemaakt via Alembic-migratie 0003.
-- [ ] `POST /v1/auth/verify` achter `API_TOKEN`-gate: geldig wachtwoord → `{"ok": true, ...}`;
+- [x] Tabel `gebruikers` wordt aangemaakt via Alembic-migratie 0003.
+- [x] `POST /v1/auth/verify` achter `API_TOKEN`-gate: geldig wachtwoord → `{"ok": true, ...}`;
       fout wachtwoord of onbekende gebruiker → `{"ok": false, ..., ""}`.
-- [ ] Admin-routes (`/v1/admin/*`) accepteren alleen requests met geldige `API_TOKEN` als
+- [x] Admin-routes (`/v1/admin/*`) accepteren alleen requests met geldige `API_TOKEN` als
       `Authorization: Bearer` en een `X-User-Id`-header; ontbreekt een van beide → `401`.
-- [ ] Login via formulier in de app (gebruikersnaam + wachtwoord); geen redirect naar Keycloak.
-- [ ] Na inloggen: Auth.js httpOnly sessiecookie; geen token in `localStorage`.
-- [ ] Niet-ingelogde gebruiker naar `/` → redirect naar `/login` (via `proxy.ts` middleware).
-- [ ] Ingelogde gebruiker naar `/login` → redirect naar `/`.
-- [ ] Navigatieheader toont gebruikersnaam en "Uitloggen"-knop; uitloggen wist sessie en stuurt
+- [x] Login via formulier in de app (gebruikersnaam + wachtwoord); geen redirect naar Keycloak.
+- [x] Na inloggen: Auth.js httpOnly sessiecookie; geen token in `localStorage`.
+- [x] Niet-ingelogde gebruiker naar `/` → redirect naar `/login` (via `proxy.ts` middleware).
+- [x] Ingelogde gebruiker naar `/login` → redirect naar `/`.
+- [x] Navigatieheader toont gebruikersnaam en "Uitloggen"-knop; uitloggen wist sessie en stuurt
       door naar `/login`.
-- [ ] Admin-API-calls gaan via Next.js BFF-routes (`/api/admin/berichten/...`); browser stuurt
+- [x] Admin-API-calls gaan via Next.js BFF-routes (`/api/admin/berichten/...`); browser stuurt
       nooit rechtstreeks naar de API voor admin-endpoints.
-- [ ] Keycloak-service en `keycloak/`-directory zijn verwijderd; geen `KEYCLOAK_*` env-vars meer.
-- [ ] Bestaande Playwright-E2E-tests aangepast: `beforeEach` logt in via het loginformulier.
-- [ ] CI draait zonder Keycloak-container; dev-gebruiker aangemaakt via seed-script.
+- [x] Keycloak-service en `keycloak/`-directory zijn verwijderd; geen `KEYCLOAK_*` env-vars meer.
+- [x] Bestaande Playwright-E2E-tests aangepast: `beforeEach` logt in via het loginformulier.
+- [x] CI draait zonder Keycloak-container; dev-gebruiker aangemaakt via seed-script.
 
 ## Edge cases
 
@@ -98,3 +98,5 @@ Vervallen: `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `NEXT_PUBLIC_KEYCLOAK_*`, `KEYCLOAK
 
 - `shared/auth.py` — `huidige_beheerder` gebruikt `API_TOKEN` + `X-User-Id` (was: Keycloak JWKS)
 - `features/identiteit_toegang/` — nieuwe router + store voor gebruikersbeheer en credential-verificatie
+
+**Gebouwd:** ja (gemerged)

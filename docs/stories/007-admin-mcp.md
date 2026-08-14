@@ -14,19 +14,19 @@ aankondigingen kan versturen terwijl ik toch al in de terminal werk.
 
 ## Acceptatiecriteria
 
-- [ ] `list_berichten_admin` — haalt alle berichten op (ook concepten), geeft een leesbare
+- [x] `list_berichten_admin` — haalt alle berichten op (ook concepten), geeft een leesbare
       tekst terug met id, titel, type, versie, gepubliceerd-status en aanmaakdatum.
-- [ ] `maak_bericht(titel, inhoud, type, versie?)` — maakt een nieuw concept-bericht aan;
+- [x] `maak_bericht(titel, inhoud, type, versie?)` — maakt een nieuw concept-bericht aan;
       `type` is één van `info | update | waarschuwing | kritiek`; `versie` is optioneel.
       Geeft het aangemaakte bericht (inclusief id) terug als tekst.
-- [ ] `update_bericht(id, titel, inhoud, type, versie?)` — overschrijft alle velden van een
+- [x] `update_bericht(id, titel, inhoud, type, versie?)` — overschrijft alle velden van een
       bestaand bericht (ook als het al gepubliceerd is). Geeft het bijgewerkte bericht terug.
-- [ ] `publiceer_bericht(id, gepubliceerd)` — publiceert (`gepubliceerd=true`) of
+- [x] `publiceer_bericht(id, gepubliceerd)` — publiceert (`gepubliceerd=true`) of
       depubliceert (`gepubliceerd=false`) een bericht op id. Geeft de bijgewerkte status terug.
-- [ ] Bij een API-fout (4xx/5xx) geeft de tool een leesbare foutmelding terug in de
+- [x] Bij een API-fout (4xx/5xx) geeft de tool een leesbare foutmelding terug in de
       MCP-tekstrespons — geen ongecatchte exception.
-- [ ] De server start op als stdio-proces (geen HTTP-luisterpoort).
-- [ ] De server is registreerbaar in `.mcp.json` als:
+- [x] De server start op als stdio-proces (geen HTTP-luisterpoort).
+- [x] De server is registreerbaar in `.mcp.json` als:
       ```json
       {
         "wetsanalyse-admin-mcp": {
@@ -118,3 +118,5 @@ Integratietests die de MCP-tools aanroepen met een lokale test-API (of een echte
 - `maak_bericht` met geldige input → API-bericht aangemaakt, id aanwezig in respons.
 - `maak_bericht` met ongeldig type → Zod-validatiefout, geen API-aanroep.
 - `publiceer_bericht` met onbekend id → leesbare 404-foutmelding.
+
+**Gebouwd:** ja (gemerged)

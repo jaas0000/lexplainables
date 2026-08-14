@@ -67,39 +67,39 @@ class GebruikerContext(BaseModel):
 
 ## Acceptatiecriteria
 
-- [ ] Keycloak draait lokaal via docker-compose op poort 8080; realm `wetsanalyse` wordt
+- [x] Keycloak draait lokaal via docker-compose op poort 8080; realm `wetsanalyse` wordt
       bij het opstarten geïmporteerd uit `keycloak/realm-export.json`.
-- [ ] Dev-gebruiker `beheerder` (wachtwoord `beheerder123`, rol `beheerder`) is aanwezig
+- [x] Dev-gebruiker `beheerder` (wachtwoord `beheerder123`, rol `beheerder`) is aanwezig
       na import van de realm-export.
-- [ ] De bestaande admin-routes (`/v1/admin/*`) accepteren alleen requests met een geldig
+- [x] De bestaande admin-routes (`/v1/admin/*`) accepteren alleen requests met een geldig
       Keycloak-JWT als `Authorization: Bearer …`-header; een ontbrekend of verlopen token
       geeft `401 Unauthorized`.
-- [ ] De `huidige_beheerder`-dependency levert een `GebruikerContext` op met
+- [x] De `huidige_beheerder`-dependency levert een `GebruikerContext` op met
       `gebruikersnaam` (= Keycloak `preferred_username`) en `rol` (= eerste rol uit
       `realm_access.roles`); de `X-Admin-Id`-header-stand-in is verwijderd.
-- [ ] `berichten/router.py` — `maak_bericht` geeft `admin_userid.gebruikersnaam` door aan
+- [x] `berichten/router.py` — `maak_bericht` geeft `admin_userid.gebruikersnaam` door aan
       `store.maak()` (was: `admin_userid` direct als `str`); `aangemaakt_door` in de tabel
       bevat de Keycloak-gebruikersnaam.
-- [ ] JWT-verificatie gebruikt het JWKS-endpoint van Keycloak
+- [x] JWT-verificatie gebruikt het JWKS-endpoint van Keycloak
       (`{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs`); de publieke
       sleutel wordt gecached en periodiek ververst (niet bij elke request opgehaald).
-- [ ] Bij ontbrekend of ongeldig token: `401` met `{"detail": "Niet geautoriseerd."}`.
-- [ ] Bij geldig token maar verkeerde rol (geen `beheerder`): `403` met
+- [x] Bij ontbrekend of ongeldig token: `401` met `{"detail": "Niet geautoriseerd."}`.
+- [x] Bij geldig token maar verkeerde rol (geen `beheerder`): `403` met
       `{"detail": "Onvoldoende rechten."}`.
-- [ ] **Frontend — `/login`-pagina**:
+- [x] **Frontend — `/login`-pagina**:
   - Toont een kaart met de tekst "Inloggen" en een primaire knop "Inloggen".
   - Klikken op de knop start de OIDC Authorization Code + PKCE-flow (redirect naar
     Keycloak-loginpagina).
   - Na succesvolle authenticatie: terug naar `/`.
   - Niet-ingelogde gebruiker die `/` bezoekt, wordt doorgestuurd naar `/login`.
   - Ingelogde gebruiker die `/login` bezoekt, wordt doorgestuurd naar `/`.
-- [ ] **Frontend — navigatieheader na inloggen**:
+- [x] **Frontend — navigatieheader na inloggen**:
   - Toont de gebruikersnaam (Keycloak `preferred_username`) naast een "Uitloggen"-knop.
   - "Uitloggen" wist de sessie en stuurt door naar `/login`.
-- [ ] **Frontend — API-calls**:
+- [x] **Frontend — API-calls**:
   - Alle fetch-calls sturen het Keycloak-access-token als `Authorization: Bearer …` mee.
   - Bij een `401`-respons: sessie wissen en doorsturen naar `/login`.
-- [ ] Bestaande Playwright-E2E-tests aangepast: de `beforeEach`-hook logt in via de
+- [x] Bestaande Playwright-E2E-tests aangepast: de `beforeEach`-hook logt in via de
       Keycloak-loginpagina (directe POST op het Keycloak-token-endpoint, niet via de UI) met
       `beheerder`/`beheerder123`; het verkregen token wordt via `page.addInitScript`
       in localStorage gezet vóór de eerste navigatie. Data-isolatie via unieke titels.
@@ -157,3 +157,5 @@ Na inloggen (navigatieheader):
 │ Wetsanalyse  │ Berichten  Analisten  Projecten  Instellingen   │  beheerder  [Uitloggen] │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Gebouwd:** ja (gemerged)

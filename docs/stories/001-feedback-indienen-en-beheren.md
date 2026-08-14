@@ -18,17 +18,17 @@ niet verloren gaat en de beheerder niet elke keer de hele lijst hoeft te doorlop
 
 ## Acceptatiecriteria
 
-- [ ] Een gebruiker kan feedback indienen (`categorie`, `tekst`, optioneel `pagina`) en krijgt
+- [x] Een gebruiker kan feedback indienen (`categorie`, `tekst`, optioneel `pagina`) en krijgt
       het toegekende id terug.
-- [ ] Een beheerder ziet ingezonden feedback terug in de admin-lijst, gepagineerd, nieuwste
+- [x] Een beheerder ziet ingezonden feedback terug in de admin-lijst, gepagineerd, nieuwste
       eerst, met het totaal aantal.
-- [ ] Een beheerder kan een feedbackitem verwijderen op id.
-- [ ] Een beheerder kan het aantal ongelezen feedbackitems opvragen: items ingediend ná het
+- [x] Een beheerder kan een feedbackitem verwijderen op id.
+- [x] Een beheerder kan het aantal ongelezen feedbackitems opvragen: items ingediend ná het
       laatste moment dat deze beheerder de feedbackpagina heeft gemarkeerd als gezien.
-- [ ] Een beheerder kan markeren dat hij de feedback gezien heeft, optioneel met een expliciete
+- [x] Een beheerder kan markeren dat hij de feedback gezien heeft, optioneel met een expliciete
       `tot`-timestamp (voorkomt dat feedback die tussen laden en markeren binnenkomt ten
       onrechte als gezien telt).
-- [ ] Vóór de eerste keer markeren telt alle ingezonden feedback als ongelezen.
+- [x] Vóór de eerste keer markeren telt alle ingezonden feedback als ongelezen.
 
 ## Schemabeslissing
 
@@ -93,3 +93,5 @@ Geen — dit is de eerste feature van deze service, er is nog niets om naar te v
 
 Geen UI. Deze story demonstreert uitsluitend de `api`-service (werkwijze-ADR-0002); `frontend`/
 `frontend-chat` zijn nog niet gebouwd in deze referentie-implementatie.
+
+**Gebouwd:** ja (gemerged)
