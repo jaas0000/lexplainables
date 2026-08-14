@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { components } from "@/generated/types";
 import { TypeBadge } from "@/components/berichten/TypeBadge";
 import { SectieHeader, LeegePlaceholder } from "@/components/beheer/SectieHeader";
+import { beheerFetch } from "@/lib/beheer-fetch";
 
 type BerichtAdminRead = components["schemas"]["BerichtAdminRead"];
 type BerichtCreate = components["schemas"]["BerichtCreate"];
@@ -12,20 +13,6 @@ type BerichtType = BerichtCreate["type"];
 
 const BERICHT_TYPES: BerichtType[] = ["info", "update", "waarschuwing", "kritiek"];
 const LEEG = { titel: "", inhoud: "", type: "info" as BerichtType, versie: null as string | null };
-
-async function beheerFetch(pad: string, init: RequestInit = {}) {
-  const res = await fetch(pad, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init.headers },
-  });
-  if (res.status === 401) { window.location.href = "/login"; throw new Error("Niet geautoriseerd."); }
-  if (!res.ok) {
-    const detail = await res.json().then((d: { detail?: string }) => d.detail).catch(() => null);
-    throw new Error(detail ?? `${res.status} ${res.statusText}`);
-  }
-  if (res.status === 204) return undefined;
-  return res.json();
-}
 
 type EditState = false | null | number;
 
