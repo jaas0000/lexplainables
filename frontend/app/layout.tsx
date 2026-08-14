@@ -4,6 +4,7 @@ import { Fira_Sans } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { NavigatieHeader } from "@/components/NavigatieHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
 
 const firaSans = Fira_Sans({
@@ -26,6 +27,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <SessionProvider session={session}>
           <header>
+            {/* PoC-strip: alleen zichtbaar na inloggen, scrollt mee met de pagina */}
+            {session && (
+              <a
+                href="/disclaimer"
+                className="poc-strip"
+              >
+                <span className="poc-strip-inner">
+                  <span className="poc-strip-vet">Testomgeving — proof of concept.</span>{" "}
+                  Analyses kunnen verloren gaan.{" "}
+                  <span className="poc-strip-link">Lees de voorwaarden</span>
+                </span>
+              </a>
+            )}
             {/* Logobalk — wit, logo gecentreerd (Rijkshuisstijl) */}
             <div className="logobalk">
               <div className="logobalk-inner">
@@ -53,6 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </div>
           </header>
           <main className="main">{children}</main>
+          <SiteFooter />
         </SessionProvider>
       </body>
     </html>

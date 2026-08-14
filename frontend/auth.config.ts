@@ -4,6 +4,14 @@ function isPublic(path: string): boolean {
   return path === "/login" || path.startsWith("/api/auth");
 }
 
+function isDisclaimerExempt(path: string): boolean {
+  return (
+    path === "/disclaimer" ||
+    path.startsWith("/api/") ||
+    path.startsWith("/mockup/")
+  );
+}
+
 export const authConfig = {
   trustHost: true,
   pages: { signIn: "/login" },
@@ -24,9 +32,24 @@ export const authConfig = {
   },
   callbacks: {
     authorized({ auth, request }) {
-      const path = request.nextUrl.pathname;
-      if (isPublic(path)) return true;
-      return !!auth?.user;
+      const { pathname, search } = request.nextUrl;
+      if (isPublic(pathname)) return true;
+      if (!auth?.user) return false;
+
+      // Disclaimer-gate: stuur ingelogde gebruikers zonder cookie naar /disclaimer
+      if (!isDisclaimerExempt(pathname)) {
+        const disclaimerCookie = request.cookies.get("disclaimer_geaccepteerd");
+        if (!disclaimerCookie) {
+          return Response.redirect(
+            new URL(
+              `/disclaimer?callbackUrl=${encodeURIComponent(pathname + search)}`,
+              request.url,
+            ),
+          );
+        }
+      }
+
+      return true;
     },
     jwt({ token, user }) {
       if (user) {

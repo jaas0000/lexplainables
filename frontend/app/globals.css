@@ -63,6 +63,37 @@ a {
   text-decoration: none;
 }
 
+/* ---- PoC-strip ---- */
+
+.poc-strip {
+  display: block;
+  background: rgb(var(--waarschuwing) / 0.1);
+  padding: 0.375rem 1.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgb(var(--ink));
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.poc-strip:hover {
+  background: rgb(var(--waarschuwing) / 0.18);
+}
+
+.poc-strip-inner {
+  display: block;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.poc-strip-vet {
+  font-weight: 600;
+}
+
+.poc-strip-link {
+  text-decoration: underline;
+}
+
 /* ---- Logobalk ---- */
 
 .logobalk {
@@ -288,6 +319,12 @@ a {
   background: rgb(var(--fout) / 0.07);
   border: 1px solid rgb(var(--fout) / 0.3);
   color: rgb(var(--fout));
+}
+
+.melding-waarschuwing {
+  background: rgb(var(--waarschuwing) / 0.07);
+  border: 1px solid rgb(var(--waarschuwing) / 0.3);
+  color: rgb(var(--ink));
 }
 
 /* ---- Kaart/sectie ---- */
