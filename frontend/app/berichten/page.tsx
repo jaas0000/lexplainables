@@ -2,16 +2,10 @@
 
 import { useEffect, useState } from "react";
 import type { components } from "@/generated/types";
+import { TypeBadge } from "@/components/berichten/TypeBadge";
+import { TYPE_META, type BerichtType } from "@/lib/bericht-types";
 
 type BerichtRead = components["schemas"]["BerichtRead"];
-type BerichtType = BerichtRead["type"];
-
-const TYPE_META: Record<BerichtType, { label: string; kleurVar: string }> = {
-  info:         { label: "Info",         kleurVar: "--info" },
-  update:       { label: "Update",       kleurVar: "--succes" },
-  waarschuwing: { label: "Waarschuwing", kleurVar: "--waarschuwing" },
-  kritiek:      { label: "Kritiek",      kleurVar: "--fout" },
-};
 
 export default function BerichtenPagina() {
   const [berichten, setBerichten] = useState<BerichtRead[] | null>(null);
@@ -57,7 +51,7 @@ export default function BerichtenPagina() {
       {!laden && berichten && berichten.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {berichten.map((b) => {
-            const { label, kleurVar } = TYPE_META[b.type as BerichtType];
+            const { kleurVar } = TYPE_META[b.type as BerichtType];
             const datum = new Date(b.gepubliceerd_op ?? b.created).toLocaleDateString("nl-NL", {
               day: "numeric", month: "long", year: "numeric",
             });
@@ -67,7 +61,7 @@ export default function BerichtenPagina() {
                   <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "4px", background: `rgb(var(${kleurVar}))`, borderRadius: "6px 0 0 6px" }} />
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
-                  <span style={{ fontSize: "0.6875rem", fontWeight: 600, padding: "0.125rem 0.4rem", borderRadius: "3px", color: `rgb(var(${kleurVar}))`, border: `1px solid rgb(var(${kleurVar}) / 0.4)`, background: `rgb(var(${kleurVar}) / 0.08)` }}>{label}</span>
+                  <TypeBadge type={b.type as BerichtType} />
                   {b.versie && <span style={{ fontSize: "0.6875rem", fontFamily: "monospace", padding: "0.125rem 0.4rem", borderRadius: "3px", color: "rgb(var(--faint))", border: "1px solid rgb(var(--line))", background: "rgb(var(--surface))" }}>{b.versie}</span>}
                   <span style={{ fontSize: "0.75rem", color: "rgb(var(--faint))", marginLeft: "auto" }}>{datum}</span>
                 </div>

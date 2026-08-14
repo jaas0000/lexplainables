@@ -2,6 +2,8 @@
 
 import React, { useCallback, useState } from "react";
 import type { components } from "@/generated/types";
+import { TypeBadge } from "@/components/berichten/TypeBadge";
+import { SectieHeader, LeegePlaceholder } from "@/components/beheer/SectieHeader";
 
 type BerichtAdminRead = components["schemas"]["BerichtAdminRead"];
 type BerichtCreate = components["schemas"]["BerichtCreate"];
@@ -9,13 +11,6 @@ type BerichtType = BerichtCreate["type"];
 
 const BERICHT_TYPES: BerichtType[] = ["info", "update", "waarschuwing", "kritiek"];
 const LEEG = { titel: "", inhoud: "", type: "info" as BerichtType, versie: null as string | null };
-
-const TYPE_META: Record<BerichtType, { label: string; kleurVar: string }> = {
-  info:         { label: "Info",         kleurVar: "--info" },
-  update:       { label: "Update",       kleurVar: "--succes" },
-  waarschuwing: { label: "Waarschuwing", kleurVar: "--waarschuwing" },
-  kritiek:      { label: "Kritiek",      kleurVar: "--fout" },
-};
 
 async function beheerFetch(pad: string, init: RequestInit = {}) {
   const res = await fetch(pad, {
@@ -29,29 +24,6 @@ async function beheerFetch(pad: string, init: RequestInit = {}) {
   }
   if (res.status === 204) return undefined;
   return res.json();
-}
-
-function TypeBadge({ type }: { type: BerichtType }) {
-  const { label, kleurVar } = TYPE_META[type];
-  return (
-    <span style={{ fontSize: "0.6875rem", fontWeight: 600, padding: "0.125rem 0.4rem", borderRadius: "3px", color: `rgb(var(${kleurVar}))`, border: `1px solid rgb(var(${kleurVar}) / 0.4)`, background: `rgb(var(${kleurVar}) / 0.08)` }}>
-      {label}
-    </span>
-  );
-}
-
-function SectieHeader({ titel, subtitel, aantal }: { titel: string; subtitel?: string; aantal?: number }) {
-  return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", borderBottom: "1px solid rgb(var(--line))", paddingBottom: "0.5rem", marginBottom: "1.25rem" }}>
-      <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "rgb(var(--lint))" }}>{titel}</h2>
-      {aantal !== undefined && <span style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "rgb(var(--faint))" }}>{aantal}</span>}
-      {subtitel && <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "rgb(var(--faint))" }}>{subtitel}</span>}
-    </div>
-  );
-}
-
-function LeegePlaceholder({ tekst }: { tekst: string }) {
-  return <p style={{ fontSize: "0.875rem", color: "rgb(var(--faint))", fontStyle: "italic", padding: "1.5rem 0" }}>{tekst}</p>;
 }
 
 type EditState = false | null | number;
@@ -96,16 +68,17 @@ export default function BeheerPagina() {
     const body: BerichtCreate = { titel: formulier.titel, inhoud: formulier.inhoud, type: formulier.type, versie: formulier.versie ?? null };
     try {
       if (editState === null) {
-        await beheerFetch("/api/admin/berichten", { method: "POST", body: JSON.stringify(body) });
+        const nieuw = await beheerFetch("/api/admin/berichten", { method: "POST", body: JSON.stringify(body) }) as BerichtAdminRead;
+        setBerichten((prev) => prev ? [nieuw, ...prev] : [nieuw]);
       } else if (typeof editState === "number") {
-        await beheerFetch(`/api/admin/berichten/${editState}`, { method: "PUT", body: JSON.stringify(body) });
+        const bijgewerkt = await beheerFetch(`/api/admin/berichten/${editState}`, { method: "PUT", body: JSON.stringify(body) }) as BerichtAdminRead;
+        setBerichten((prev) => prev?.map((b) => b.id === editState ? bijgewerkt : b) ?? null);
       }
       setEditState(false);
       setFormulier(LEEG);
       setToonLijst(true);
       setOpgeslagen(true);
       setTimeout(() => setOpgeslagen(false), 3000);
-      await laadBerichten();
     } catch (err) {
       setFout(err instanceof Error ? err.message : "Fout bij het opslaan.");
     }
@@ -114,8 +87,8 @@ export default function BeheerPagina() {
   async function publicatieWisselen(b: BerichtAdminRead) {
     setFout(null);
     try {
-      await beheerFetch(`/api/admin/berichten/${b.id}/publicatie`, { method: "PATCH", body: JSON.stringify({ gepubliceerd: !b.gepubliceerd }) });
-      await laadBerichten();
+      const bijgewerkt = await beheerFetch(`/api/admin/berichten/${b.id}/publicatie`, { method: "PATCH", body: JSON.stringify({ gepubliceerd: !b.gepubliceerd }) }) as BerichtAdminRead;
+      setBerichten((prev) => prev?.map((bestaand) => bestaand.id === b.id ? bijgewerkt : bestaand) ?? null);
     } catch (err) {
       setFout(err instanceof Error ? err.message : "Fout bij publicatiestatus wijzigen.");
     }
@@ -126,7 +99,7 @@ export default function BeheerPagina() {
     try {
       await beheerFetch(`/api/admin/berichten/${id}`, { method: "DELETE" });
       setUitgeklapt((prev) => { const next = new Set(prev); next.delete(id); return next; });
-      await laadBerichten();
+      setBerichten((prev) => prev?.filter((b) => b.id !== id) ?? null);
     } catch (err) {
       setFout(err instanceof Error ? err.message : "Fout bij verwijderen.");
     }

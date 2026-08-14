@@ -71,19 +71,6 @@ export function LoginFormulier() {
         />
       </div>
 
-      <label style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", fontSize: "0.875rem", color: "rgb(var(--ink))", cursor: "pointer" }}>
-        <input
-          type="checkbox"
-          style={{ marginTop: "0.125rem", width: "1rem", height: "1rem", accentColor: "rgb(var(--lint))", flexShrink: 0 }}
-        />
-        <span>
-          Ingelogd blijven op dit apparaat
-          <span style={{ display: "block", fontSize: "0.75rem", color: "rgb(var(--muted))", marginTop: "0.125rem" }}>
-            30 dagen ingelogd blijven en 2FA overslaan op dit apparaat.
-          </span>
-        </span>
-      </label>
-
       <button type="submit" disabled={bezig} className="btn btn-primary" style={{ width: "100%" }}>
         {bezig ? "Bezig met inloggen…" : "Inloggen"}
       </button>

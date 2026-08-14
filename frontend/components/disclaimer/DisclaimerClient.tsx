@@ -77,7 +77,8 @@ export function DisclaimerClient({
         setBezig(false);
         return;
       }
-      window.location.href = callbackUrl;
+      const data = (await res.json()) as { ok: boolean; redirect: string };
+      window.location.href = data.redirect;
     } catch {
       setFout("Er ging iets mis. Probeer het opnieuw.");
       setBezig(false);

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-
-type BerichtType = "info" | "update" | "waarschuwing" | "kritiek";
+import { TypeBadge } from "@/components/berichten/TypeBadge";
+import { TYPE_META, type BerichtType } from "@/lib/bericht-types";
 
 interface Bericht {
   id: number;
@@ -15,15 +15,8 @@ interface Bericht {
   created: string;
 }
 
-const TYPE_META: Record<BerichtType, { label: string; kleurVar: string }> = {
-  info:         { label: "Info",        kleurVar: "--info" },
-  update:       { label: "Update",      kleurVar: "--succes" },
-  waarschuwing: { label: "Waarschuwing",kleurVar: "--waarschuwing" },
-  kritiek:      { label: "Kritiek",     kleurVar: "--fout" },
-};
-
 function BerichtItem({ bericht }: { bericht: Bericht }) {
-  const { label, kleurVar } = TYPE_META[bericht.type];
+  const { kleurVar } = TYPE_META[bericht.type];
   const datum = new Date(bericht.gepubliceerd_op ?? bericht.created).toLocaleDateString(
     "nl-NL",
     { day: "numeric", month: "long", year: "numeric" },
@@ -53,19 +46,7 @@ function BerichtItem({ bericht }: { bericht: Bericht }) {
         />
       )}
       <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", flexWrap: "wrap" }}>
-        <span
-          style={{
-            fontSize: "0.6875rem",
-            fontWeight: 600,
-            padding: "0.125rem 0.4rem",
-            borderRadius: "3px",
-            color: `rgb(var(${kleurVar}))`,
-            border: `1px solid rgb(var(${kleurVar}) / 0.4)`,
-            background: `rgb(var(${kleurVar}) / 0.08)`,
-          }}
-        >
-          {label}
-        </span>
+        <TypeBadge type={bericht.type} />
         {bericht.versie && (
           <span
             style={{

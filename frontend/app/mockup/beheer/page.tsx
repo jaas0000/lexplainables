@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-
-type BerichtType = "info" | "update" | "waarschuwing" | "kritiek";
+import { TypeBadge } from "@/components/berichten/TypeBadge";
+import { SectieHeader, LeegePlaceholder } from "@/components/beheer/SectieHeader";
+import type { BerichtType } from "@/lib/bericht-types";
 
 interface Bericht {
   id: number;
@@ -64,76 +65,6 @@ const NEPPE_GEBRUIKERS = [
   { id: 3, gebruikersnaam: "analist.lisa", rol: "analist", actief: false },
 ];
 
-const TYPE_META: Record<BerichtType, { label: string; kleurVar: string }> = {
-  info:         { label: "Info",         kleurVar: "--info" },
-  update:       { label: "Update",       kleurVar: "--succes" },
-  waarschuwing: { label: "Waarschuwing", kleurVar: "--waarschuwing" },
-  kritiek:      { label: "Kritiek",      kleurVar: "--fout" },
-};
-
-function TypeBadge({ type }: { type: BerichtType }) {
-  const { label, kleurVar } = TYPE_META[type];
-  return (
-    <span
-      style={{
-        fontSize: "0.6875rem",
-        fontWeight: 600,
-        padding: "0.125rem 0.4rem",
-        borderRadius: "3px",
-        color: `rgb(var(${kleurVar}))`,
-        border: `1px solid rgb(var(${kleurVar}) / 0.4)`,
-        background: `rgb(var(${kleurVar}) / 0.08)`,
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-function SectieHeader({
-  titel,
-  subtitel,
-  aantal,
-}: {
-  titel: string;
-  subtitel?: string;
-  aantal?: number;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "baseline",
-        gap: "0.75rem",
-        borderBottom: "1px solid rgb(var(--line))",
-        paddingBottom: "0.5rem",
-        marginBottom: "1.25rem",
-      }}
-    >
-      <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "rgb(var(--lint))" }}>
-        {titel}
-      </h2>
-      {aantal !== undefined && (
-        <span style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "rgb(var(--faint))" }}>
-          {aantal}
-        </span>
-      )}
-      {subtitel && (
-        <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "rgb(var(--faint))" }}>
-          {subtitel}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function LeegePlaceholder({ tekst }: { tekst: string }) {
-  return (
-    <p style={{ fontSize: "0.875rem", color: "rgb(var(--faint))", fontStyle: "italic", padding: "1.5rem 0" }}>
-      {tekst}
-    </p>
-  );
-}
 
 // false = toon knoppen; null = nieuw bericht formulier; number = bewerk bericht id
 type EditState = false | null | number;

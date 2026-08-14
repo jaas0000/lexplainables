@@ -1,4 +1,5 @@
-type BerichtType = "info" | "update" | "waarschuwing" | "kritiek";
+import { TypeBadge } from "@/components/berichten/TypeBadge";
+import { TYPE_META, type BerichtType } from "@/lib/bericht-types";
 
 interface Bericht {
   id: number;
@@ -40,13 +41,6 @@ const NEPPE_BERICHTEN: Bericht[] = [
   },
 ];
 
-const TYPE_META: Record<BerichtType, { label: string; kleurVar: string }> = {
-  info:         { label: "Info",         kleurVar: "--info" },
-  update:       { label: "Update",       kleurVar: "--succes" },
-  waarschuwing: { label: "Waarschuwing", kleurVar: "--waarschuwing" },
-  kritiek:      { label: "Kritiek",      kleurVar: "--fout" },
-};
-
 export default function BerichtenPagina() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -68,7 +62,7 @@ export default function BerichtenPagina() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         {NEPPE_BERICHTEN.map((b) => {
-          const { label, kleurVar } = TYPE_META[b.type];
+          const { kleurVar } = TYPE_META[b.type];
           const datum = new Date(b.gepubliceerd_op).toLocaleDateString("nl-NL", {
             day: "numeric",
             month: "long",
@@ -102,19 +96,7 @@ export default function BerichtenPagina() {
               )}
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
-                <span
-                  style={{
-                    fontSize: "0.6875rem",
-                    fontWeight: 600,
-                    padding: "0.125rem 0.4rem",
-                    borderRadius: "3px",
-                    color: `rgb(var(${kleurVar}))`,
-                    border: `1px solid rgb(var(${kleurVar}) / 0.4)`,
-                    background: `rgb(var(${kleurVar}) / 0.08)`,
-                  }}
-                >
-                  {label}
-                </span>
+                <TypeBadge type={b.type} />
                 {b.versie && (
                   <span
                     style={{

@@ -24,5 +24,5 @@ export async function POST(req: Request) {
     maxAge: 365 * 24 * 3600,
   });
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, redirect: callbackUrl });
 }
