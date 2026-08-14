@@ -1,31 +1,26 @@
-import { auth } from "@/auth";
-import { apiProxy } from "@/lib/proxy";
+import { requireSession } from "@/lib/bff-auth";
+import { apiProxy } from "@/lib/api-client";
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const [session, { id }, body] = await Promise.all([
-    auth(),
+  const [gebruikersnaam, { id }, body] = await Promise.all([
+    requireSession(),
     params,
     req.text(),
   ]);
-  if (!session?.user?.name)
+  if (!gebruikersnaam)
     return Response.json({ detail: "Niet geautoriseerd." }, { status: 401 });
-  return apiProxy(`/v1/admin/berichten/${id}`, session.user.name, {
-    method: "PUT",
-    body,
-  });
+  return apiProxy(`/v1/admin/berichten/${id}`, gebruikersnaam, { method: "PUT", body });
 }
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const [session, { id }] = await Promise.all([auth(), params]);
-  if (!session?.user?.name)
+  const [gebruikersnaam, { id }] = await Promise.all([requireSession(), params]);
+  if (!gebruikersnaam)
     return Response.json({ detail: "Niet geautoriseerd." }, { status: 401 });
-  return apiProxy(`/v1/admin/berichten/${id}`, session.user.name, {
-    method: "DELETE",
-  });
+  return apiProxy(`/v1/admin/berichten/${id}`, gebruikersnaam, { method: "DELETE" });
 }

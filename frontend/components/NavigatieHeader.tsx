@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { BerichtenPopover } from "@/components/BerichtenPopover";
+import { BerichtenPopover } from "@/components/berichten/BerichtenPopover";
 
 export function NavigatieHeader() {
   const { data: session } = useSession();

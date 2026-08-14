@@ -1,19 +1,16 @@
-import { auth } from "@/auth";
-import { apiProxy } from "@/lib/proxy";
+import { requireSession } from "@/lib/bff-auth";
+import { apiProxy } from "@/lib/api-client";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.name)
+  const gebruikersnaam = await requireSession();
+  if (!gebruikersnaam)
     return Response.json({ detail: "Niet geautoriseerd." }, { status: 401 });
-  return apiProxy("/v1/admin/berichten", session.user.name);
+  return apiProxy("/v1/admin/berichten", gebruikersnaam);
 }
 
 export async function POST(req: Request) {
-  const [session, body] = await Promise.all([auth(), req.text()]);
-  if (!session?.user?.name)
+  const [gebruikersnaam, body] = await Promise.all([requireSession(), req.text()]);
+  if (!gebruikersnaam)
     return Response.json({ detail: "Niet geautoriseerd." }, { status: 401 });
-  return apiProxy("/v1/admin/berichten", session.user.name, {
-    method: "POST",
-    body,
-  });
+  return apiProxy("/v1/admin/berichten", gebruikersnaam, { method: "POST", body });
 }

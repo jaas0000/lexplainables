@@ -1,18 +1,18 @@
-import { auth } from "@/auth";
-import { apiProxy } from "@/lib/proxy";
+import { requireSession } from "@/lib/bff-auth";
+import { apiProxy } from "@/lib/api-client";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const [session, { id }, body] = await Promise.all([
-    auth(),
+  const [gebruikersnaam, { id }, body] = await Promise.all([
+    requireSession(),
     params,
     req.text(),
   ]);
-  if (!session?.user?.name)
+  if (!gebruikersnaam)
     return Response.json({ detail: "Niet geautoriseerd." }, { status: 401 });
-  return apiProxy(`/v1/admin/berichten/${id}/publicatie`, session.user.name, {
+  return apiProxy(`/v1/admin/berichten/${id}/publicatie`, gebruikersnaam, {
     method: "PATCH",
     body,
   });
