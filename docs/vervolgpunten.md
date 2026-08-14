@@ -32,11 +32,11 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ## Architectuur-audit — 2026-08-14
 
-Audit gedraaid op stand na PR #7. Drie bevindingen, geen ernstige:
+Audit gedraaid op stand na PR #7. Drie bevindingen — direct opgelost (commit `be2bfa7`):
 
-- **Naamconflict `proxy.ts`**: `frontend/proxy.ts` (root) is de Next.js-middleware (auth gate); `frontend/lib/proxy.ts` is de BFF HTTP-client voor de API. Twee bestanden met dezelfde naam, fundamenteel ander doel — verwarrend voor iemand nieuw in de codebase. Suggestie: hernoem de root-middleware naar `middleware.ts` (de Next.js-conventie) bij een volgende refactorronde.
-- **`BerichtenPopover.tsx` op verkeerde plek**: staat in `components/` (top-level), terwijl verwante `TypeBadge.tsx` en domeinkennis in `components/berichten/` wonen. Bij een volgende berichtengerelateerde wijziging verplaatsen naar `components/berichten/BerichtenPopover.tsx`.
-- **BFF auth-guard 6× herhaald**: elk BFF-routebestand doet `const session = await auth(); if (!session?.user?.name) return 401`. Nu 6 routes, acceptabel. Zodra een zevende route toegevoegd wordt, helper-functie of middleware-wrapper overwegen.
+- **Naamconflict opgelost** ✓: `frontend/lib/proxy.ts` (BFF HTTP-client) hernoemd naar `lib/api-client.ts`. NB: `proxy.ts` in de root is correct — in Next.js 16 is dit de officiële bestandsconventie (`middleware.ts` is deprecated).
+- **`BerichtenPopover.tsx` verplaatst** ✓: naar `components/berichten/BerichtenPopover.tsx`, naast `TypeBadge.tsx`.
+- **BFF auth-guard geëxtraheerd** ✓: `lib/bff-auth.ts` met `requireSession()` — alle 6 routes importeren nu alleen nog `requireSession()` en `apiProxy()`.
 
 Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models/store/router) is consistent voor alle drie domeinen; `shared/auth.py` en `shared/tijd.py` zijn op de juiste plek; `TYPE_META`/`TypeBadge`/`SectieHeader` zijn na PR #7 gededupliceerd; de BFF-proxy is éénmalig gedefinieerd in `lib/proxy.ts`.
 
