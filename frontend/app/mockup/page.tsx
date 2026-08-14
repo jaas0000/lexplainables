@@ -30,6 +30,18 @@ export default function StartPagina() {
         <Link href="/mockup/feedback" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
           Feedback (story 009)
         </Link>
+        <Link href="/mockup/wetcatalogus" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+          Wetcatalogus (story 010)
+        </Link>
+        <Link href="/mockup/llm-profielen" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+          LLM-profielen (story 011)
+        </Link>
+        <Link href="/mockup/analyse" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+          Analyse (story 012)
+        </Link>
+        <Link href="/mockup/rapport" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+          Rapport (story 013)
+        </Link>
       </nav>
 
       <div
