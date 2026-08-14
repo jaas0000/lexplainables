@@ -13,25 +13,13 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ## PR #5 — auth-eigen-gebruikers (story 006)
 
-- `docs/architectuur/c4-model.md` bijwerken: L1/L2 vermelden Keycloak nog als externe service; L3 toont de oude PKCE-componenten en mist `identiteit_toegang` en de BFF-routes.
 - BFF-routes controleren `session.user.rol` niet — momenteel geen `analist`-gebruikers, maar de architectuur (story 006) zegt dat de BFF de rolautorisatie draagt. Toevoegen zodra meerdere rollen in gebruik komen.
 
 ---
 
 ## PR #3 — huisstijl-frontend (story 004)
 
-- **MEDIUM** — `.melding-fout` bypast het token-systeem: `color: rgb(213 43 30)` in
-  `frontend/app/globals.css:234` is hardcoded. Fix: `color: rgb(var(--fout))`.
 - **MEDIUM** — Geen `<h1>` op de pagina (opgelost in `app/beheer/page.tsx` en `app/berichten/page.tsx`; nog open voor de mockup-pagina's).
-- **LAAG** — `border-color` in de universele `*`-reset (`globals.css:26`) preset de
-  randkleur op alle elementen; ongebruikelijk en kan onverwachte randen geven op
-  elementen zonder CSS-klasse.
-
----
-
-## PR #6 — admin-mcp (story 007)
-
-- **Simplify-definitie nalopen**: de `n.v.t.`-uitzondering in `feature-bouwen` regel 9 is bedoeld voor "geen productiecode" (puur docs/CI), niet voor "geen bestaande code". Bij de volgende story die `tools/` raakt, `/simplify` ook op nieuwe TypeScript-productiecode draaien.
 
 ---
 
