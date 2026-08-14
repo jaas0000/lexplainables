@@ -48,14 +48,21 @@ const NEP_FEEDBACK: FeedbackRead[] = [
   },
 ];
 
-type Variant = "knop-gesloten" | "knop-open" | "knop-verzonden" | "beheer-gevuld" | "beheer-leeg";
+type Variant =
+  | "knop-gesloten"
+  | "knop-open"
+  | "knop-verzonden"
+  | "beheer-navigatieknop"
+  | "feedbackpagina-gevuld"
+  | "feedbackpagina-leeg";
 
 const VARIANTEN: { id: Variant; label: string }[] = [
-  { id: "knop-gesloten",  label: "Knop — gesloten" },
-  { id: "knop-open",      label: "Knop — formulier open" },
-  { id: "knop-verzonden", label: "Knop — verzonden" },
-  { id: "beheer-gevuld",  label: "Beheer — met items" },
-  { id: "beheer-leeg",    label: "Beheer — leeg" },
+  { id: "knop-gesloten",        label: "Knop — gesloten" },
+  { id: "knop-open",            label: "Knop — formulier open" },
+  { id: "knop-verzonden",       label: "Knop — verzonden" },
+  { id: "beheer-navigatieknop", label: "Beheer — navigatieknop" },
+  { id: "feedbackpagina-gevuld", label: "Feedbackpagina — met items" },
+  { id: "feedbackpagina-leeg",   label: "Feedbackpagina — leeg" },
 ];
 
 function CategorieBadge({ categorie }: { categorie: Categorie }) {
@@ -328,7 +335,47 @@ function FeedbackItem({ item }: { item: FeedbackRead }) {
   );
 }
 
-function BeheerDemo({ items }: { items: FeedbackRead[] }) {
+function BeheerNavigatieKnop() {
+  return (
+    <div>
+      <SectieHeader titel="Gebruikersfeedback" />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "1rem",
+          background: "rgb(var(--surface))",
+          border: "1px solid rgb(var(--line))",
+          borderRadius: "6px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+          <span style={{ fontSize: "0.875rem", color: "rgb(var(--ink))" }}>
+            Ingezonden feedbackitems
+          </span>
+          <span
+            style={{
+              fontSize: "0.6875rem",
+              fontWeight: 700,
+              padding: "0.125rem 0.4rem",
+              borderRadius: "99px",
+              background: "rgb(var(--fout))",
+              color: "white",
+            }}
+          >
+            3 ongelezen
+          </span>
+        </div>
+        <button className="btn btn-secondary" style={{ fontSize: "0.8125rem" }}>
+          Bekijk feedback →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FeedbackPaginaDemo({ items }: { items: FeedbackRead[] }) {
   return (
     <div>
       <SectieHeader
@@ -385,11 +432,12 @@ export default function FeedbackMockup() {
         ))}
       </div>
 
-      {variant === "knop-gesloten"  && <KnopDemo variant="gesloten" />}
-      {variant === "knop-open"      && <KnopDemo variant="open" />}
-      {variant === "knop-verzonden" && <KnopDemo variant="verzonden" />}
-      {variant === "beheer-gevuld"  && <BeheerDemo items={NEP_FEEDBACK} />}
-      {variant === "beheer-leeg"    && <BeheerDemo items={[]} />}
+      {variant === "knop-gesloten"        && <KnopDemo variant="gesloten" />}
+      {variant === "knop-open"            && <KnopDemo variant="open" />}
+      {variant === "knop-verzonden"       && <KnopDemo variant="verzonden" />}
+      {variant === "beheer-navigatieknop" && <BeheerNavigatieKnop />}
+      {variant === "feedbackpagina-gevuld" && <FeedbackPaginaDemo items={NEP_FEEDBACK} />}
+      {variant === "feedbackpagina-leeg"   && <FeedbackPaginaDemo items={[]} />}
     </div>
   );
 }

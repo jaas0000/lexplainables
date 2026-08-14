@@ -17,8 +17,9 @@ Als beheerder wil ik ingezonden feedback kunnen inzien en verwijderen via het be
 - [ ] Lege tekst of categorie buiten de toegestane set blokkeert verzenden (client-side validatie).
 - [ ] Na succesvol verzenden sluit het formulier en ziet de gebruiker een korte bevestiging.
 - [ ] Bij een netwerk- of serverfout blijft het formulier open met een foutmelding.
-- [ ] Een beheerder ziet op `/beheer` in de sectie "Gebruikersfeedback" de ingezonden feedback (nieuwste eerst, gepagineerd met max 50 items).
-- [ ] Een beheerder kan een feedbackitem verwijderen.
+- [ ] Een beheerder ziet op `/beheer` in de sectie "Gebruikersfeedback" een knop "Bekijk feedback →" met het ongelezen-aantal als badge. De knop navigeert naar `/beheer/feedback`.
+- [ ] `/beheer/feedback` toont alle ingezonden feedbackitems (nieuwste eerst, gepagineerd met max 50 items).
+- [ ] Een beheerder kan een feedbackitem verwijderen op `/beheer/feedback`.
 - [ ] Als de feedbacksectie geladen wordt, roept de frontend automatisch `POST /api/admin/feedback/markeer-gezien` aan (vergelijkbaar met hoe berichten werken in de popover).
 - [ ] Het ongelezen-aantal verschijnt als badge of teller zichtbaar voor de beheerder in de `/beheer` sectie-header.
 - [ ] Bij een lege feedbacklijst staat "Nog geen feedback ontvangen."
@@ -64,6 +65,7 @@ Geen nieuwe datamodellen — de API-types worden via de bestaande contractgenera
 
 - **Zwevende knop**: rechtsonder, vaste positie op het scherm, zichtbaar op alle pagina's na inloggen. Stijl: `btn btn-primary` met een feedbackicoon.
 - **Formulier**: opent als overlay/panel boven de knop (niet een modal die de hele pagina blokkeert). Sluit bij Escape en bij klikken buiten het paneel.
-- **Admin-sectie**: in `/beheer`, onder de berichten-sectie. Ongelezen-teller in de `SectieHeader`.
+- **Admin-knop op `/beheer`**: in de sectie "Gebruikersfeedback", één regel met het ongelezen-aantal als rode badge en een "Bekijk feedback →"-knop die linkt naar `/beheer/feedback`.
+- **Feedbackpagina `/beheer/feedback`**: toont de volledige lijst met `SectieHeader`, `CategorieBadge` per item, userid/pagina/datum, en een verwijderknop per item.
 
 **Gebouwd:** nee
