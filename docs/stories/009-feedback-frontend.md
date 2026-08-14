@@ -68,4 +68,4 @@ Geen nieuwe datamodellen — de API-types worden via de bestaande contractgenera
 - **Admin-knop op `/beheer`**: in de sectie "Gebruikersfeedback", één regel met het ongelezen-aantal als rode badge en een "Bekijk feedback →"-knop die linkt naar `/beheer/feedback`.
 - **Feedbackpagina `/beheer/feedback`**: toont de volledige lijst met `SectieHeader`, `CategorieBadge` per item, userid/pagina/datum, en een verwijderknop per item.
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #8)
