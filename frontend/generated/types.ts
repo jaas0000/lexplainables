@@ -234,6 +234,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Setup
+         * @description Maakt de eerste beheerder aan. Retourneert 409 als de tabel al niet leeg is.
+         */
+        post: operations["setup_v1_auth_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/setup-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Setup Status
+         * @description Geeft aan of er al een beheerder bestaat (needs_setup = False als inrichtbaar).
+         */
+        get: operations["setup_status_v1_auth_setup_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/verify": {
         parameters: {
             query?: never;
@@ -758,6 +798,15 @@ export interface components {
             /** Wachtwoord */
             wachtwoord: string;
         };
+        /** GebruikerInfo */
+        GebruikerInfo: {
+            /** Email */
+            email: string;
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Rol */
+            rol: string;
+        };
         /** GebruikerPatch */
         GebruikerPatch: {
             /** Actief */
@@ -896,6 +945,20 @@ export interface components {
         OngelezenFeedbackOut: {
             /** Aantal */
             aantal: number;
+        };
+        /** SetupStatus */
+        SetupStatus: {
+            /** Needs Setup */
+            needs_setup: boolean;
+        };
+        /** SetupVerzoek */
+        SetupVerzoek: {
+            /** Email */
+            email: string;
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Wachtwoord */
+            wachtwoord: string;
         };
         /** TijdelijkWachtwoord */
         TijdelijkWachtwoord: {
@@ -1619,6 +1682,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MijnProfiel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setup_v1_auth_setup_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupVerzoek"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GebruikerInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setup_status_v1_auth_setup_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupStatus"];
                 };
             };
             /** @description Validation Error */

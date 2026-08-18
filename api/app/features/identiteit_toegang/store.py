@@ -9,9 +9,20 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.future import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from .models import Gebruiker, GebruikerRead, MijnProfiel, TijdelijkWachtwoord, VerifyResult
+from .models import (
+    Gebruiker,
+    GebruikerInfo,
+    GebruikerRead,
+    MijnProfiel,
+    TijdelijkWachtwoord,
+    VerifyResult,
+)
 
 GELDIGE_ROLLEN = {"beheerder", "analist"}
+
+
+class GebruikerFout(Exception):
+    """Domeinuitzondering voor ongeldig gebruikersbeheer (409 / ongeldige invoer)."""
 
 
 class GebruikerNietGevonden(Exception):
@@ -50,6 +61,46 @@ def _naar_read(g: Gebruiker) -> GebruikerRead:
 _DUMMY_HASH = b"$2b$12$aPK8gqAEWjX6MHVbvpshbeUk9q3j2hMZBhg1kx2Gm9ptWc0HvYCZe"
 
 
+async def tabel_leeg(engine: AsyncEngine) -> bool:
+    """Geeft True terug als de gebruikers-tabel geen enkel record bevat."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(select(Gebruiker).limit(1))
+        return result.scalar_one_or_none() is None
+
+
+async def maak_eerste_beheerder(
+    engine: AsyncEngine,
+    gebruikersnaam: str,
+    email: str,
+    wachtwoord: str,
+) -> GebruikerInfo:
+    """Maakt de eerste beheerder aan.
+
+    Gooit `GebruikerFout` als de tabel al niet leeg is of de gebruikersnaam al bestaat.
+    """
+    async with AsyncSession(engine) as sess:
+        existing = await sess.execute(select(Gebruiker).limit(1))
+        if existing.scalar_one_or_none() is not None:
+            raise GebruikerFout("Setup al voltooid.")
+
+        wachtwoord_hash = bcrypt.hashpw(wachtwoord.encode(), bcrypt.gensalt()).decode()
+        gebruiker = Gebruiker(
+            gebruikersnaam=gebruikersnaam,
+            email=email,
+            wachtwoord_hash=wachtwoord_hash,
+            rol="beheerder",
+        )
+        sess.add(gebruiker)
+        await sess.commit()
+        await sess.refresh(gebruiker)
+
+    return GebruikerInfo(
+        gebruikersnaam=gebruiker.gebruikersnaam,
+        email=gebruiker.email,
+        rol=gebruiker.rol,
+    )
+
+
 async def verifieer_credentials(
     engine: AsyncEngine, gebruikersnaam: str, wachtwoord: str
 ) -> VerifyResult:
@@ -75,9 +126,15 @@ async def maak_gebruiker(
     gebruikersnaam: str,
     wachtwoord: str,
     rol: str = "beheerder",
+    email: str = "",
 ) -> Gebruiker:
     wachtwoord_hash = bcrypt.hashpw(wachtwoord.encode(), bcrypt.gensalt()).decode()
-    gebruiker = Gebruiker(gebruikersnaam=gebruikersnaam, wachtwoord_hash=wachtwoord_hash, rol=rol)
+    gebruiker = Gebruiker(
+        gebruikersnaam=gebruikersnaam,
+        email=email,
+        wachtwoord_hash=wachtwoord_hash,
+        rol=rol,
+    )
     async with AsyncSession(engine) as sess:
         sess.add(gebruiker)
         await sess.commit()
