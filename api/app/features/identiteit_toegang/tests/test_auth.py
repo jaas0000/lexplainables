@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import select
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
