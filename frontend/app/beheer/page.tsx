@@ -42,6 +42,7 @@ export default function BeheerPagina() {
     null,
   );
   const [aantalProfielen, setAantalProfielen] = useState<number | null>(null);
+  const [aantalWetten, setAantalWetten] = useState<number | null>(null);
 
   const laadBerichten = useCallback(async () => {
     setLaden(true);
@@ -76,6 +77,15 @@ export default function BeheerPagina() {
       .then((data: unknown) => {
         const profielen = data as { naam: string }[];
         setAantalProfielen(profielen.length);
+      })
+      .catch(() => {
+        /* niet-kritiek */
+      });
+
+    beheerFetch("/api/admin/wetten")
+      .then((data: unknown) => {
+        const wetten = data as { bwb_id: string }[];
+        setAantalWetten(wetten.length);
       })
       .catch(() => {
         /* niet-kritiek */
@@ -640,6 +650,48 @@ export default function BeheerPagina() {
             style={{ fontSize: "0.8125rem" }}
           >
             Beheer LLM-profielen →
+          </Link>
+        </div>
+      </section>
+
+      {/* ---- Sectie: Wetten ---- */}
+      <section>
+        <SectieHeader titel="Wetcatalogus" />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "1rem",
+            background: "rgb(var(--surface))",
+            border: "1px solid rgb(var(--line))",
+            borderRadius: "6px",
+          }}
+        >
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}
+          >
+            <span style={{ fontSize: "0.875rem", color: "rgb(var(--ink))" }}>
+              Wetten in de catalogus
+            </span>
+            {aantalWetten !== null && (
+              <span
+                style={{
+                  fontSize: "0.6875rem",
+                  fontFamily: "monospace",
+                  color: "rgb(var(--faint))",
+                }}
+              >
+                {aantalWetten}
+              </span>
+            )}
+          </div>
+          <Link
+            href="/beheer/wetten"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.8125rem" }}
+          >
+            Wetten →
           </Link>
         </div>
       </section>
