@@ -52,7 +52,6 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 ## PR #9 — wetcatalogus (story 010)
 
 - **C4-model bijwerken**: `docs/architectuur/c4-model.md` is niet bijgewerkt voor de nieuwe wetcatalogus-feature. Toe te voegen: L3 Component `api` — wetcatalogus (`features/wetcatalogus/`); L3 Component `frontend` — wetcatalogus-pagina (`app/wetcatalogus/`), `WetSelector` (`components/WetSelector.tsx`) en BFF-routes (`app/api/wetten/`); L2 Container — beschrijving van `api` bijwerken (wetcatalogus staat er nog als "nog niet gebouwd").
-- **Pre-existing CI failure**: `test_admin_bericht_met_geldig_token_en_user_id_geeft_200` in `api/app/features/identiteit_toegang/tests/test_auth.py` faalt op `no such table: berichten` — los van deze PR, maar blokkeert CI.
 
 ---
 
@@ -67,6 +66,21 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 - **C4-model bijwerken**: `docs/architectuur/c4-model.md` is niet bijgewerkt voor de nieuwe `projecten`-feature. Toe te voegen: L3 Component `api` — `projecten` (`features/projecten/`); L3 Component `frontend` — analyselijst/detail/nieuw (`app/projecten/`), BFF-routes (`app/api/projecten/`), `StatusPill`/`VerwijderKnop` (`components/projecten/`). Ook de api- en frontend-beschrijving in L2 Container bijwerken.
 - **Story 012 "Gebouwd: nee"**: `docs/stories/012-analyse-aanmaken.md` heeft onderaan nog `**Gebouwd:** nee` staan. Bijwerken naar `ja`.
+
+---
+
+## PR #14 — gebruikersbeheer uitbreiden (story 014)
+
+- **store.py**: LaatsteBeheerder-invariantquery staat verbatim gedupliceerd in `wijzig_gebruiker` en `verwijder_gebruiker`; extraheer naar een private `_tel_actieve_beheerders(sess)` helper.
+- **store.py**: LaatsteBeheerder-check en write zijn in één transactie maar zonder `SELECT … FOR UPDATE`; bij een toekomstige PostgreSQL-migratie opnieuw evalueren (met SQLite zijn writes geserialiseerd, dus nu geen acuut risico).
+- **BFF**: `requireSession` + `apiProxy`-patroon is nu gedupliceerd in berichten-, profielen- én gebruikers-routes; een gedeelde `adminProxy(req, url, opts)`-utility elimineert de boilerplate.
+- **models.py**: `GebruikerCreate.rol` en `GebruikerPatch.rol` zijn getypeerd als `str` i.p.v. `Literal["beheerder", "analist"]`; met een Literal-type valideert FastAPI/Pydantic dit automatisch en verdwijnt de handmatige check in de router.
+- **page.tsx**: `onReset` cast de API-response naar een inline type i.p.v. `components["schemas"]["TijdelijkWachtwoord"]` (beschikbaar in `generated/types.ts`); consisent maken met de andere casts.
+- **models.py**: `GebruikerPatch` accepteert een volledig lege body (`{"rol": null, "actief": null}`) als silent no-op; een model-validator die ten minste één non-null veld eist zou dit explicieter maken.
+- **openapi.json**: 401-response is niet gedocumenteerd voor de vijf admin-endpoints (GET, POST, PATCH, DELETE, reset-wachtwoord); toevoegen voor volledigheid van het contract.
+- **store.py**: `lijst_gebruikers` heeft geen LIMIT; inconsistent met berichten-store. Op de huidige schaal geen probleem, maar bewaken bij groei.
+- **scope**: GET + POST `/v1/admin/gebruikers` vallen buiten story 014-spec (afhankelijkheid story 006); functioneel noodzakelijk voor de UI maar niet formeel vastgelegd in de story.
+- **ADR-0011**: `identiteit_toegang` staat nog op SQLModel ORM (niet SQLAlchemy Core + Pydantic zoals ADR-0011 voorschrijft en de implementatienoot aanbeval). Aparte story aanmaken voor de migratie.
 
 ---
 
