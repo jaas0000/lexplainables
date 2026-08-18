@@ -92,4 +92,4 @@ Routerlogica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/routers/admin
 - **Sectie op `/beheer`**: navigatieknop "Wetten →" met het aantal wetten als badge.
 - Mockup-varianten: lege catalogus, lijst met twee wetten (één via resolve gevuld), bewerken in uitklapbaar formulier.
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #15)

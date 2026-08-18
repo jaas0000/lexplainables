@@ -77,4 +77,4 @@ Logica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/app_settings.py` en
 - **Sectie "Instellingen" op `/beheer`** (of aparte `/beheer/instellingen/`-pagina): schakelaar "LLM-calls vastleggen" met beschrijving "Sla alle LLM-aanroepen (prompt + respons) op in de database voor later inzage. Schakel alleen in als dat nodig is — de opgeslagen inhoud kan gevoelige tekst bevatten." Plus een "Opslaan"-knop.
 - Mockup-varianten: instelling uit (grijs), instelling aan (actief), na opslaan (succesmelding).
 
-**Gebouwd:** ja (PR feature/story-019-impl)
+**Gebouwd:** ja (PR #16)

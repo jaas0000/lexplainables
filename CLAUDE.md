@@ -5,26 +5,39 @@ methodologie, skills en achtergrond staan in
 [werkwijze-v2-multi-service](https://github.com/jaas0000/werkwijze-v2-multi-service).
 
 **Stand van zaken:** topologie en stack-profiel liggen vast (zie hieronder). Gebouwde features:
-- `api/app/features/feedback/` — indienen, admin-lijst, verwijderen, ongelezen-aantal, markeer-gezien
+
+**`api/` — feature-mappen:**
+- `api/app/features/feedback/` — indienen, admin-lijst, verwijderen, ongelezen-aantal, markeer-gezien (PR #1–#8)
 - `api/app/features/berichten/` — aanmaken, bewerken, publiceren/depubliceren, verwijderen (admin); lezen, ongelezen-status, lees-alles (analist)
-- `api/app/features/identiteit_toegang/` — eigen `gebruikers`-tabel, bcrypt, `POST /v1/auth/verify` achter API_TOKEN
-- `api/app/shared/auth.py` — API_TOKEN-gate + X-User-Id-header (geen Keycloak meer)
-- `api/app/shared/crypto.py` — Fernet-encryptie voor API-sleutels (PR #10, story 011)
-- `api/app/features/wetcatalogus/` — wettenlijst + structuuropvraag (PR #9, story 010)
-- `api/app/features/llm_profielen/` — CRUD voor LLM-profielen + Fernet-encryptie van API-sleutels (PR #10, story 011)
-- `frontend/` — login (Auth.js v5 Credentials, httpOnly cookie); navigatie (logobalk, nav met Beheer-tab + bel-icoon popover); pagina's:
-  - `app/page.tsx` — startpagina (banner)
-  - `app/beheer/page.tsx` — beheer (berichten CRUD + LLM-profielen teller via BFF; gebruikers/feedback/instellingen placeholder)
-  - `app/beheer/llm-profielen/page.tsx` — LLM-profielen CRUD (aanmaken, bewerken, standaard instellen, verwijderen) (PR #10, story 011)
-  - `app/berichten/page.tsx` — berichten lees-weergave voor analisten (gepubliceerde berichten + lees-alles)
-  - `app/wetcatalogus/page.tsx` — wetcatalogus met WetSelector-component (PR #9, story 010)
-  - `app/mockup/` — interactieve mockups met nepdata (fase 1 `frontend-bouwen`); staan los van de echte routes
-  - BFF-routes: `app/api/admin/berichten/`, `app/api/berichten/`, `app/api/wetten/`, `app/api/admin/profielen/`
-- `tools/wetsanalyse-admin-mcp/` — Admin-MCP (PR #6, story 007): 4 tools (`list_berichten_admin`, `maak_bericht`, `update_bericht`, `publiceer_bericht`); registreerbaar in `.mcp.json`
+- `api/app/features/identiteit_toegang/` — gebruikers-tabel, bcrypt, auth/verify, setup (eerste beheerder), CRUD beheerder, account/wachtwoord-wijzigen (PR #12, #13, #14)
+- `api/app/features/wetcatalogus/` — database-backed (tabel `wet_catalogus`, migratie 0007), admin CRUD + resolve via Wettenbank-MCP (PR #9 story 010, PR #15 story 020)
+- `api/app/features/llm_profielen/` — CRUD + Fernet-encryptie van API-sleutels (PR #10, story 011)
+- `api/app/features/projecten/` — analyses aanmaken/volgen, SSE voortgang, nep-engine (PR #11, story 012); **echte LLM-orkestratie nog niet gebouwd**
+- `api/app/features/runtime_config/` — `app_instellingen`-tabel (migratie 0008), toggle `capture_llm_calls`, TTL-cache (PR #16, story 019)
+- `api/app/shared/auth.py` — API_TOKEN-gate + X-User-Id-header (geen Keycloak)
+- `api/app/shared/crypto.py` — Fernet-encryptie
+
+**`frontend/` — pagina's:**
+- `/` — startpagina (banner)
+- `/login`, `/setup` — auth-flow
+- `/account` — eigen profiel + wachtwoord wijzigen (PR #12)
+- `/beheer` — overzicht met navigatie naar alle beheer-secties
+- `/beheer/llm-profielen` — LLM-profielen CRUD (PR #10)
+- `/beheer/gebruikers` — gebruikersbeheer CRUD (PR #14)
+- `/beheer/wetten` — wetcatalogus admin CRUD + resolve (PR #15)
+- `/beheer/instellingen` — LLM-invoer vastleggen toggle (PR #16)
+- `/berichten` — berichten voor analisten
+- `/wetcatalogus` — wetcatalogus lezen
+- `/projecten`, `/projecten/nieuw` — analyses aanmaken + SSE volgen (PR #11)
+- `app/mockup/` — resterende interactieve mockups (nog niet gepromoveerd)
+
+**`tools/wetsanalyse-admin-mcp/`** — Admin-MCP (PR #6, story 007)
 
 Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in docker-compose of CI.
 
-De overige zes domeinen van `api` en de vier andere services uit de topologie hieronder staan nog niet (`tools/wetsanalyse-admin-mcp/` is gebouwd, PR #6).
+**Alembic-migraties:** 0001–0008 draaien clean op SQLite.
+
+**Nog te bouwen:** analyse-engine (LLM-orkestratie, act2/act3), rapport bekijken (story 013), 2FA (017), API-tokens (018), LLM-calls log (021), annotatie-backend (022), werkplek-UI (023).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -77,9 +90,8 @@ dezelfde workspace toevallig een skill met dezelfde naam heeft.
 
 ## Volgende stap
 
-De overige zes domeinen van `api` (analyse/jobs, LLM-configuratie, wetcatalogus, runtime-config,
-annotatie, orkestratie) als evenzoveel feature-mappen herbouwen — dat is nog steeds de grootste
-stap, zie het topologie-ADR §Consequenties — daarna de vier resterende services opzetten
-(`frontend-chat`, `tools/wettenbank-mcp`, `tools/graph-qa`; `tools/wetsanalyse-admin-mcp` is
-klaar), het CI/CD-sjabloon invullen, en cross-service-contracten instantiëren zodra er meer dan
-één service is om te verbinden.
+De analyse-engine (echte LLM-orkestratie, act2/act3, rapportgeneratie) is het grootste resterende
+werk — de nep-`BackgroundTask` in `projecten/` moet vervangen worden. Daarna story 013 (rapport
+bekijken), 021 (LLM-calls log), 017 (2FA), 018 (API-tokens), 022 (annotatie-backend) en 023
+(werkplek-UI). De vier resterende services (`frontend-chat`, `tools/wettenbank-mcp`,
+`tools/graph-qa`) staan nog niet; `tools/wetsanalyse-admin-mcp/` is klaar.

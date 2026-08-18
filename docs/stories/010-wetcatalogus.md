@@ -66,4 +66,4 @@ Cataloguslogica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/routers/ca
 - **`WetSelector`-component** (Client Component): dropdown voor wet-keuze, laadt artikel-structuur on change, checkboxes of multi-select voor artikelkeuze. Wordt hergebruikt in het analyse-aanmaken-formulier (story 012).
 - Mockup-varianten: leeg (geen wet gekozen), wet gekozen + artikelen zichtbaar, één artikel geselecteerd.
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #9)

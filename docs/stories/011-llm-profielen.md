@@ -71,4 +71,4 @@ Als beheerder wil ik LLM-profielen kunnen aanmaken, bewerken en verwijderen, en 
 - **Sectie op `/beheer`**: navigatieknop "Beheer LLM-profielen →" met het aantal profielen als teller.
 - Mockup-varianten: lege lijst (geen profielen), lijst met twee profielen (waarvan één standaard), bewerk-formulier ingevuld.
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #10)

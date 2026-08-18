@@ -100,4 +100,4 @@ Als analist wil ik een analyse kunnen starten door een werkgebied-naam, één of
 - **`/projecten/{id}`**: status-scherm met live SSE-updates; toont huidige fase als tekst + voortgangsbalk. Bij `klaar`: "Bekijk rapport →". Bij `fout`: foutmelding. Verwijderknop met bevestigingsstap.
 - Mockup-varianten: lijst, aanmaken-formulier, status-wachtrij, status-lopend, status-klaar, status-fout.
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #11) — nep-engine; echte LLM-orkestratie volgt

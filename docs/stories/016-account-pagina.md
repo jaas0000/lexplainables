@@ -70,4 +70,4 @@ Routerlogica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/routers/auth.
 - **Navigatiebalk**: gebruikersnaam als klikbare link naar `/account`, of als label in een dropdown naast de "Uitloggen"-knop.
 - Mockup-varianten: accountpagina (leeg), na succesvolle wachtwoord-wijziging (succesmelding), na verkeerd wachtwoord (foutmelding bij veld).
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #12)

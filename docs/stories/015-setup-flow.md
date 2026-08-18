@@ -74,4 +74,4 @@ Routerlogica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/routers/auth.
 - **Redirect-logica** in `middleware.ts`: controleer setup-status bij elke request; redirect naar `/setup` als `needs_setup: true`; redirect van `/setup` naar `/` als de gebruiker al ingelogd is.
 - Huisstijl: zelfde opmaak als het login-formulier (story 005).
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #13)
