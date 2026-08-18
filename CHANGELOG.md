@@ -2,6 +2,7 @@
 
 ## Niet uitgebracht
 
+- Bij een lege database kunnen beheerders nu via de `/setup`-pagina eenmalig een eerste beheerdersaccount aanmaken. Na de eerste aanmelding is de setup-pagina niet meer beschikbaar. (PR #13)
 - Analisten kunnen nu een analyse starten door bronartikelen te selecteren, een doel en context op te geven, en vervolgens de voortgang live te volgen. De analyselijst toont alle eigen analyses met status en zoek-/filteropties. (PR #11)
 - Analisten kunnen nu een wet kiezen en de bijbehorende artikelen selecteren via het nieuwe Wetcatalogus-scherm dat de structuur van drie wetten toont. (PR #9)
 - Beheerders kunnen nu LLM-profielen (provider, model, API-sleutel) aanmaken, bewerken, als standaard instellen en verwijderen via het beheerscherm. API-sleutels worden versleuteld opgeslagen. (PR #10)
