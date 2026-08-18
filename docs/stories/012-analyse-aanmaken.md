@@ -11,28 +11,31 @@ Als analist wil ik een analyse kunnen starten door een werkgebied-naam, één of
 
 ## Acceptatiecriteria
 
-- [ ] Een ingelogde gebruiker kan een nieuwe analyse aanmaken met naam, bronartikelen (uit de wetcatalogus), en optioneel een analysefocus.
-- [ ] Het standaard LLM-profiel wordt automatisch gebruikt — de analist hoeft geen profiel te kiezen.
+- [ ] Een ingelogde gebruiker kan een nieuwe analyse aanmaken met naam (optioneel), bronartikelen (wet-dropdown + artikel-input + lid-input), omschrijving/context (optioneel), hoofdvraag/analysefocus (optioneel), en een bestaande begrippenlijst (optioneel, inklapbaar blok).
+- [ ] Het model-profiel is te kiezen via een dropdown; bij ontbreken van profielen valt het formulier terug op een vrij tekstveld.
+- [ ] Human-in-the-loop review is instelbaar via een checkbox (default aangevinkt); uit = volautomatisch tot het rapport.
 - [ ] Na aanmaken geeft de API direct 202 terug met het job-id; de analyse draait asynchroon op de achtergrond.
 - [ ] De frontend navigeert direct naar de detailpagina van de nieuwe analyse.
 - [ ] De detailpagina toont de huidige status live via SSE (`GET /v1/projecten/{id}/events`).
-- [ ] De analyselijst (`/analyse`) toont alle analyses van de ingelogde gebruiker met naam, status-badge en datum.
+- [ ] De analyselijst (`/analyse`) toont alle analyses van de ingelogde gebruiker met naam, bronnen-samenvatting, status (dot + tekst) en datum.
+- [ ] De analyselijst heeft een zoekbalk (naam/BWB-id/artikel), status-dropdown en wet-dropdown als filters.
 - [ ] Een ingelogde gebruiker kan een analyse verwijderen vanuit de lijst of de detailpagina.
 - [ ] Statussen: `wachtrij`, `actief`, `review`, `klaar`, `fout`.
 - [ ] Bij status `klaar` verschijnt een knop "Bekijk rapport →" die linkt naar `/analyse/{id}/rapport` (story 013).
 - [ ] Bij status `fout` wordt een foutmelding getoond op de detailpagina.
-- [ ] Minimaal 1 bronartikel is verplicht; het aanmaken-formulier blokkeert verzenden bij lege bronnenlijst (client-side).
+- [ ] Minimaal 1 bronartikel is verplicht (wet + artikel); het aanmaken-formulier blokkeert verzenden bij lege bronnenlijst (client-side).
 
 ## Schemabeslissing
 
 **Python-models (`api/app/features/projecten/models.py`):**
 
 - `BronKeuze` — `bwb_id: str`, `artikel: str`, `lid: str | None = None`
-- `AnalyseAanmaken` — `naam: str`, `bronnen: list[BronKeuze]` (min 1, max 50), `analysefocus: str | None = None`
+- `BegripInvoer` — `naam: str`, `definitie: str | None = None`
+- `AnalyseAanmaken` — `naam: str | None = None`, `bronnen: list[BronKeuze]` (min 1, max 50), `omschrijving: str | None = None`, `analysefocus: str | None = None`, `begrippenlijst: list[BegripInvoer] | None = None`, `model_profiel: str | None = None`, `human_in_the_loop: bool = True`
 - `AnalyseStatus` (str enum) — `wachtrij`, `actief`, `review`, `klaar`, `fout`
 - `AangemaaktAcceptatie` — `id: str`, `status: AnalyseStatus`
-- `AnalyseOverzicht` — `id: str`, `naam: str`, `status: AnalyseStatus`, `bijgewerkt: str`
-- `AnalyseDetail` — extends `AnalyseOverzicht` + `bronnen: list[BronKeuze]`, `analysefocus: str | None`, `huidige_fase: str | None`
+- `AnalyseOverzicht` — `id: str`, `naam: str`, `bronnen: list[BronKeuze]`, `status: AnalyseStatus`, `bijgewerkt: str`
+- `AnalyseDetail` — extends `AnalyseOverzicht` + `omschrijving: str | None`, `analysefocus: str | None`, `model_profiel: str | None`, `human_in_the_loop: bool`, `begrippenlijst: list[BegripInvoer] | None`, `huidige_fase: str | None`
 
 **Endpoints:**
 
@@ -60,6 +63,7 @@ Als analist wil ik een analyse kunnen starten door een werkgebied-naam, één of
 - SSE-verbinding verbroken → frontend herverbindt automatisch met exponentiële backoff (max 3 pogingen).
 - Engine-fout tijdens analyse → status `fout`; foutbericht zichtbaar op de detailpagina.
 - Analyse nog actief bij refresh → SSE hervat live updates.
+- Begrippenlijst bevat parse-fouten → frontend toont per-fout melding, blokkeert verzenden.
 
 ## Auth / rollen
 
@@ -69,7 +73,7 @@ Als analist wil ik een analyse kunnen starten door een werkgebied-naam, één of
 
 ## Gedeelde logica
 
-- `WetSelector`-component uit story 010 — hergebruikt in het aanmaken-formulier.
+- `WetSelector`-component uit story 010 — als grondslag voor de wet-dropdown in de bron-rijen (de mockup gebruikt een simplere select; de echte implementatie hergebruikt de WetSelector + artikel-autocomplete).
 - `requireSession()` + `apiProxy()` — bestaan ✓
 - Engine-logica kopiëren vanuit `wetsanalyse-ai/api/app/engine/` → `api/app/features/projecten/engine/`.
 - Router-logica kopiëren vanuit `wetsanalyse-ai/api/app/routers/projects.py` → `api/app/features/projecten/router.py`.
@@ -77,9 +81,17 @@ Als analist wil ik een analyse kunnen starten door een werkgebied-naam, één of
 
 ## UI
 
-- **`/analyse`**: analyselijst met naam, status-badge, datum, "Bekijk →"-knop per rij, en een "Nieuwe analyse →"-knop bovenaan.
-- **`/analyse/nieuw`**: formulier met werkgebied-naam (tekstveld), `WetSelector` (bronnen kiezen), analysefocus (optioneel tekstgebied), verzendknop.
-- **`/analyse/{id}`**: status-scherm met live SSE-updates; toont huidige fase als tekst ("Analyse loopt — act 2/3..."), voortgangsindicator. Bij `klaar`: "Bekijk rapport →". Bij `fout`: foutmelding. Opnieuw-proberen valt buiten scope van deze story.
-- Mockup-varianten: aanmaken-formulier (leeg), status-lopend, status-klaar, status-fout, analyselijst.
+- **`/analyse`**: donkerblauwe hero-banner (label "JURIDISCH ANALYSESCHEMA", titel "Analyses", beschrijving, knop "Nieuwe analyse"). Filterbar met zoekbalk, status-dropdown en wet-dropdown. Tabel: checkbox | NAAM (+ id eronder) | BRON (samenvatting eerste bron + +N) | STATUS (dot + tekst) | BIJGEWERKT | acties.
+- **`/analyse/nieuw`**: formulier met:
+  - Sectie "Bronnen in het werkgebied" met teller rechts — per bron een rij met wet-dropdown, artikel-input, lid-input (optioneel) en ×-knop; "+ Bron toevoegen"-knop.
+  - Model-profiel: dropdown (geladen via BFF) met "beheer via /beheer"-link rechts.
+  - Naam werkgebied: tekstveld, optioneel, hint "anders afgeleid".
+  - Omschrijving / context: textarea, optioneel.
+  - Hoofdvraag / analysefocus: textarea, optioneel.
+  - Bestaande begrippenlijst: `<details>`-element (inklapbaar), optioneel; JSON/CSV/vrij formaat.
+  - Human-in-the-loop review: checkbox (default aangevinkt) + uitlegtekst.
+  - "Analyse starten"-knop (primair) + "Annuleer"-knop.
+- **`/analyse/{id}`**: status-scherm met live SSE-updates; toont huidige fase als tekst + voortgangsbalk. Bij `klaar`: "Bekijk rapport →". Bij `fout`: foutmelding. Verwijderknop met bevestigingsstap.
+- Mockup-varianten: lijst, aanmaken-formulier, status-wachtrij, status-lopend, status-klaar, status-fout.
 
 **Gebouwd:** nee

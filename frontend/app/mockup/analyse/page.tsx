@@ -6,22 +6,21 @@ import { useState, useEffect } from "react";
 
 type AnalyseStatus = "wachtrij" | "actief" | "review" | "klaar" | "fout";
 
-type BronKeuze = { bwb_id: string; artikel: string; pad: string };
+type BronKeuze = { bwb_id: string; artikel: string; lid: string };
 
 type AnalyseOverzicht = {
   id: string;
   naam: string;
+  bronnen: BronKeuze[];
   status: AnalyseStatus;
   bijgewerkt: string;
 };
 
 // ─── Nep-data ─────────────────────────────────────────────────────────────────
 
-const INIT_ANALYSES: AnalyseOverzicht[] = [
-  { id: "a1b2c3", naam: "Wwb participatieplicht 2026",           status: "klaar",    bijgewerkt: "2026-08-14T11:30:00Z" },
-  { id: "d4e5f6", naam: "SUWI uitwisseling persoonsgegevens",    status: "actief",   bijgewerkt: "2026-08-14T10:15:00Z" },
-  { id: "g7h8i9", naam: "Participatiewet art. 8a–10",            status: "wachtrij", bijgewerkt: "2026-08-14T09:00:00Z" },
-  { id: "j0k1l2", naam: "Test met verkeerde API-sleutel",        status: "fout",     bijgewerkt: "2026-08-13T16:45:00Z" },
+const NEP_PROFIELEN = [
+  { naam: "azure-sonnet (default)", is_default: true },
+  { naam: "azure-gpt4o", is_default: false },
 ];
 
 const NEP_WETTEN = [
@@ -30,26 +29,45 @@ const NEP_WETTEN = [
   { bwb_id: "BWBR0020183", naam: "Participatiewet" },
 ];
 
-// O(1) bwb_id → naam lookup voor de bronnen-chips (E3)
-const NEP_WETTEN_NAAM = new Map(NEP_WETTEN.map((w) => [w.bwb_id, w.naam]));
+// O(1) bwb_id → naam lookup
+const WETTEN_NAAM = new Map(NEP_WETTEN.map((w) => [w.bwb_id, w.naam]));
 
-const NEP_STRUCTUUR: Record<string, { artikel: string; pad: string }[]> = {
-  BWBR0011823: [
-    { artikel: "1",  pad: "Hoofdstuk 1 / Artikel 1" },
-    { artikel: "2",  pad: "Hoofdstuk 1 / Artikel 2" },
-    { artikel: "17", pad: "Hoofdstuk 2 / Artikel 17" },
-    { artikel: "31", pad: "Hoofdstuk 3 / Artikel 31" },
-  ],
-  BWBR0015703: [
-    { artikel: "1", pad: "Hoofdstuk 1 / Artikel 1" },
-    { artikel: "7", pad: "Hoofdstuk 2 / Artikel 7" },
-  ],
-  BWBR0020183: [
-    { artikel: "8a", pad: "Hoofdstuk 2 / Artikel 8a" },
-    { artikel: "10", pad: "Hoofdstuk 2 / Artikel 10" },
-    { artikel: "44", pad: "Hoofdstuk 3 / Artikel 44" },
-  ],
-};
+const INIT_ANALYSES: AnalyseOverzicht[] = [
+  {
+    id: "a1b2c3",
+    naam: "Wwb participatieplicht 2026",
+    bronnen: [{ bwb_id: "BWBR0011823", artikel: "9", lid: "1" }],
+    status: "klaar",
+    bijgewerkt: "2026-08-14T11:30:00Z",
+  },
+  {
+    id: "d4e5f6",
+    naam: "SUWI uitwisseling persoonsgegevens",
+    bronnen: [
+      { bwb_id: "BWBR0015703", artikel: "7", lid: "" },
+      { bwb_id: "BWBR0015703", artikel: "33", lid: "" },
+    ],
+    status: "actief",
+    bijgewerkt: "2026-08-14T10:15:00Z",
+  },
+  {
+    id: "g7h8i9",
+    naam: "Participatiewet art. 8a–10",
+    bronnen: [
+      { bwb_id: "BWBR0020183", artikel: "8a", lid: "" },
+      { bwb_id: "BWBR0020183", artikel: "10", lid: "" },
+    ],
+    status: "wachtrij",
+    bijgewerkt: "2026-08-14T09:00:00Z",
+  },
+  {
+    id: "j0k1l2",
+    naam: "Test met verkeerde API-sleutel",
+    bronnen: [{ bwb_id: "BWBR0020183", artikel: "44", lid: "3" }],
+    status: "fout",
+    bijgewerkt: "2026-08-13T16:45:00Z",
+  },
+];
 
 const STATUS_META: Record<AnalyseStatus, { label: string; kleur: string }> = {
   wachtrij: { label: "Wachtrij", kleur: "rgb(var(--waarschuwing))" },
@@ -59,50 +77,72 @@ const STATUS_META: Record<AnalyseStatus, { label: string; kleur: string }> = {
   fout:     { label: "Fout",     kleur: "rgb(var(--fout))" },
 };
 
-// Simulated SSE events: fase-tekst + bijbehorend voortgangspercentage
+// Gesimuleerde SSE-fases voor het lopend-scherm
 const SSE_FASES: { tekst: string; pct: number }[] = [
-  { tekst: "stap 1/4 — bronnen ophalen",       pct: 15 },
-  { tekst: "stap 2/4 — artikelen doorlezen",   pct: 38 },
-  { tekst: "stap 3/4 — verbanden leggen",      pct: 65 },
-  { tekst: "stap 4/4 — rapport samenstellen",  pct: 88 },
+  { tekst: "stap 1/4 — bronnen ophalen",      pct: 15 },
+  { tekst: "stap 2/4 — artikelen doorlezen",  pct: 38 },
+  { tekst: "stap 3/4 — verbanden leggen",     pct: 65 },
+  { tekst: "stap 4/4 — rapport samenstellen", pct: 88 },
 ];
 
-// ─── Variants ─────────────────────────────────────────────────────────────────
+// ─── Variant-definitie ─────────────────────────────────────────────────────────
 
 type Variant =
-  | "formulier"
   | "lijst"
+  | "formulier"
   | "status-wachtrij"
   | "status-lopend"
   | "status-klaar"
   | "status-fout";
 
 const VARIANTEN: { id: Variant; label: string }[] = [
-  { id: "formulier",       label: "Aanmaken-formulier" },
   { id: "lijst",           label: "Analyselijst" },
+  { id: "formulier",       label: "Aanmaken-formulier" },
   { id: "status-wachtrij", label: "Status — wachtrij" },
   { id: "status-lopend",   label: "Status — lopend" },
   { id: "status-klaar",    label: "Status — klaar" },
   { id: "status-fout",     label: "Status — fout" },
 ];
 
+// ─── Hulpfuncties ─────────────────────────────────────────────────────────────
+
+function bronnenSamenvatting(bronnen: BronKeuze[]): string {
+  if (bronnen.length === 0) return "—";
+  const eerste = bronnen[0];
+  const wetnaam = WETTEN_NAAM.get(eerste.bwb_id) ?? eerste.bwb_id;
+  // Korte afkorting zodat de kolom niet te breed wordt
+  const kort = wetnaam.length > 22 ? wetnaam.slice(0, 22) + "…" : wetnaam;
+  const lidSuffix = eerste.lid ? ` lid ${eerste.lid}` : "";
+  const rest = bronnen.length > 1 ? ` +${bronnen.length - 1}` : "";
+  return `${kort} art. ${eerste.artikel}${lidSuffix}${rest}`;
+}
+
+function formatDatum(iso: string): string {
+  return new Date(iso).toLocaleString("nl-NL", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 // ─── Kleine hulpcomponenten ───────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: AnalyseStatus }) {
+// Status-dot: gekleurde cirkel + tekst, zoals in de wetsanalyse-ai tabel
+function StatusDot({ status }: { status: AnalyseStatus }) {
   const { label, kleur } = STATUS_META[status];
   return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "0.125rem 0.5rem",
-        borderRadius: "99px",
-        fontSize: "0.75rem",
-        fontWeight: 600,
-        background: kleur,
-        color: "white",
-      }}
-    >
-      {label}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+      <span
+        style={{
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          background: kleur,
+          flexShrink: 0,
+        }}
+      />
+      <span style={{ fontSize: "0.875rem", color: "rgb(var(--ink))" }}>{label}</span>
     </span>
   );
 }
@@ -119,22 +159,23 @@ function TerugKnop({ onClick }: { onClick: () => void }) {
   );
 }
 
-// A1: één bevestig-patroon voor zowel status-schermen als de lijst-rijen
-function VerwijderKnop({ onClick, compact = false }: { onClick: () => void; compact?: boolean }) {
+// Verwijderknop met één bevestiging (compact voor tabelrijen, normaal voor detailschermen)
+function VerwijderKnop({
+  onClick,
+  compact = false,
+}: {
+  onClick: () => void;
+  compact?: boolean;
+}) {
   const [bevestig, setBevestig] = useState(false);
   if (bevestig) {
     return (
       <span style={{ display: "inline-flex", gap: "0.5rem", alignItems: "center" }}>
         <button
-          className="btn"
+          className="btn btn-danger"
           style={{
             fontSize: compact ? "0.75rem" : "0.8125rem",
             padding: compact ? "0.25rem 0.625rem" : "0.375rem 0.875rem",
-            background: "rgb(var(--fout))",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
           }}
           onClick={onClick}
         >
@@ -142,8 +183,10 @@ function VerwijderKnop({ onClick, compact = false }: { onClick: () => void; comp
         </button>
         <button
           className="btn btn-secondary"
-          style={{ fontSize: compact ? "0.75rem" : "0.8125rem",
-                   padding: compact ? "0.25rem 0.625rem" : undefined }}
+          style={{
+            fontSize: compact ? "0.75rem" : "0.8125rem",
+            padding: compact ? "0.25rem 0.625rem" : undefined,
+          }}
           onClick={() => setBevestig(false)}
         >
           Annuleer
@@ -153,11 +196,10 @@ function VerwijderKnop({ onClick, compact = false }: { onClick: () => void; comp
   }
   return (
     <button
-      className="btn btn-secondary"
+      className="btn btn-danger"
       style={{
         fontSize: compact ? "0.75rem" : "0.8125rem",
         padding: compact ? "0.25rem 0.625rem" : undefined,
-        color: "rgb(var(--fout))",
       }}
       onClick={() => setBevestig(true)}
     >
@@ -166,7 +208,7 @@ function VerwijderKnop({ onClick, compact = false }: { onClick: () => void; comp
   );
 }
 
-// S2: gedeelde schil voor alle vier status-schermen
+// Gedeelde shell voor alle vier status-schermen
 function StatusSchermShell({
   naam,
   status,
@@ -181,55 +223,200 @@ function StatusSchermShell({
   return (
     <div style={{ maxWidth: "40rem" }}>
       <TerugKnop onClick={onTerug} />
-      <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "0.5rem" }}>{naam}</h2>
+      <h2
+        style={{
+          fontSize: "1.125rem",
+          fontWeight: 600,
+          marginBottom: "0.5rem",
+          color: "rgb(var(--lint))",
+        }}
+      >
+        {naam}
+      </h2>
       <div style={{ marginBottom: "1.5rem" }}>
-        <StatusBadge status={status} />
+        <StatusDot status={status} />
       </div>
       {children}
     </div>
   );
 }
 
-// ─── WetSelector ─────────────────────────────────────────────────────────────
+// ─── Hero-banner (bovenaan de analyselijst) ────────────────────────────────────
 
-function WetSelectorInForm({
-  bronnen,
-  setBronnen,
-}: {
-  bronnen: BronKeuze[];
-  setBronnen: (b: BronKeuze[]) => void;
-}) {
-  const [gekozenWet, setGekozenWet] = useState("");
-  const artikelen = gekozenWet ? (NEP_STRUCTUUR[gekozenWet] ?? []) : [];
-
-  // S4: één helper voor zowel toggleArtikel als het chip-kruisje
-  function verwijderArtikel(bwb_id: string, artikel: string) {
-    setBronnen(bronnen.filter((b) => !(b.bwb_id === bwb_id && b.artikel === artikel)));
-  }
-
-  function toggleArtikel(artikel: string, pad: string) {
-    if (bronnen.some((b) => b.bwb_id === gekozenWet && b.artikel === artikel)) {
-      verwijderArtikel(gekozenWet, artikel);
-    } else {
-      setBronnen([...bronnen, { bwb_id: gekozenWet, artikel, pad }]);
-    }
-  }
-
+function HeroBanner({ onNieuw }: { onNieuw: () => void }) {
   return (
-    <div>
-      <div style={{ marginBottom: "0.75rem" }}>
-        <label
-          style={{ display: "block", fontSize: "0.8125rem", fontWeight: 500, marginBottom: "0.25rem" }}
-        >
-          Wet
-        </label>
+    <div
+      style={{
+        background: "rgb(var(--communicatiekleur))",
+        borderRadius: "8px",
+        padding: "2rem 2.5rem",
+        marginBottom: "1.5rem",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.25rem",
+        }}
+      >
+        <div>
+          <p
+            style={{
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.7)",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Juridisch Analyseschema
+          </p>
+          <h1
+            style={{
+              fontSize: "1.75rem",
+              fontWeight: 700,
+              color: "white",
+              margin: 0,
+            }}
+          >
+            Analyses
+          </h1>
+          <p
+            style={{
+              fontSize: "0.875rem",
+              color: "rgba(255,255,255,0.85)",
+              marginTop: "0.5rem",
+              maxWidth: "36rem",
+            }}
+          >
+            Elke analyse duidt een werkgebied — één of meer bronnen (wetsartikel of lid) —
+            brongetrouw volgens het Juridisch Analyseschema: markeren &amp; classificeren, daarna
+            begrippen &amp; afleidingsregels.
+          </p>
+        </div>
+        <div>
+          <button
+            className="btn"
+            style={{
+              background: "white",
+              color: "rgb(var(--lint))",
+              fontWeight: 600,
+              border: "none",
+            }}
+            onClick={onNieuw}
+          >
+            Nieuwe analyse
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Filterbar (zoekbalk + dropdowns) ─────────────────────────────────────────
+
+function FilterBar({
+  zoek,
+  setZoek,
+  statusFilter,
+  setStatusFilter,
+  wetFilter,
+  setWetFilter,
+}: {
+  zoek: string;
+  setZoek: (v: string) => void;
+  statusFilter: string;
+  setStatusFilter: (v: string) => void;
+  wetFilter: string;
+  setWetFilter: (v: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "0.75rem",
+        flexWrap: "wrap",
+        marginBottom: "1rem",
+        alignItems: "center",
+      }}
+    >
+      <input
+        className="field-input"
+        style={{ flex: "1 1 16rem", minWidth: "14rem" }}
+        type="search"
+        placeholder="Zoek op naam, BWB-id of artikel..."
+        value={zoek}
+        onChange={(e) => setZoek(e.target.value)}
+      />
+      <select
+        className="field-input"
+        style={{ width: "10rem", flex: "0 0 auto" }}
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+      >
+        <option value="">Alle statussen</option>
+        <option value="wachtrij">Wachtrij</option>
+        <option value="actief">Actief</option>
+        <option value="review">Review</option>
+        <option value="klaar">Klaar</option>
+        <option value="fout">Fout</option>
+      </select>
+      <select
+        className="field-input"
+        style={{ width: "14rem", flex: "0 0 auto" }}
+        value={wetFilter}
+        onChange={(e) => setWetFilter(e.target.value)}
+      >
+        <option value="">Alle wetten</option>
+        {NEP_WETTEN.map((w) => (
+          <option key={w.bwb_id} value={w.bwb_id}>
+            {w.naam}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ─── BronRij (één bron in het aanmaakformulier) ────────────────────────────────
+
+function BronRij({
+  bron,
+  onUpdate,
+  onVerwijder,
+  verwijderDisabled,
+}: {
+  bron: BronKeuze;
+  onUpdate: (patch: Partial<BronKeuze>) => void;
+  onVerwijder: () => void;
+  verwijderDisabled: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr auto auto auto",
+        gap: "0.75rem",
+        alignItems: "end",
+        padding: "0.875rem",
+        border: "1px solid rgb(var(--line))",
+        borderRadius: "6px",
+        background: "rgb(var(--paper))",
+      }}
+    >
+      {/* Wet-dropdown */}
+      <div>
+        <label className="field-label">Wet</label>
         <select
           className="field-input"
-          value={gekozenWet}
-          onChange={(e) => setGekozenWet(e.target.value)}
-          style={{ width: "100%" }}
+          value={bron.bwb_id}
+          onChange={(e) =>
+            onUpdate({ bwb_id: e.target.value, artikel: "", lid: "" })
+          }
         >
-          <option value="">— Kies een wet —</option>
+          <option value="">— kies een wet —</option>
           {NEP_WETTEN.map((w) => (
             <option key={w.bwb_id} value={w.bwb_id}>
               {w.naam}
@@ -238,96 +425,56 @@ function WetSelectorInForm({
         </select>
       </div>
 
-      {gekozenWet && (
-        <div style={{ marginBottom: "0.75rem" }}>
-          <label
-            style={{ display: "block", fontSize: "0.8125rem", fontWeight: 500, marginBottom: "0.25rem" }}
-          >
-            Artikelen
-          </label>
-          <div style={{ border: "1px solid rgb(var(--line))", borderRadius: "6px", overflow: "hidden" }}>
-            {artikelen.map((a, i) => {
-              // S5/E2: één keer berekenen, twee keer gebruiken
-              const geselecteerd = bronnen.some(
-                (b) => b.bwb_id === gekozenWet && b.artikel === a.artikel
-              );
-              return (
-                <label
-                  key={a.artikel}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                    padding: "0.4rem 0.75rem",
-                    cursor: "pointer",
-                    background: geselecteerd ? "rgb(var(--surface))" : "rgb(var(--paper))",
-                    borderTop: i > 0 ? "1px solid rgb(var(--line))" : "none",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={geselecteerd}
-                    onChange={() => toggleArtikel(a.artikel, a.pad)}
-                  />
-                  <span style={{ fontWeight: 500, minWidth: "3rem" }}>art. {a.artikel}</span>
-                  <span style={{ color: "rgb(var(--muted))", fontSize: "0.8125rem" }}>{a.pad}</span>
-                </label>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Artikel */}
+      <div>
+        <label className="field-label">
+          Artikel{" "}
+          <span style={{ color: "rgb(var(--fout))", fontWeight: 700 }}>*</span>
+        </label>
+        <input
+          className="field-input"
+          style={{ width: "6rem" }}
+          type="text"
+          placeholder="9"
+          value={bron.artikel}
+          onChange={(e) => onUpdate({ artikel: e.target.value, lid: "" })}
+          autoComplete="off"
+        />
+      </div>
 
-      {bronnen.length > 0 && (
-        <div>
-          <p
-            style={{
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              color: "rgb(var(--muted))",
-              marginBottom: "0.375rem",
-            }}
-          >
-            Geselecteerde bronnen ({bronnen.length}):
-          </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
-            {bronnen.map((b) => (
-              <span
-                key={`${b.bwb_id}-${b.artikel}`}
-                style={{
-                  fontSize: "0.75rem",
-                  padding: "0.125rem 0.375rem 0.125rem 0.5rem",
-                  background: "rgb(var(--surface))",
-                  border: "1px solid rgb(var(--line))",
-                  borderRadius: "4px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.375rem",
-                }}
-              >
-                {/* E3: O(1) map-lookup i.p.v. .find() per chip per render */}
-                {NEP_WETTEN_NAAM.get(b.bwb_id)} art. {b.artikel}
-                <button
-                  onClick={() => verwijderArtikel(b.bwb_id, b.artikel)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "rgb(var(--muted))",
-                    padding: "0",
-                    fontSize: "0.75rem",
-                    lineHeight: 1,
-                  }}
-                  aria-label={`Verwijder art. ${b.artikel}`}
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Lid (optioneel) */}
+      <div>
+        <label className="field-label" style={{ color: "rgb(var(--muted))" }}>
+          Lid
+        </label>
+        <input
+          className="field-input"
+          style={{ width: "5rem" }}
+          type="text"
+          placeholder="1"
+          value={bron.lid}
+          onChange={(e) => onUpdate({ lid: e.target.value })}
+          autoComplete="off"
+        />
+      </div>
+
+      {/* Verwijder */}
+      <div>
+        {/* Lege label zodat de ×-knop op gelijke hoogte staat */}
+        <label className="field-label" style={{ visibility: "hidden" }}>
+          _
+        </label>
+        <button
+          className="btn btn-secondary"
+          style={{ fontSize: "1.125rem", padding: "0.35rem 0.75rem" }}
+          type="button"
+          onClick={onVerwijder}
+          disabled={verwijderDisabled}
+          aria-label="Bron verwijderen"
+        >
+          ×
+        </button>
+      </div>
     </div>
   );
 }
@@ -335,98 +482,337 @@ function WetSelectorInForm({
 // ─── Aanmaken-formulier ───────────────────────────────────────────────────────
 
 function AanmakenFormulier({ onNavigeer }: { onNavigeer: (v: Variant) => void }) {
+  const [bronnen, setBronnen] = useState<BronKeuze[]>([
+    { bwb_id: "", artikel: "", lid: "" },
+  ]);
   const [naam, setNaam] = useState("");
-  const [bronnen, setBronnen] = useState<BronKeuze[]>([]);
+  const [omschrijving, setOmschrijving] = useState("");
   const [analysefocus, setAnalysefocus] = useState("");
+  const [begrippenTekst, setBegrippenTekst] = useState("");
+  const [profiel, setProfiel] = useState("azure-sonnet (default)");
+  const [review, setReview] = useState(true);
   const [geprobeerd, setGeprobeerd] = useState(false);
 
-  const kanVerzenden = naam.trim().length > 0 && bronnen.length > 0;
+  const heeftGeldigeBron = bronnen.some(
+    (b) => b.bwb_id.length > 0 && b.artikel.trim().length > 0
+  );
 
-  function handleVerzenden() {
+  function updateBron(i: number, patch: Partial<BronKeuze>) {
+    setBronnen((bs) => bs.map((b, j) => (j === i ? { ...b, ...patch } : b)));
+  }
+  function voegBronToe() {
+    setBronnen((bs) => [...bs, { bwb_id: "", artikel: "", lid: "" }]);
+  }
+  function verwijderBron(i: number) {
+    setBronnen((bs) => (bs.length > 1 ? bs.filter((_, j) => j !== i) : bs));
+  }
+
+  function handleVerzenden(e: React.FormEvent) {
+    e.preventDefault();
     setGeprobeerd(true);
-    if (!kanVerzenden) return;
-    // Simuleer 202-response: navigeer naar wachtrij-variant
+    if (!heeftGeldigeBron) return;
+    // Simuleer 202-response → navigeer naar wachtrij-variant
     onNavigeer("status-wachtrij");
   }
 
+  const begrippenRegels = begrippenTekst.trim().split("\n").filter(Boolean).length;
+
   return (
     <div style={{ maxWidth: "40rem" }}>
-      {/* S1: TerugKnop heeft al marginBottom — geen wrapper div nodig */}
       <TerugKnop onClick={() => onNavigeer("lijst")} />
-      <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "1.5rem" }}>
+
+      <h2
+        style={{
+          fontSize: "1.5rem",
+          fontWeight: 700,
+          color: "rgb(var(--lint))",
+          marginBottom: "0.25rem",
+        }}
+      >
         Nieuwe analyse
       </h2>
+      <p
+        style={{
+          fontSize: "0.875rem",
+          color: "rgb(var(--muted))",
+          marginBottom: "1.5rem",
+        }}
+      >
+        De orchestrator haalt de wettekst op via de wettenbank en doorloopt activiteit 2 en 3.
+        Met review aan pauzeert hij na elke activiteit voor jouw akkoord.
+      </p>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-        <div>
-          <label
-            style={{ display: "block", fontSize: "0.8125rem", fontWeight: 500, marginBottom: "0.25rem" }}
-          >
-            Naam werkgebied
-          </label>
-          <input
-            className="field-input"
-            type="text"
-            placeholder="bv. Participatieplicht 2026"
-            value={naam}
-            onChange={(e) => setNaam(e.target.value)}
-            style={{ width: "100%" }}
-          />
-          {geprobeerd && naam.trim().length === 0 && (
-            <p style={{ fontSize: "0.75rem", color: "rgb(var(--fout))", marginTop: "0.25rem" }}>
-              Naam is verplicht.
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label
-            style={{ display: "block", fontSize: "0.8125rem", fontWeight: 500, marginBottom: "0.5rem" }}
-          >
-            Bronartikelen
-            <span
-              style={{ fontWeight: 400, color: "rgb(var(--faint))", marginLeft: "0.375rem" }}
+      <div className="card">
+        <form
+          onSubmit={handleVerzenden}
+          style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
+        >
+          {/* Bronnen in het werkgebied */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                marginBottom: "0.625rem",
+              }}
             >
-              (minimaal 1)
+              <span className="field-label" style={{ marginBottom: 0 }}>
+                Bronnen in het werkgebied
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "rgb(var(--muted))" }}>
+                {bronnen.length} bron{bronnen.length === 1 ? "" : "nen"}
+              </span>
+            </div>
+            {geprobeerd && !heeftGeldigeBron && (
+              <p
+                style={{
+                  fontSize: "0.75rem",
+                  color: "rgb(var(--fout))",
+                  marginBottom: "0.5rem",
+                }}
+              >
+                Voeg minimaal 1 bronartikel toe (wet + artikel verplicht).
+              </p>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+              {bronnen.map((b, i) => (
+                <BronRij
+                  key={i}
+                  bron={b}
+                  onUpdate={(patch) => updateBron(i, patch)}
+                  onVerwijder={() => verwijderBron(i)}
+                  verwijderDisabled={bronnen.length === 1}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ marginTop: "0.625rem", fontSize: "0.8125rem" }}
+              onClick={voegBronToe}
+            >
+              + Bron toevoegen
+            </button>
+          </div>
+
+          {/* Model-profiel */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+              }}
+            >
+              <label className="field-label">Model-profiel</label>
+              <span style={{ fontSize: "0.75rem", color: "rgb(var(--link))" }}>
+                beheer via /beheer
+              </span>
+            </div>
+            <select
+              className="field-input"
+              value={profiel}
+              onChange={(e) => setProfiel(e.target.value)}
+            >
+              {NEP_PROFIELEN.map((p) => (
+                <option key={p.naam} value={p.naam}>
+                  {p.naam}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Naam werkgebied */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+              }}
+            >
+              <label className="field-label">Naam werkgebied</label>
+              <span style={{ fontSize: "0.75rem", color: "rgb(var(--muted))" }}>
+                optioneel — anders afgeleid
+              </span>
+            </div>
+            <input
+              className="field-input"
+              type="text"
+              placeholder="Inkomensafhankelijke bijdrage Zvw"
+              value={naam}
+              onChange={(e) => setNaam(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+
+          {/* Omschrijving / context */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+              }}
+            >
+              <label className="field-label">Omschrijving / context</label>
+              <span style={{ fontSize: "0.75rem", color: "rgb(var(--muted))" }}>
+                optioneel
+              </span>
+            </div>
+            <textarea
+              className="field-input"
+              rows={2}
+              placeholder="Achtergrond bij deze analyse…"
+              value={omschrijving}
+              onChange={(e) => setOmschrijving(e.target.value)}
+              style={{ resize: "vertical", fontFamily: "inherit" }}
+            />
+          </div>
+
+          {/* Hoofdvraag / analysefocus */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+              }}
+            >
+              <label className="field-label">Hoofdvraag / analysefocus</label>
+              <span style={{ fontSize: "0.75rem", color: "rgb(var(--muted))" }}>
+                optioneel
+              </span>
+            </div>
+            <textarea
+              className="field-input"
+              rows={2}
+              placeholder="Waar moet de analyse antwoord op geven?"
+              value={analysefocus}
+              onChange={(e) => setAnalysefocus(e.target.value)}
+              style={{ resize: "vertical", fontFamily: "inherit" }}
+            />
+          </div>
+
+          {/* Bestaande begrippenlijst (inklapbaar) */}
+          <details
+            style={{
+              border: "1px solid rgb(var(--line))",
+              borderRadius: "6px",
+              padding: "0.875rem",
+              background: "rgb(var(--surface))",
+            }}
+          >
+            <summary
+              style={{
+                cursor: "pointer",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                color: "rgb(var(--ink))",
+              }}
+            >
+              Bestaande begrippenlijst{" "}
+              <span style={{ fontWeight: 400, color: "rgb(var(--muted))" }}>(optioneel)</span>
+              {begrippenRegels > 0 && (
+                <span
+                  style={{
+                    marginLeft: "0.5rem",
+                    fontFamily: "monospace",
+                    fontSize: "0.75rem",
+                    color: "rgb(var(--faint))",
+                  }}
+                >
+                  {begrippenRegels} regel{begrippenRegels === 1 ? "" : "s"} ingevoerd
+                </span>
+              )}
+            </summary>
+            <div
+              style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}
+            >
+              <p style={{ fontSize: "0.8125rem", color: "rgb(var(--muted))" }}>
+                Plak of upload een bestaande begrippenlijst als suggestieve invoer voor activiteit 3:
+                JSON (<code>{`{"begrippen": [...]}`}</code>), CSV met kopregel (kolom{" "}
+                <code>naam</code> verplicht), of één begrip per regel (
+                <code>naam; definitie</code>). De analyse hergebruikt waar de betekenis past en
+                registreert per begrip de herkomst.
+              </p>
+              <textarea
+                className="field-input"
+                rows={4}
+                placeholder={
+                  "belastingplichtige; degene die aangifte moet doen\nbijdrage-inkomen"
+                }
+                value={begrippenTekst}
+                onChange={(e) => setBegrippenTekst(e.target.value)}
+                style={{ resize: "vertical", fontFamily: "monospace", fontSize: "0.8125rem" }}
+              />
+            </div>
+          </details>
+
+          {/* Human-in-the-loop review */}
+          <label
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.75rem",
+              padding: "0.875rem",
+              border: "1px solid rgb(var(--line))",
+              borderRadius: "6px",
+              cursor: "pointer",
+              background: "rgb(var(--surface))",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={review}
+              onChange={(e) => setReview(e.target.checked)}
+              style={{
+                marginTop: "0.125rem",
+                width: "1rem",
+                height: "1rem",
+                accentColor: "rgb(var(--accent))",
+              }}
+            />
+            <span>
+              <span
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "rgb(var(--ink))",
+                  display: "block",
+                }}
+              >
+                Human-in-the-loop review
+              </span>
+              <span
+                style={{
+                  fontSize: "0.8125rem",
+                  color: "rgb(var(--muted))",
+                  display: "block",
+                  marginTop: "0.125rem",
+                }}
+              >
+                Pauzeer na activiteit 2 en 3 voor jouw beoordeling. Uit = volautomatisch tot het
+                rapport (brongetrouwheid blijft hard afgedwongen).
+              </span>
             </span>
           </label>
-          <WetSelectorInForm bronnen={bronnen} setBronnen={setBronnen} />
-          {geprobeerd && bronnen.length === 0 && (
-            <p style={{ fontSize: "0.75rem", color: "rgb(var(--fout))", marginTop: "0.375rem" }}>
-              Selecteer minimaal 1 bronartikel.
-            </p>
-          )}
-        </div>
 
-        <div>
-          <label
-            style={{ display: "block", fontSize: "0.8125rem", fontWeight: 500, marginBottom: "0.25rem" }}
-          >
-            Analysefocus
-            <span
-              style={{ fontWeight: 400, color: "rgb(var(--faint))", marginLeft: "0.375rem" }}
+          {/* Submit */}
+          <div style={{ display: "flex", gap: "0.75rem", paddingTop: "0.5rem" }}>
+            <button className="btn btn-primary" type="submit" style={{ fontWeight: 600 }}>
+              Analyse starten
+            </button>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={() => onNavigeer("lijst")}
             >
-              (optioneel — hoofdvraag of aandachtspunt)
-            </span>
-          </label>
-          <textarea
-            className="field-input"
-            rows={3}
-            placeholder="Beschrijf de specifieke vraag of focus voor deze analyse..."
-            value={analysefocus}
-            onChange={(e) => setAnalysefocus(e.target.value)}
-            style={{ width: "100%", resize: "vertical", fontFamily: "inherit" }}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <button className="btn btn-primary" onClick={handleVerzenden}>
-            Analyse starten
-          </button>
-          <button className="btn btn-secondary" onClick={() => onNavigeer("lijst")}>
-            Annuleer
-          </button>
-        </div>
+              Annuleer
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -445,39 +831,64 @@ function AnalyseLijst({
   onVerwijder: (id: string) => void;
   onNieuw: () => void;
 }) {
+  const [zoek, setZoek] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [wetFilter, setWetFilter] = useState("");
+  const [geselecteerd, setGeselecteerd] = useState<Set<string>>(new Set());
+
+  const gefilterd = analyses.filter((a) => {
+    if (statusFilter && a.status !== statusFilter) return false;
+    if (wetFilter && !a.bronnen.some((b) => b.bwb_id === wetFilter)) return false;
+    if (zoek) {
+      const q = zoek.toLowerCase();
+      if (
+        !a.naam.toLowerCase().includes(q) &&
+        !a.id.toLowerCase().includes(q) &&
+        !a.bronnen.some(
+          (b) =>
+            b.bwb_id.toLowerCase().includes(q) || b.artikel.toLowerCase().includes(q)
+        )
+      )
+        return false;
+    }
+    return true;
+  });
+
+  const alleGeselecteerd =
+    gefilterd.length > 0 && gefilterd.every((a) => geselecteerd.has(a.id));
+  const enkeleGeselecteerd = gefilterd.some((a) => geselecteerd.has(a.id));
+
+  function toggleAlles() {
+    setGeselecteerd((prev) => {
+      const next = new Set(prev);
+      if (alleGeselecteerd) gefilterd.forEach((a) => next.delete(a.id));
+      else gefilterd.forEach((a) => next.add(a.id));
+      return next;
+    });
+  }
+
+  function toggleEen(id: string) {
+    setGeselecteerd((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1rem",
-        }}
-      >
-        <h2 style={{ fontSize: "1.125rem", fontWeight: 600 }}>
-          Mijn analyses
-          <span
-            style={{
-              fontSize: "0.8125rem",
-              fontWeight: 400,
-              color: "rgb(var(--muted))",
-              marginLeft: "0.5rem",
-            }}
-          >
-            ({analyses.length})
-          </span>
-        </h2>
-        <button
-          className="btn btn-primary"
-          style={{ fontSize: "0.8125rem" }}
-          onClick={onNieuw}
-        >
-          + Nieuwe analyse
-        </button>
-      </div>
+      <HeroBanner onNieuw={onNieuw} />
+      <FilterBar
+        zoek={zoek}
+        setZoek={setZoek}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        wetFilter={wetFilter}
+        setWetFilter={setWetFilter}
+      />
 
-      {analyses.length === 0 ? (
+      {gefilterd.length === 0 ? (
         <div
           style={{
             padding: "2.5rem",
@@ -489,58 +900,114 @@ function AnalyseLijst({
             borderRadius: "8px",
           }}
         >
-          Nog geen analyses aangemaakt.
-          <br />
-          <button
-            className="btn btn-primary"
-            style={{ marginTop: "1rem", fontSize: "0.875rem" }}
-            onClick={onNieuw}
-          >
-            + Nieuwe analyse starten
-          </button>
+          {analyses.length === 0 ? (
+            <>
+              Nog geen analyses aangemaakt.
+              <br />
+              <button
+                className="btn btn-primary"
+                style={{ marginTop: "1rem" }}
+                onClick={onNieuw}
+              >
+                + Eerste analyse starten
+              </button>
+            </>
+          ) : (
+            "Geen analyses gevonden met deze filters."
+          )}
         </div>
       ) : (
-        <table className="tabel" style={{ width: "100%" }}>
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Status</th>
-              <th>Bijgewerkt</th>
-              <th style={{ textAlign: "right" }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {analyses.map((a) => (
-              <tr key={a.id}>
-                <td style={{ fontWeight: 500 }}>{a.naam}</td>
-                <td>
-                  <StatusBadge status={a.status} />
-                </td>
-                <td style={{ color: "rgb(var(--muted))", fontSize: "0.875rem", whiteSpace: "nowrap" }}>
-                  {new Date(a.bijgewerkt).toLocaleString("nl-NL", {
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </td>
-                {/* A1: VerwijderKnop compact=true i.p.v. eigen bevestigId-state */}
-                <td style={{ textAlign: "right" }}>
-                  <span style={{ display: "inline-flex", gap: "0.375rem", alignItems: "center" }}>
-                    <button
-                      className="btn btn-secondary"
-                      style={{ fontSize: "0.75rem", padding: "0.25rem 0.625rem" }}
-                      onClick={() => onBekijk(a.id)}
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table className="tabel">
+              <thead>
+                <tr>
+                  <th style={{ width: "2.5rem" }}>
+                    <input
+                      type="checkbox"
+                      aria-label="Selecteer alle analyses op deze pagina"
+                      checked={alleGeselecteerd}
+                      ref={(el) => {
+                        if (el)
+                          el.indeterminate = enkeleGeselecteerd && !alleGeselecteerd;
+                      }}
+                      onChange={toggleAlles}
+                    />
+                  </th>
+                  <th>Naam</th>
+                  <th>Bron</th>
+                  <th>Status</th>
+                  <th>Bijgewerkt</th>
+                  <th style={{ textAlign: "right" }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {gefilterd.map((a) => (
+                  <tr
+                    key={a.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => onBekijk(a.id)}
+                  >
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Selecteer ${a.naam}`}
+                        checked={geselecteerd.has(a.id)}
+                        onChange={() => toggleEen(a.id)}
+                      />
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 500 }}>{a.naam}</span>
+                      <span
+                        style={{
+                          display: "block",
+                          fontFamily: "monospace",
+                          fontSize: "0.75rem",
+                          color: "rgb(var(--faint))",
+                          marginTop: "0.1rem",
+                        }}
+                      >
+                        {a.id}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: "0.8125rem", color: "rgb(var(--muted))" }}>
+                        {bronnenSamenvatting(a.bronnen)}
+                      </span>
+                    </td>
+                    <td>
+                      <StatusDot status={a.status} />
+                    </td>
+                    <td
+                      style={{
+                        color: "rgb(var(--muted))",
+                        fontSize: "0.8125rem",
+                        whiteSpace: "nowrap",
+                      }}
                     >
-                      Bekijk →
-                    </button>
-                    <VerwijderKnop compact onClick={() => onVerwijder(a.id)} />
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                      {formatDatum(a.bijgewerkt)}
+                    </td>
+                    <td
+                      style={{ textAlign: "right" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span style={{ display: "inline-flex", gap: "0.375rem" }}>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ fontSize: "0.75rem", padding: "0.25rem 0.625rem" }}
+                          onClick={() => onBekijk(a.id)}
+                        >
+                          Bekijk →
+                        </button>
+                        <VerwijderKnop compact onClick={() => onVerwijder(a.id)} />
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -559,15 +1026,7 @@ function StatusSchermWachtrij({
 }) {
   return (
     <StatusSchermShell naam={naam} status="wachtrij" onTerug={onTerug}>
-      <div
-        style={{
-          padding: "1.25rem",
-          background: "rgb(var(--surface))",
-          border: "1px solid rgb(var(--line))",
-          borderRadius: "8px",
-          marginBottom: "1.25rem",
-        }}
-      >
+      <div className="card" style={{ marginBottom: "1.25rem" }}>
         <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
           De analyse staat in de wachtrij en wacht op beschikbare verwerkingscapaciteit. De pagina
           wordt automatisch bijgewerkt via SSE zodra de verwerking begint.
@@ -601,15 +1060,12 @@ function StatusSchermLopend({
   return (
     <StatusSchermShell naam={naam} status="actief" onTerug={onTerug}>
       <div
+        className="card"
         style={{
-          padding: "1.25rem",
-          background: "rgb(var(--surface))",
-          border: "1px solid rgb(var(--line))",
-          borderRadius: "8px",
+          marginBottom: "1.25rem",
           display: "flex",
           flexDirection: "column",
           gap: "0.875rem",
-          marginBottom: "1.25rem",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -653,7 +1109,13 @@ function StatusSchermLopend({
           />
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <p style={{ fontSize: "0.8125rem", color: "rgb(var(--muted))" }}>
             Live updates via SSE — de pagina hoeft niet te worden herladen.
           </p>
@@ -691,7 +1153,7 @@ function StatusSchermKlaar({
         className="melding"
         style={{
           background: "rgb(var(--succes) / 0.1)",
-          borderColor: "rgb(var(--succes))",
+          border: "1px solid rgb(var(--succes))",
           marginBottom: "1.25rem",
         }}
       >
@@ -750,8 +1212,7 @@ export default function AnalyseMockup() {
     setVariant(variantMap[a.status]);
   }
 
-  // S3/A2: per-variant lookup — dient voor zowel rendering als disabled-state in de switcher.
-  // Elke lookup is O(n) over max 4 analyses; geen precomputed object nodig.
+  // Per-variant lookup — dient voor zowel rendering als disabled-state in de switcher
   const analyseVoor = {
     wachtrij: analyses.find((a) => a.status === "wachtrij"),
     lopend:   analyses.find((a) => a.status === "actief" || a.status === "review"),
@@ -759,7 +1220,6 @@ export default function AnalyseMockup() {
     fout:     analyses.find((a) => a.status === "fout"),
   };
 
-  // A2: status-variant is alleen beschikbaar als er data is
   function isVariantBeschikbaar(v: Variant): boolean {
     if (v === "formulier" || v === "lijst") return true;
     if (v === "status-wachtrij") return analyseVoor.wachtrij !== undefined;
@@ -771,14 +1231,15 @@ export default function AnalyseMockup() {
 
   return (
     <div className="main">
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      {/* Mockup-badge */}
+      {/* Mockup-badge rechtsboven (verplicht) */}
       <div
         style={{
-          display: "inline-flex",
+          position: "fixed",
+          top: "1rem",
+          right: "1rem",
+          zIndex: 999,
           background: "rgb(var(--lint))",
           color: "white",
           borderRadius: "4px",
@@ -787,18 +1248,14 @@ export default function AnalyseMockup() {
           fontWeight: 700,
           letterSpacing: "0.08em",
           textTransform: "uppercase",
-          marginBottom: "1.25rem",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
         }}
       >
         Mockup — nepdata (story 012)
       </div>
 
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 600, marginBottom: "1.5rem" }}>
-        Analyse aanmaken en volgen
-      </h1>
-
-      {/* Variant-switcher — A2: status-varianten worden gedimd als er geen passende data is */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "2rem" }}>
+      {/* Variant-switcher */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1.5rem" }}>
         {VARIANTEN.map((v) => {
           const beschikbaar = isVariantBeschikbaar(v.id);
           return (
@@ -817,10 +1274,6 @@ export default function AnalyseMockup() {
       </div>
 
       {/* Actieve variant */}
-      {variant === "formulier" && (
-        <AanmakenFormulier onNavigeer={setVariant} />
-      )}
-
       {variant === "lijst" && (
         <AnalyseLijst
           analyses={analyses}
@@ -828,6 +1281,10 @@ export default function AnalyseMockup() {
           onVerwijder={verwijderAnalyse}
           onNieuw={() => setVariant("formulier")}
         />
+      )}
+
+      {variant === "formulier" && (
+        <AanmakenFormulier onNavigeer={setVariant} />
       )}
 
       {variant === "status-wachtrij" && analyseVoor.wachtrij && (
