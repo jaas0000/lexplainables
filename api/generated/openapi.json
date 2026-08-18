@@ -439,6 +439,197 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "LlmProfielCreate": {
+        "description": "Wat een beheerder meestuurt bij het aanmaken van een profiel.",
+        "properties": {
+          "api_base": {
+            "minLength": 1,
+            "title": "Api Base",
+            "type": "string"
+          },
+          "api_sleutel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Sleutel"
+          },
+          "api_versie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Versie"
+          },
+          "is_standaard": {
+            "default": false,
+            "title": "Is Standaard",
+            "type": "boolean"
+          },
+          "model": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "naam": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Naam",
+            "type": "string"
+          },
+          "provider": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          },
+          "temperatuur": {
+            "default": 0.0,
+            "title": "Temperatuur",
+            "type": "number"
+          }
+        },
+        "required": [
+          "naam",
+          "provider",
+          "model",
+          "api_base"
+        ],
+        "title": "LlmProfielCreate",
+        "type": "object"
+      },
+      "LlmProfielRead": {
+        "description": "Wat de API teruggeeft \u2014 de plaintext API-sleutel verlaat de API nooit.",
+        "properties": {
+          "api_base": {
+            "title": "Api Base",
+            "type": "string"
+          },
+          "api_versie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Versie"
+          },
+          "is_standaard": {
+            "title": "Is Standaard",
+            "type": "boolean"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "sleutel_ingesteld": {
+            "title": "Sleutel Ingesteld",
+            "type": "boolean"
+          },
+          "temperatuur": {
+            "title": "Temperatuur",
+            "type": "number"
+          },
+          "updated": {
+            "format": "date-time",
+            "title": "Updated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "naam",
+          "provider",
+          "model",
+          "api_base",
+          "api_versie",
+          "temperatuur",
+          "sleutel_ingesteld",
+          "is_standaard",
+          "updated"
+        ],
+        "title": "LlmProfielRead",
+        "type": "object"
+      },
+      "LlmProfielUpdate": {
+        "description": "Wat een beheerder meestuurt bij het bijwerken van een profiel.\n\n`naam` ontbreekt bewust: naam is de stabiele identifier en kan niet veranderen.\n`api_sleutel` leeg (None of \"\") \u2192 sleutel ongewijzigd laten (niet overschrijven).",
+        "properties": {
+          "api_base": {
+            "minLength": 1,
+            "title": "Api Base",
+            "type": "string"
+          },
+          "api_sleutel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Sleutel"
+          },
+          "api_versie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Versie"
+          },
+          "is_standaard": {
+            "default": false,
+            "title": "Is Standaard",
+            "type": "boolean"
+          },
+          "model": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          },
+          "temperatuur": {
+            "default": 0.0,
+            "title": "Temperatuur",
+            "type": "number"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "api_base"
+        ],
+        "title": "LlmProfielUpdate",
+        "type": "object"
+      },
       "MarkeerGezienIn": {
         "properties": {
           "tot": {
@@ -1292,6 +1483,297 @@
         "summary": "Verwijder Feedback",
         "tags": [
           "feedback-admin"
+        ]
+      }
+    },
+    "/v1/admin/profielen": {
+      "get": {
+        "operationId": "lijst_profielen_v1_admin_profielen_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LlmProfielRead"
+                  },
+                  "title": "Response Lijst Profielen V1 Admin Profielen Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lijst Profielen",
+        "tags": [
+          "llm-profielen-admin"
+        ]
+      },
+      "post": {
+        "operationId": "maak_profiel_v1_admin_profielen_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LlmProfielCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmProfielRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Maak Profiel",
+        "tags": [
+          "llm-profielen-admin"
+        ]
+      }
+    },
+    "/v1/admin/profielen/{naam}": {
+      "delete": {
+        "operationId": "verwijder_profiel_v1_admin_profielen__naam__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "naam",
+            "required": true,
+            "schema": {
+              "title": "Naam",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verwijder Profiel",
+        "tags": [
+          "llm-profielen-admin"
+        ]
+      },
+      "put": {
+        "operationId": "bewerk_profiel_v1_admin_profielen__naam__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "naam",
+            "required": true,
+            "schema": {
+              "title": "Naam",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LlmProfielUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmProfielRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bewerk Profiel",
+        "tags": [
+          "llm-profielen-admin"
         ]
       }
     },

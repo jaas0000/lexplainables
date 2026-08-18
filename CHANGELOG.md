@@ -3,6 +3,7 @@
 ## Niet uitgebracht
 
 - Analisten kunnen nu een wet kiezen en de bijbehorende artikelen selecteren via het nieuwe Wetcatalogus-scherm dat de structuur van drie wetten toont. (PR #9)
+- Beheerders kunnen nu LLM-profielen (provider, model, API-sleutel) aanmaken, bewerken, als standaard instellen en verwijderen via het beheerscherm. API-sleutels worden versleuteld opgeslagen. (PR #10)
 - Ingelogde gebruikers kunnen feedback indienen via een zwevende knop rechtsonder op elk scherm. Beheerders zien het ongelezen-aantal op het beheerscherm en kunnen feedback bekijken en verwijderen via een nieuwe feedbackpagina. (PR #8)
 - Elke ingelogde gebruiker ziet bovenaan het scherm een gele balk die aangeeft dat het om een testomgeving gaat, en moet eenmalig bevestigen dat ze dat begrijpen voordat ze verder kunnen. (PR #7)
 - Beheerders kunnen nu via Claude Code rechtstreeks vanuit de terminal berichten aanmaken en publiceren, zonder de browser te hoeven openen. (PR #6)
