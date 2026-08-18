@@ -759,29 +759,6 @@
         "title": "FeedbackRead",
         "type": "object"
       },
-      "GebruikerInfo": {
-        "properties": {
-          "email": {
-            "title": "Email",
-            "type": "string"
-          },
-          "gebruikersnaam": {
-            "title": "Gebruikersnaam",
-            "type": "string"
-          },
-          "rol": {
-            "title": "Rol",
-            "type": "string"
-          }
-        },
-        "required": [
-          "gebruikersnaam",
-          "email",
-          "rol"
-        ],
-        "title": "GebruikerInfo",
-        "type": "object"
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1004,35 +981,6 @@
         "title": "MarkeerGezienIn",
         "type": "object"
       },
-      "MijnProfiel": {
-        "description": "Eigen accountgegevens — teruggegeven door GET /v1/auth/me.",
-        "properties": {
-          "gebruikersnaam": {
-            "title": "Gebruikersnaam",
-            "type": "string"
-          },
-          "naam": {
-            "title": "Naam",
-            "type": "string"
-          },
-          "rol": {
-            "title": "Rol",
-            "type": "string"
-          },
-          "totp_ingeschakeld": {
-            "title": "Totp Ingeschakeld",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "naam",
-          "gebruikersnaam",
-          "rol",
-          "totp_ingeschakeld"
-        ],
-        "title": "MijnProfiel",
-        "type": "object"
-      },
       "OngelezenAantalOut": {
         "properties": {
           "aantal": {
@@ -1059,44 +1007,18 @@
         "title": "OngelezenFeedbackOut",
         "type": "object"
       },
-      "SetupStatus": {
+      "ResolveResultaat": {
+        "description": "Resultaat van een resolve-aanroep: de officiële citeertitel.",
         "properties": {
-          "needs_setup": {
-            "title": "Needs Setup",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "needs_setup"
-        ],
-        "title": "SetupStatus",
-        "type": "object"
-      },
-      "SetupVerzoek": {
-        "properties": {
-          "email": {
-            "maxLength": 320,
-            "title": "Email",
-            "type": "string"
-          },
-          "gebruikersnaam": {
-            "maxLength": 64,
-            "title": "Gebruikersnaam",
-            "type": "string"
-          },
-          "wachtwoord": {
-            "maxLength": 512,
-            "minLength": 8,
-            "title": "Wachtwoord",
+          "naam": {
+            "title": "Naam",
             "type": "string"
           }
         },
         "required": [
-          "gebruikersnaam",
-          "email",
-          "wachtwoord"
+          "naam"
         ],
-        "title": "SetupVerzoek",
+        "title": "ResolveResultaat",
         "type": "object"
       },
       "ValidationError": {
@@ -1180,26 +1102,26 @@
         "title": "VerifyResult",
         "type": "object"
       },
-      "WachtwoordWijzigenVerzoek": {
-        "description": "Verzoek om het eigen wachtwoord te wijzigen — body van POST /v1/auth/wijzig-wachtwoord.",
+      "WetCreate": {
+        "description": "Wat een beheerder meestuurt bij het aanmaken of bijwerken van een wet.",
         "properties": {
-          "huidig_wachtwoord": {
-            "maxLength": 512,
-            "title": "Huidig Wachtwoord",
+          "bwb_id": {
+            "minLength": 1,
+            "title": "Bwb Id",
             "type": "string"
           },
-          "nieuw_wachtwoord": {
-            "maxLength": 512,
-            "minLength": 8,
-            "title": "Nieuw Wachtwoord",
+          "naam": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Naam",
             "type": "string"
           }
         },
         "required": [
-          "huidig_wachtwoord",
-          "nieuw_wachtwoord"
+          "bwb_id",
+          "naam"
         ],
-        "title": "WachtwoordWijzigenVerzoek",
+        "title": "WetCreate",
         "type": "object"
       },
       "WetKeuze": {
@@ -1219,6 +1141,35 @@
           "naam"
         ],
         "title": "WetKeuze",
+        "type": "object"
+      },
+      "WetRead": {
+        "description": "Wat de admin-API teruggeeft — inclusief beheermetadata.",
+        "properties": {
+          "bijgewerkt": {
+            "title": "Bijgewerkt",
+            "type": "string"
+          },
+          "bijgewerkt_door": {
+            "title": "Bijgewerkt Door",
+            "type": "string"
+          },
+          "bwb_id": {
+            "title": "Bwb Id",
+            "type": "string"
+          },
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bwb_id",
+          "naam",
+          "bijgewerkt_door",
+          "bijgewerkt"
+        ],
+        "title": "WetRead",
         "type": "object"
       },
       "WetStructuur": {
@@ -1241,6 +1192,120 @@
           "artikelen"
         ],
         "title": "WetStructuur",
+        "type": "object"
+      },
+      "GebruikerInfo": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "gebruikersnaam": {
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "rol": {
+            "title": "Rol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gebruikersnaam",
+          "email",
+          "rol"
+        ],
+        "title": "GebruikerInfo",
+        "type": "object"
+      },
+      "SetupVerzoek": {
+        "properties": {
+          "email": {
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          },
+          "gebruikersnaam": {
+            "maxLength": 64,
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "wachtwoord": {
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Wachtwoord",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gebruikersnaam",
+          "email",
+          "wachtwoord"
+        ],
+        "title": "SetupVerzoek",
+        "type": "object"
+      },
+      "MijnProfiel": {
+        "description": "Eigen accountgegevens — teruggegeven door GET /v1/auth/me.",
+        "properties": {
+          "gebruikersnaam": {
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          },
+          "rol": {
+            "title": "Rol",
+            "type": "string"
+          },
+          "totp_ingeschakeld": {
+            "title": "Totp Ingeschakeld",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "naam",
+          "gebruikersnaam",
+          "rol",
+          "totp_ingeschakeld"
+        ],
+        "title": "MijnProfiel",
+        "type": "object"
+      },
+      "SetupStatus": {
+        "properties": {
+          "needs_setup": {
+            "title": "Needs Setup",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "needs_setup"
+        ],
+        "title": "SetupStatus",
+        "type": "object"
+      },
+      "WachtwoordWijzigenVerzoek": {
+        "description": "Verzoek om het eigen wachtwoord te wijzigen — body van POST /v1/auth/wijzig-wachtwoord.",
+        "properties": {
+          "huidig_wachtwoord": {
+            "maxLength": 512,
+            "title": "Huidig Wachtwoord",
+            "type": "string"
+          },
+          "nieuw_wachtwoord": {
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Nieuw Wachtwoord",
+            "type": "string"
+          }
+        },
+        "required": [
+          "huidig_wachtwoord",
+          "nieuw_wachtwoord"
+        ],
+        "title": "WachtwoordWijzigenVerzoek",
         "type": "object"
       }
     }
@@ -2224,10 +2289,10 @@
         ]
       }
     },
-    "/v1/auth/me": {
+    "/v1/admin/wetten": {
       "get": {
-        "description": "Geeft de eigen accountgegevens terug van de ingelogde gebruiker.",
-        "operationId": "me_v1_auth_me_get",
+        "description": "Lijst catalogus-items inclusief beheermetadata. Alleen voor beheerders.",
+        "operationId": "admin_lijst_wetten_v1_admin_wetten_get",
         "parameters": [
           {
             "in": "header",
@@ -2267,7 +2332,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MijnProfiel"
+                  "items": {
+                    "$ref": "#/components/schemas/WetRead"
+                  },
+                  "title": "Response Admin Lijst Wetten V1 Admin Wetten Get",
+                  "type": "array"
                 }
               }
             },
@@ -2284,17 +2353,26 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Me",
+        "summary": "Admin Lijst Wetten",
         "tags": [
-          "auth"
+          "wetcatalogus-admin"
         ]
       }
     },
-    "/v1/auth/setup": {
-      "post": {
-        "description": "Maakt de eerste beheerder aan. Retourneert 409 als de tabel al niet leeg is.",
-        "operationId": "setup_v1_auth_setup_post",
+    "/v1/admin/wetten/{bwb_id}": {
+      "delete": {
+        "description": "Verwijder een wet uit de catalogus. Geeft 404 als het bwb-id onbekend is.",
+        "operationId": "admin_verwijder_wet_v1_admin_wetten__bwb_id__delete",
         "parameters": [
+          {
+            "in": "path",
+            "name": "bwb_id",
+            "required": true,
+            "schema": {
+              "title": "Bwb Id",
+              "type": "string"
+            }
+          },
           {
             "in": "header",
             "name": "authorization",
@@ -2309,6 +2387,88 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Verwijder Wet",
+        "tags": [
+          "wetcatalogus-admin"
+        ]
+      },
+      "put": {
+        "description": "Voeg een wet toe of werk bestaande bij. Beheerder-only.",
+        "operationId": "admin_upsert_wet_v1_admin_wetten__bwb_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bwb_id",
+            "required": true,
+            "schema": {
+              "title": "Bwb Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
             }
           }
         ],
@@ -2316,18 +2476,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SetupVerzoek"
+                "$ref": "#/components/schemas/WetCreate"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GebruikerInfo"
+                  "$ref": "#/components/schemas/WetRead"
                 }
               }
             },
@@ -2344,17 +2504,26 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Setup",
+        "summary": "Admin Upsert Wet",
         "tags": [
-          "auth"
+          "wetcatalogus-admin"
         ]
       }
     },
-    "/v1/auth/setup-status": {
-      "get": {
-        "description": "Geeft aan of er al een beheerder bestaat (needs_setup = False als inrichtbaar).",
-        "operationId": "setup_status_v1_auth_setup_status_get",
+    "/v1/admin/wetten/{bwb_id}/resolve": {
+      "post": {
+        "description": "Haal de officiële citeertitel van een wet op via de Wettenbank-MCP.\n\nGeeft 502 als de MCP tijdelijk niet bereikbaar is.\nGeeft 404 als het bwb-id onbekend is bij de Wettenbank.",
+        "operationId": "admin_resolve_wet_v1_admin_wetten__bwb_id__resolve_post",
         "parameters": [
+          {
+            "in": "path",
+            "name": "bwb_id",
+            "required": true,
+            "schema": {
+              "title": "Bwb Id",
+              "type": "string"
+            }
+          },
           {
             "in": "header",
             "name": "authorization",
@@ -2369,6 +2538,22 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
             }
           }
         ],
@@ -2377,7 +2562,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SetupStatus"
+                  "$ref": "#/components/schemas/ResolveResultaat"
                 }
               }
             },
@@ -2394,9 +2579,9 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Setup Status",
+        "summary": "Admin Resolve Wet",
         "tags": [
-          "auth"
+          "wetcatalogus-admin"
         ]
       }
     },
@@ -2454,75 +2639,6 @@
           }
         },
         "summary": "Verify",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/v1/auth/wijzig-wachtwoord": {
-      "post": {
-        "description": "Wijzigt het eigen wachtwoord. Geeft 400 als het huidige wachtwoord onjuist is.",
-        "operationId": "wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-Id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-User-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WachtwoordWijzigenVerzoek"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Wijzig Wachtwoord",
         "tags": [
           "auth"
         ]
@@ -3186,6 +3302,251 @@
         "summary": "Get Wet Structuur",
         "tags": [
           "wetcatalogus"
+        ]
+      }
+    },
+    "/v1/auth/setup": {
+      "post": {
+        "description": "Maakt de eerste beheerder aan. Retourneert 409 als de tabel al niet leeg is.",
+        "operationId": "setup_v1_auth_setup_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupVerzoek"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GebruikerInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Setup",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/me": {
+      "get": {
+        "description": "Geeft de eigen accountgegevens terug van de ingelogde gebruiker.",
+        "operationId": "me_v1_auth_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MijnProfiel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/setup-status": {
+      "get": {
+        "description": "Geeft aan of er al een beheerder bestaat (needs_setup = False als inrichtbaar).",
+        "operationId": "setup_status_v1_auth_setup_status_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Setup Status",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/wijzig-wachtwoord": {
+      "post": {
+        "description": "Wijzigt het eigen wachtwoord. Geeft 400 als het huidige wachtwoord onjuist is.",
+        "operationId": "wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WachtwoordWijzigenVerzoek"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wijzig Wachtwoord",
+        "tags": [
+          "auth"
         ]
       }
     }

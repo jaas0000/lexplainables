@@ -161,7 +161,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/me": {
+    "/v1/admin/wetten": {
         parameters: {
             query?: never;
             header?: never;
@@ -169,10 +169,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Me
-         * @description Geeft de eigen accountgegevens terug van de ingelogde gebruiker.
+         * Admin Lijst Wetten
+         * @description Lijst catalogus-items inclusief beheermetadata. Alleen voor beheerders.
          */
-        get: operations["me_v1_auth_me_get"];
+        get: operations["admin_lijst_wetten_v1_admin_wetten_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -181,7 +181,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/setup": {
+    "/v1/admin/wetten/{bwb_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Admin Upsert Wet
+         * @description Voeg een wet toe of werk bestaande bij. Beheerder-only.
+         */
+        put: operations["admin_upsert_wet_v1_admin_wetten__bwb_id__put"];
+        post?: never;
+        /**
+         * Admin Verwijder Wet
+         * @description Verwijder een wet uit de catalogus. Geeft 404 als het bwb-id onbekend is.
+         */
+        delete: operations["admin_verwijder_wet_v1_admin_wetten__bwb_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/wetten/{bwb_id}/resolve": {
         parameters: {
             query?: never;
             header?: never;
@@ -191,30 +215,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Setup
-         * @description Maakt de eerste beheerder aan. Retourneert 409 als de tabel al niet leeg is.
+         * Admin Resolve Wet
+         * @description Haal de officiële citeertitel van een wet op via de Wettenbank-MCP.
+         *
+         *     Geeft 502 als de MCP tijdelijk niet bereikbaar is.
+         *     Geeft 404 als het bwb-id onbekend is bij de Wettenbank.
          */
-        post: operations["setup_v1_auth_setup_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/auth/setup-status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Setup Status
-         * @description Geeft aan of er al een beheerder bestaat (needs_setup = False als inrichtbaar).
-         */
-        get: operations["setup_status_v1_auth_setup_status_get"];
-        put?: never;
-        post?: never;
+        post: operations["admin_resolve_wet_v1_admin_wetten__bwb_id__resolve_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -232,26 +239,6 @@ export interface paths {
         put?: never;
         /** Verify */
         post: operations["verify_v1_auth_verify_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/auth/wijzig-wachtwoord": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Wijzig Wachtwoord
-         * @description Wijzigt het eigen wachtwoord. Geeft 400 als het huidige wachtwoord onjuist is.
-         */
-        post: operations["wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -428,6 +415,86 @@ export interface paths {
         get: operations["get_wet_structuur_v1_wetten__bwb_id__structuur_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Setup
+         * @description Maakt de eerste beheerder aan. Retourneert 409 als de tabel al niet leeg is.
+         */
+        post: operations["setup_v1_auth_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Me
+         * @description Geeft de eigen accountgegevens terug van de ingelogde gebruiker.
+         */
+        get: operations["me_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/setup-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Setup Status
+         * @description Geeft aan of er al een beheerder bestaat (needs_setup = False als inrichtbaar).
+         */
+        get: operations["setup_status_v1_auth_setup_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/wijzig-wachtwoord": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Wijzig Wachtwoord
+         * @description Wijzigt het eigen wachtwoord. Geeft 400 als het huidige wachtwoord onjuist is.
+         */
+        post: operations["wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -827,20 +894,6 @@ export interface components {
             /** Tot */
             tot?: string | null;
         };
-        /**
-         * MijnProfiel
-         * @description Eigen accountgegevens — teruggegeven door GET /v1/auth/me.
-         */
-        MijnProfiel: {
-            /** Gebruikersnaam */
-            gebruikersnaam: string;
-            /** Naam */
-            naam: string;
-            /** Rol */
-            rol: string;
-            /** Totp Ingeschakeld */
-            totp_ingeschakeld: boolean;
-        };
         /** OngelezenAantalOut */
         OngelezenAantalOut: {
             /** Aantal */
@@ -851,31 +904,15 @@ export interface components {
             /** Aantal */
             aantal: number;
         };
+        /**
+         * ResolveResultaat
+         * @description Resultaat van een resolve-aanroep: de officiële citeertitel.
+         */
+        ResolveResultaat: {
+            /** Naam */
+            naam: string;
+        };
         /** ValidationError */
-
-        SetupStatus: {
-            /** Needs Setup */
-            needs_setup: boolean;
-        };
-
-        SetupVerzoek: {
-            /** Email */
-            email: string;
-            /** Gebruikersnaam */
-            gebruikersnaam: string;
-            /** Wachtwoord */
-            wachtwoord: string;
-        };
-
-        GebruikerInfo: {
-            /** Email */
-            email: string;
-            /** Gebruikersnaam */
-            gebruikersnaam: string;
-            /** Rol */
-            rol: string;
-        };
-
         ValidationError: {
             /** Context */
             ctx?: Record<string, never>;
@@ -911,20 +948,34 @@ export interface components {
             rol: string;
         };
         /**
-         * WachtwoordWijzigenVerzoek
-         * @description Verzoek om het eigen wachtwoord te wijzigen — body van POST /v1/auth/wijzig-wachtwoord.
+         * WetCreate
+         * @description Wat een beheerder meestuurt bij het aanmaken of bijwerken van een wet.
          */
-        WachtwoordWijzigenVerzoek: {
-            /** Huidig Wachtwoord */
-            huidig_wachtwoord: string;
-            /** Nieuw Wachtwoord */
-            nieuw_wachtwoord: string;
+        WetCreate: {
+            /** Bwb Id */
+            bwb_id: string;
+            /** Naam */
+            naam: string;
         };
         /**
          * WetKeuze
          * @description Één beschikbare wet — bwb-id + leesbare naam.
          */
         WetKeuze: {
+            /** Bwb Id */
+            bwb_id: string;
+            /** Naam */
+            naam: string;
+        };
+        /**
+         * WetRead
+         * @description Wat de admin-API teruggeeft — inclusief beheermetadata.
+         */
+        WetRead: {
+            /** Bijgewerkt */
+            bijgewerkt: string;
+            /** Bijgewerkt Door */
+            bijgewerkt_door: string;
             /** Bwb Id */
             bwb_id: string;
             /** Naam */
@@ -939,6 +990,53 @@ export interface components {
             artikelen: components["schemas"]["ArtikelKeuze"][];
             /** Bwb Id */
             bwb_id: string;
+        };
+        /** GebruikerInfo */
+        GebruikerInfo: {
+            /** Email */
+            email: string;
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Rol */
+            rol: string;
+        };
+        /** SetupVerzoek */
+        SetupVerzoek: {
+            /** Email */
+            email: string;
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Wachtwoord */
+            wachtwoord: string;
+        };
+        /**
+         * MijnProfiel
+         * @description Eigen accountgegevens — teruggegeven door GET /v1/auth/me.
+         */
+        MijnProfiel: {
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Naam */
+            naam: string;
+            /** Rol */
+            rol: string;
+            /** Totp Ingeschakeld */
+            totp_ingeschakeld: boolean;
+        };
+        /** SetupStatus */
+        SetupStatus: {
+            /** Needs Setup */
+            needs_setup: boolean;
+        };
+        /**
+         * WachtwoordWijzigenVerzoek
+         * @description Verzoek om het eigen wachtwoord te wijzigen — body van POST /v1/auth/wijzig-wachtwoord.
+         */
+        WachtwoordWijzigenVerzoek: {
+            /** Huidig Wachtwoord */
+            huidig_wachtwoord: string;
+            /** Nieuw Wachtwoord */
+            nieuw_wachtwoord: string;
         };
     };
     responses: never;
@@ -1399,7 +1497,7 @@ export interface operations {
             };
         };
     };
-    me_v1_auth_me_get: {
+    admin_lijst_wetten_v1_admin_wetten_get: {
         parameters: {
             query?: never;
             header?: {
@@ -1417,7 +1515,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MijnProfiel"];
+                    "application/json": components["schemas"]["WetRead"][];
                 };
             };
             /** @description Validation Error */
@@ -1431,29 +1529,31 @@ export interface operations {
             };
         };
     };
-
-    setup_v1_auth_setup_post: {
+    admin_upsert_wet_v1_admin_wetten__bwb_id__put: {
         parameters: {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "X-User-Id"?: string | null;
             };
-            path?: never;
+            path: {
+                bwb_id: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SetupVerzoek"];
+                "application/json": components["schemas"]["WetCreate"];
             };
         };
         responses: {
             /** @description Successful Response */
-            201: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GebruikerInfo"];
+                    "application/json": components["schemas"]["WetRead"];
                 };
             };
             /** @description Validation Error */
@@ -1467,14 +1567,48 @@ export interface operations {
             };
         };
     };
-
-    setup_status_v1_auth_setup_status_get: {
+    admin_verwijder_wet_v1_admin_wetten__bwb_id__delete: {
         parameters: {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "X-User-Id"?: string | null;
             };
-            path?: never;
+            path: {
+                bwb_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_resolve_wet_v1_admin_wetten__bwb_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                bwb_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -1485,7 +1619,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SetupStatus"];
+                    "application/json": components["schemas"]["ResolveResultaat"];
                 };
             };
             /** @description Validation Error */
@@ -1499,7 +1633,6 @@ export interface operations {
             };
         };
     };
-
     verify_v1_auth_verify_post: {
         parameters: {
             query?: never;
@@ -1523,40 +1656,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VerifyResult"];
                 };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "X-User-Id"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WachtwoordWijzigenVerzoek"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1919,6 +2018,138 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WetStructuur"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setup_v1_auth_setup_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupVerzoek"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GebruikerInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MijnProfiel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setup_status_v1_auth_setup_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WachtwoordWijzigenVerzoek"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
