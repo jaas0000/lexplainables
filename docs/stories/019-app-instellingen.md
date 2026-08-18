@@ -1,6 +1,6 @@
 # Story 019: App-instellingen (runtime-config)
 
-**Prioriteit:** laag
+**Prioriteit:** hoog
 **Story points:** 2
 **Service:** `api/` + `frontend/`
 

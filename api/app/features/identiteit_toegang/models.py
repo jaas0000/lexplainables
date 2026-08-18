@@ -52,3 +52,19 @@ class VerifyResult(SQLModel):
     ok: bool
     gebruikersnaam: str = ""
     rol: str = ""
+
+
+class MijnProfiel(SQLModel):
+    """Eigen accountgegevens — teruggegeven door GET /v1/auth/me."""
+
+    naam: str
+    gebruikersnaam: str
+    rol: str
+    totp_ingeschakeld: bool
+
+
+class WachtwoordWijzigenVerzoek(SQLModel):
+    """Verzoek om het eigen wachtwoord te wijzigen — body van POST /v1/auth/wijzig-wachtwoord."""
+
+    huidig_wachtwoord: str = Field(max_length=512)
+    nieuw_wachtwoord: str = Field(min_length=8, max_length=512)
