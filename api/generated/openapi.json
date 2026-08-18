@@ -759,6 +759,29 @@
         "title": "FeedbackRead",
         "type": "object"
       },
+      "GebruikerInfo": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "gebruikersnaam": {
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "rol": {
+            "title": "Rol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gebruikersnaam",
+          "email",
+          "rol"
+        ],
+        "title": "GebruikerInfo",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1005,6 +1028,46 @@
           "aantal"
         ],
         "title": "OngelezenFeedbackOut",
+        "type": "object"
+      },
+      "SetupStatus": {
+        "properties": {
+          "needs_setup": {
+            "title": "Needs Setup",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "needs_setup"
+        ],
+        "title": "SetupStatus",
+        "type": "object"
+      },
+      "SetupVerzoek": {
+        "properties": {
+          "email": {
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          },
+          "gebruikersnaam": {
+            "maxLength": 64,
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "wachtwoord": {
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Wachtwoord",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gebruikersnaam",
+          "email",
+          "wachtwoord"
+        ],
+        "title": "SetupVerzoek",
         "type": "object"
       },
       "ValidationError": {
@@ -2107,6 +2170,116 @@
         "summary": "Bewerk Profiel",
         "tags": [
           "llm-profielen-admin"
+        ]
+      }
+    },
+    "/v1/auth/setup": {
+      "post": {
+        "description": "Maakt de eerste beheerder aan. Retourneert 409 als de tabel al niet leeg is.",
+        "operationId": "setup_v1_auth_setup_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupVerzoek"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GebruikerInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Setup",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/setup-status": {
+      "get": {
+        "description": "Geeft aan of er al een beheerder bestaat (needs_setup = False als inrichtbaar).",
+        "operationId": "setup_status_v1_auth_setup_status_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Setup Status",
+        "tags": [
+          "auth"
         ]
       }
     },
