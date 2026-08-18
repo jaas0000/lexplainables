@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.future import select
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.db import get_engine
 from app.features.identiteit_toegang.models import Gebruiker
 from app.features.identiteit_toegang.store import (
     GebruikerNietActief,
@@ -34,9 +36,19 @@ def stel_api_token_in(monkeypatch):
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client(tmp_path) -> TestClient:
+    db_pad = tmp_path / "test.db"
+    sync_engine = create_engine(f"sqlite:///{db_pad}")
+    SQLModel.metadata.create_all(sync_engine)
+    sync_engine.dispose()
+
+    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+    app.dependency_overrides[get_engine] = lambda: async_engine
+
     with TestClient(app) as c:
         yield c
+
+    app.dependency_overrides.pop(get_engine, None)
 
 
 @pytest.fixture
