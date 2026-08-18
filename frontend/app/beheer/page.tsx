@@ -4,10 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { components } from "@/generated/types";
 import { TypeBadge } from "@/components/berichten/TypeBadge";
-import {
-  SectieHeader,
-  LeegePlaceholder,
-} from "@/components/beheer/SectieHeader";
+import { SectieHeader } from "@/components/beheer/SectieHeader";
 import { beheerFetch } from "@/lib/beheer-fetch";
 
 type BerichtAdminRead = components["schemas"]["BerichtAdminRead"];
@@ -563,8 +560,29 @@ export default function BeheerPagina() {
 
       {/* ---- Sectie: Gebruikers ---- */}
       <section>
-        <SectieHeader titel="Gebruikers" subtitel="nog niet gebouwd" />
-        <LeegePlaceholder tekst="Gebruikersbeheer wordt hier weergegeven zodra de API beschikbaar is." />
+        <SectieHeader titel="Gebruikers" subtitel="Accounts, rollen en wachtwoorden" />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "1rem",
+            background: "rgb(var(--surface))",
+            border: "1px solid rgb(var(--line))",
+            borderRadius: "6px",
+          }}
+        >
+          <span style={{ fontSize: "0.875rem", color: "rgb(var(--ink))" }}>
+            Beheer accounts, rollen en wachtwoorden
+          </span>
+          <Link
+            href="/beheer/gebruikers"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.8125rem" }}
+          >
+            Gebruikers →
+          </Link>
+        </div>
       </section>
 
       {/* ---- Sectie: Gebruikersfeedback ---- */}

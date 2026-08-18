@@ -51,6 +51,29 @@ class GebruikerInfo(SQLModel):
     rol: str
 
 
+class GebruikerRead(SQLModel):
+    gebruikersnaam: str
+    rol: str
+    actief: bool
+    aangemaakt_op: datetime
+
+
+class GebruikerCreate(SQLModel):
+    gebruikersnaam: str = Field(max_length=64)
+    wachtwoord: str = Field(min_length=8)
+    rol: str = Field(default="analist")
+
+
+class GebruikerPatch(SQLModel):
+    rol: str | None = None
+    actief: bool | None = None
+
+
+class TijdelijkWachtwoord(SQLModel):
+    gebruikersnaam: str
+    tijdelijk_wachtwoord: str
+
+
 class VerifyRequest(SQLModel):
     gebruikersnaam: str
     wachtwoord: str

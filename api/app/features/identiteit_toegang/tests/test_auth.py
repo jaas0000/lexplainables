@@ -2,6 +2,12 @@
 
 Negatieve paden voor `huidige_beheerder` (geen override — test de echte auth-grens).
 Positieve en negatieve paden voor /v1/auth/verify, /v1/auth/me en /v1/auth/wijzig-wachtwoord.
+
+Opmerking: de vier auth-grens-tests gebruiken /v1/admin/gebruikers in plaats van
+/v1/admin/berichten. De berichten-router roept get_engine() direct aan (buiten FastAPI
+dependency injection), waardoor de engine-override in de fixture niet doorwerkt en de
+berichten-tabel ontbreekt. De gebruikers-admin-router gebruikt wel Depends(get_engine),
+zodat de override correct doorwerkt en een lege lijst (200) kan terugkeren.
 """
 
 from __future__ import annotations
@@ -63,31 +69,31 @@ async def db_engine():
 # --- huidige_beheerder grenzen ---
 
 
-def test_admin_bericht_zonder_token_geeft_401(client):
-    response = client.get("/v1/admin/berichten")
+def test_admin_gebruikers_zonder_token_geeft_401(client):
+    response = client.get("/v1/admin/gebruikers")
     assert response.status_code == 401
     assert response.json()["detail"] == "Niet geautoriseerd."
 
 
-def test_admin_bericht_met_fout_token_geeft_401(client):
+def test_admin_gebruikers_met_fout_token_geeft_401(client):
     response = client.get(
-        "/v1/admin/berichten",
+        "/v1/admin/gebruikers",
         headers={"Authorization": "Bearer fout-token", "X-User-Id": "beheerder"},
     )
     assert response.status_code == 401
 
 
-def test_admin_bericht_zonder_user_id_geeft_401(client):
+def test_admin_gebruikers_zonder_user_id_geeft_401(client):
     response = client.get(
-        "/v1/admin/berichten",
+        "/v1/admin/gebruikers",
         headers={"Authorization": f"Bearer {TEST_API_TOKEN}"},
     )
     assert response.status_code == 401
 
 
-def test_admin_bericht_met_geldig_token_en_user_id_geeft_200(client):
+def test_admin_gebruikers_met_geldig_token_en_user_id_geeft_200(client):
     response = client.get(
-        "/v1/admin/berichten",
+        "/v1/admin/gebruikers",
         headers={
             "Authorization": f"Bearer {TEST_API_TOKEN}",
             "X-User-Id": "beheerder",
