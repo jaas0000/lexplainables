@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.db import get_engine
 from app.shared.auth import GebruikerContext, huidige_beheerder, vereist_api_token
 
 from .models import MijnProfiel, VerifyRequest, VerifyResult, WachtwoordWijzigenVerzoek
-from .store import haal_gebruiker, verifieer_credentials, wijzig_eigen_wachtwoord
+from .store import (
+    GebruikerNietActief,
+    WachtwoordOnjuist,
+    haal_gebruiker,
+    verifieer_credentials,
+    wijzig_eigen_wachtwoord,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -24,7 +30,13 @@ async def me(
     engine=Depends(get_engine),
 ) -> MijnProfiel:
     """Geeft de eigen accountgegevens terug van de ingelogde gebruiker."""
-    return await haal_gebruiker(engine, gebruiker.gebruikersnaam)
+    try:
+        return await haal_gebruiker(engine, gebruiker.gebruikersnaam)
+    except GebruikerNietActief as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account niet (meer) actief.",
+        ) from exc
 
 
 @router.post("/wijzig-wachtwoord", status_code=status.HTTP_204_NO_CONTENT)
@@ -34,9 +46,20 @@ async def wijzig_wachtwoord(
     engine=Depends(get_engine),
 ) -> None:
     """Wijzigt het eigen wachtwoord. Geeft 400 als het huidige wachtwoord onjuist is."""
-    await wijzig_eigen_wachtwoord(
-        engine,
-        gebruiker.gebruikersnaam,
-        verzoek.huidig_wachtwoord,
-        verzoek.nieuw_wachtwoord,
-    )
+    try:
+        await wijzig_eigen_wachtwoord(
+            engine,
+            gebruiker.gebruikersnaam,
+            verzoek.huidig_wachtwoord,
+            verzoek.nieuw_wachtwoord,
+        )
+    except GebruikerNietActief as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account niet (meer) actief.",
+        ) from exc
+    except WachtwoordOnjuist as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Huidig wachtwoord klopt niet.",
+        ) from exc

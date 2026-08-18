@@ -7,7 +7,6 @@ Positieve en negatieve paden voor /v1/auth/verify, /v1/auth/me en /v1/auth/wijzi
 from __future__ import annotations
 
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import select
@@ -16,6 +15,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.features.identiteit_toegang.models import Gebruiker
 from app.features.identiteit_toegang.store import (
+    GebruikerNietActief,
+    WachtwoordOnjuist,
     haal_gebruiker,
     maak_gebruiker,
     maak_gebruiker_indien_ontbreekt,
@@ -171,10 +172,9 @@ async def test_haal_gebruiker_profiel(db_engine):
 
 
 @pytest.mark.asyncio
-async def test_haal_gebruiker_onbekend_geeft_401(db_engine):
-    with pytest.raises(HTTPException) as exc_info:
+async def test_haal_gebruiker_onbekend_geeft_domein_fout(db_engine):
+    with pytest.raises(GebruikerNietActief):
         await haal_gebruiker(db_engine, "onbekend")
-    assert exc_info.value.status_code == 401
 
 
 # --- /v1/auth/wijzig-wachtwoord ---
@@ -198,12 +198,10 @@ async def test_wijzig_wachtwoord_succes(db_engine):
 
 
 @pytest.mark.asyncio
-async def test_wijzig_wachtwoord_fout_huidig_geeft_400(db_engine):
+async def test_wijzig_wachtwoord_fout_huidig_geeft_domein_fout(db_engine):
     await maak_gebruiker(db_engine, "testuser2", "oud123456", "beheerder")
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(WachtwoordOnjuist):
         await wijzig_eigen_wachtwoord(db_engine, "testuser2", "fout-wachtwoord", "nieuw1234")
-    assert exc_info.value.status_code == 400
-    assert "klopt niet" in exc_info.value.detail
 
 
 def test_wijzig_wachtwoord_te_kort_geeft_422(client):

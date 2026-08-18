@@ -13,6 +13,7 @@ export function NavigatieHeader() {
 
   const isBeheer =
     pathname.startsWith("/beheer") || pathname.startsWith("/mockup/beheer");
+  const isAccount = pathname.startsWith("/account");
 
   return (
     <nav className="nav">
@@ -30,13 +31,12 @@ export function NavigatieHeader() {
       >
         Assistent
       </button>
-      <button
-        className="nav-link nav-link--placeholder"
-        disabled
-        title="Nog niet beschikbaar"
+      <Link
+        href="/account"
+        className={`nav-link${isAccount ? " nav-link--active" : ""}`}
       >
         Account
-      </button>
+      </Link>
       <Link
         href="/beheer"
         className={`nav-link${isBeheer ? " nav-link--active" : ""}`}
