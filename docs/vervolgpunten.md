@@ -49,6 +49,13 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ---
 
+## PR #9 — wetcatalogus (story 010)
+
+- **C4-model bijwerken**: `docs/architectuur/c4-model.md` is niet bijgewerkt voor de nieuwe wetcatalogus-feature. Toe te voegen: L3 Component `api` — wetcatalogus (`features/wetcatalogus/`); L3 Component `frontend` — wetcatalogus-pagina (`app/wetcatalogus/`), `WetSelector` (`components/WetSelector.tsx`) en BFF-routes (`app/api/wetten/`); L2 Container — beschrijving van `api` bijwerken (wetcatalogus staat er nog als "nog niet gebouwd").
+- **Pre-existing CI failure**: `test_admin_bericht_met_geldig_token_en_user_id_geeft_200` in `api/app/features/identiteit_toegang/tests/test_auth.py` faalt op `no such table: berichten` — los van deze PR, maar blokkeert CI.
+
+---
+
 ## Frontend — berichten fase 2
 
 - **BFF-rolautorisatie**: `app/api/admin/berichten/` controleert `session.user.rol` niet — momenteel alleen beheerders actief, maar de BFF hoort rolautorisatie te dragen zodra analisten bestaan.
