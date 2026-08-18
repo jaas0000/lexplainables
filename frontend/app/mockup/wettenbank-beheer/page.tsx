@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import {
+  SectieHeader,
+  LeegePlaceholder,
+} from "@/components/beheer/SectieHeader";
 
 // --- Types -----------------------------------------------------------------
 
@@ -39,8 +43,6 @@ const NEPPE_WETTEN: WetRead[] = [
   },
 ];
 
-const LEEG_FORMULIER = { bwb_id: "", naam: "" };
-
 // --- Hulpcomponenten -------------------------------------------------------
 
 function MockupBadge() {
@@ -62,7 +64,7 @@ function MockupBadge() {
   );
 }
 
-function FoutBalk({ bericht, onSluit }: { bericht: string; onSluit: () => void }) {
+function FoutMelding({ bericht, onSluit }: { bericht: string; onSluit: () => void }) {
   return (
     <div
       role="alert"
@@ -70,13 +72,12 @@ function FoutBalk({ bericht, onSluit }: { bericht: string; onSluit: () => void }
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0.625rem 1rem",
+        padding: "0.75rem 1rem",
         borderRadius: "4px",
-        background: "rgb(var(--gevaar) / 0.08)",
-        border: "1px solid rgb(var(--gevaar) / 0.3)",
-        color: "rgb(var(--gevaar))",
+        background: "rgb(var(--fout) / 0.08)",
+        border: "1px solid rgb(var(--fout) / 0.3)",
+        color: "rgb(var(--fout))",
         fontSize: "0.875rem",
-        marginBottom: "1rem",
       }}
     >
       <span>{bericht}</span>
@@ -99,17 +100,16 @@ function FoutBalk({ bericht, onSluit }: { bericht: string; onSluit: () => void }
   );
 }
 
-function SuccesBalk({ bericht }: { bericht: string }) {
+function SuccesMelding({ bericht }: { bericht: string }) {
   return (
     <div
       style={{
-        padding: "0.625rem 1rem",
+        padding: "0.75rem 1rem",
         borderRadius: "4px",
         background: "rgb(var(--succes) / 0.08)",
         border: "1px solid rgb(var(--succes) / 0.3)",
         color: "rgb(var(--succes))",
         fontSize: "0.875rem",
-        marginBottom: "1rem",
       }}
     >
       {bericht}
@@ -154,8 +154,12 @@ function ResolvePaneel({
 
   return (
     <div
-      className="card"
-      style={{ marginTop: "0.5rem", padding: "1rem", background: "rgb(var(--surface))" }}
+      style={{
+        padding: "1rem",
+        borderRadius: "4px",
+        border: "1px solid rgb(var(--line))",
+        background: "rgb(var(--surface))",
+      }}
     >
       <p style={{ fontSize: "0.8125rem", color: "rgb(var(--muted))", marginBottom: "0.75rem" }}>
         Haal de officiële citeertitel op voor{" "}
@@ -190,11 +194,11 @@ function ResolvePaneel({
           <p
             style={{
               fontSize: "0.875rem",
-              color: "rgb(var(--gevaar))",
+              color: "rgb(var(--fout))",
               padding: "0.5rem 0.75rem",
               borderRadius: "4px",
-              background: "rgb(var(--gevaar) / 0.08)",
-              border: "1px solid rgb(var(--gevaar) / 0.3)",
+              background: "rgb(var(--fout) / 0.08)",
+              border: "1px solid rgb(var(--fout) / 0.3)",
             }}
           >
             {status.bericht}
@@ -261,163 +265,265 @@ function ResolvePaneel({
   );
 }
 
-// --- Inline bewerken -------------------------------------------------------
+// --- Wet-formulier (toevoegen én bewerken) ---------------------------------
+// Visueel identiek aan WetEditor in wetsanalyse-ai/frontend/components/admin/WetEditor.tsx
 
-function BewerkRij({
+function WetFormulier({
   wet,
+  bestaandeBwbIds,
   onOpslaan,
   onAnnuleren,
 }: {
-  wet: WetRead;
+  wet: WetRead | null; // null = nieuw
+  bestaandeBwbIds: string[];
   onOpslaan: (bwb_id: string, naam: string) => void;
   onAnnuleren: () => void;
 }) {
-  const [naam, setNaam] = useState(wet.naam);
-  const [resolveOpen, setResolveOpen] = useState(false);
-
-  function resolveNaamToepassen(gevondenNaam: string) {
-    setNaam(gevondenNaam);
-    setResolveOpen(false);
-  }
-
-  return (
-    <tr style={{ background: "rgb(var(--surface))" }}>
-      <td style={{ fontFamily: "monospace", fontSize: "0.8125rem", color: "rgb(var(--muted))" }}>
-        {wet.bwb_id}
-      </td>
-      <td colSpan={2}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (naam.trim()) onOpslaan(wet.bwb_id, naam.trim());
-          }}
-          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-        >
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <input
-              className="field-input"
-              value={naam}
-              onChange={(e) => setNaam(e.target.value)}
-              required
-              aria-label="Naam wet"
-              style={{ flex: 1 }}
-            />
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: "0.8125rem", flexShrink: 0 }}
-              onClick={() => setResolveOpen((v) => !v)}
-              title="Citeertitel ophalen via Wettenbank-MCP"
-            >
-              Resolve
-            </button>
-          </div>
-          {resolveOpen && (
-            <ResolvePaneel
-              bwb_id={wet.bwb_id}
-              huidigenaam={naam}
-              onNaamToepassen={resolveNaamToepassen}
-              onSluiten={() => setResolveOpen(false)}
-            />
-          )}
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button type="submit" className="btn btn-primary" style={{ fontSize: "0.8125rem" }}>
-              Opslaan
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: "0.8125rem" }}
-              onClick={onAnnuleren}
-            >
-              Annuleren
-            </button>
-          </div>
-        </form>
-      </td>
-      <td style={{ textAlign: "center", color: "rgb(var(--muted))", fontSize: "0.8125rem" }}>
-        {wet.artikelen}
-      </td>
-      <td></td>
-    </tr>
-  );
-}
-
-// --- Toevoeg-formulier -----------------------------------------------------
-
-function ToevoegFormulier({
-  bestaandeBwbIds,
-  onToevoegen,
-  onAnnuleren,
-}: {
-  bestaandeBwbIds: string[];
-  onToevoegen: (wet: { bwb_id: string; naam: string }) => void;
-  onAnnuleren: () => void;
-}) {
-  const [formulier, setFormulier] = useState(LEEG_FORMULIER);
+  const nieuw = wet === null;
+  const [bwb_id, setBwbId] = useState(wet?.bwb_id ?? "");
+  const [naam, setNaam] = useState(wet?.naam ?? "");
   const [fout, setFout] = useState<Foutmelding>(null);
+  const [resolveOpen, setResolveOpen] = useState(false);
 
   function verzenden(e: React.FormEvent) {
     e.preventDefault();
     setFout(null);
-    const bwb_id = formulier.bwb_id.trim().toUpperCase();
-    const naam = formulier.naam.trim();
-    if (!bwb_id || !naam) return;
-    if (bestaandeBwbIds.includes(bwb_id)) {
-      setFout(`Conflict (409): wet met bwb-id "${bwb_id}" bestaat al in de catalogus.`);
+    const id = nieuw ? bwb_id.trim().toUpperCase() : bwb_id.trim();
+    const n = naam.trim();
+    if (!id || !n) return;
+    if (nieuw && bestaandeBwbIds.includes(id)) {
+      setFout(`Conflict (409): wet met bwb-id "${id}" bestaat al in de catalogus.`);
       return;
     }
-    onToevoegen({ bwb_id, naam });
-    setFormulier(LEEG_FORMULIER);
+    onOpslaan(id, n);
   }
 
   return (
-    <div className="card" style={{ marginBottom: "1.5rem" }}>
-      <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.875rem" }}>
-        Wet toevoegen
-      </h3>
-      {fout && <FoutBalk bericht={fout} onSluit={() => setFout(null)} />}
-      <form onSubmit={verzenden} style={{ display: "grid", gap: "0.75rem" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.75rem" }}>
+    <div
+      style={{
+        background: "rgb(var(--paper))",
+        border: "1px solid rgb(var(--line))",
+        borderRadius: "5px",
+        padding: "1.5rem",
+      }}
+    >
+      <form onSubmit={verzenden} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <h3
+          style={{
+            fontSize: "1.125rem",
+            fontWeight: 600,
+            color: "rgb(var(--lint))",
+          }}
+        >
+          {nieuw ? "Nieuwe wet" : `Wet bewerken — ${wet?.bwb_id}`}
+        </h3>
+
+        {fout && <FoutMelding bericht={fout} onSluit={() => setFout(null)} />}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "1.25rem",
+          }}
+        >
+          {/* BWB-ID veld */}
           <div>
-            <label className="field-label" htmlFor="bwb-id">
+            <label
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "0.375rem",
+                marginBottom: "0.25rem",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                color: "rgb(var(--ink))",
+              }}
+              htmlFor="bwb-id"
+            >
               BWB-ID
+              <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "rgb(var(--faint))" }}>
+                {nieuw ? "bv. BWBR0005290" : "vast"}
+              </span>
             </label>
             <input
               id="bwb-id"
               className="field-input"
-              placeholder="bijv. BWBR0005290"
-              value={formulier.bwb_id}
-              onChange={(e) => setFormulier((f) => ({ ...f, bwb_id: e.target.value }))}
+              style={{ fontFamily: "monospace" }}
+              placeholder="BWBR0005290"
+              value={bwb_id}
+              onChange={(e) => setBwbId(e.target.value)}
+              disabled={!nieuw}
               required
-              style={{ marginTop: "0.25rem", fontFamily: "monospace" }}
+              autoComplete="off"
             />
           </div>
+
+          {/* Naam veld */}
           <div>
-            <label className="field-label" htmlFor="wet-naam">
+            <label
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "0.375rem",
+                marginBottom: "0.25rem",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                color: "rgb(var(--ink))",
+              }}
+              htmlFor="wet-naam"
+            >
               Naam
+              <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "rgb(var(--faint))" }}>
+                leesbaar label
+              </span>
             </label>
-            <input
-              id="wet-naam"
-              className="field-input"
-              placeholder="bijv. Algemene wet bestuursrecht"
-              value={formulier.naam}
-              onChange={(e) => setFormulier((f) => ({ ...f, naam: e.target.value }))}
-              required
-              maxLength={256}
-              style={{ marginTop: "0.25rem" }}
-            />
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+              className="sm:flex-row"
+            >
+              <input
+                id="wet-naam"
+                className="field-input"
+                style={{ flex: 1 }}
+                placeholder="Algemene wet bestuursrecht"
+                value={naam}
+                onChange={(e) => setNaam(e.target.value)}
+                required
+                maxLength={256}
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ whiteSpace: "nowrap" }}
+                onClick={() => setResolveOpen((v) => !v)}
+                title="Citeertitel ophalen via Wettenbank-MCP"
+              >
+                Naam ophalen
+              </button>
+            </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button type="submit" className="btn btn-primary">
-            Toevoegen
-          </button>
+
+        {resolveOpen && (
+          <ResolvePaneel
+            bwb_id={bwb_id || (wet?.bwb_id ?? "")}
+            huidigenaam={naam}
+            onNaamToepassen={(n) => {
+              setNaam(n);
+              setResolveOpen(false);
+            }}
+            onSluiten={() => setResolveOpen(false)}
+          />
+        )}
+
+        <div style={{ display: "flex", gap: "0.5rem", paddingTop: "0.5rem" }}>
           <button type="button" className="btn btn-secondary" onClick={onAnnuleren}>
             Annuleren
           </button>
+          <button type="submit" className="btn btn-primary">
+            {nieuw ? "Toevoegen" : "Opslaan"}
+          </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// --- Wettenlijst (cards per wet) -------------------------------------------
+// Visueel identiek aan de "Wetten"-sectie in wetsanalyse-ai BeheerClient.tsx
+
+function WettenLijst({
+  wetten,
+  onBewerken,
+  onVerwijderen,
+}: {
+  wetten: WetRead[];
+  onBewerken: (bwb_id: string) => void;
+  onVerwijderen: (wet: WetRead) => void;
+}) {
+  if (wetten.length === 0) {
+    return (
+      <LeegePlaceholder tekst="Nog geen wetten. Voeg er een toe om de dropdown te vullen." />
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      {wetten.map((wet) => (
+        <div
+          key={wet.bwb_id}
+          style={{
+            background: "rgb(var(--surface))",
+            border: "1px solid rgb(var(--line))",
+            borderRadius: "5px",
+            padding: "1rem",
+          }}
+        >
+          {/* Naam + BWB-badge + metadata */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "0.75rem",
+            }}
+          >
+            <span
+              style={{
+                fontWeight: 600,
+                color: "rgb(var(--ink))",
+              }}
+            >
+              {wet.naam || "(geen naam)"}
+            </span>
+            {/* BWB-id badge — gelijk aan Tag in wetsanalyse-ai */}
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "0.125rem 0.5rem",
+                borderRadius: "9999px",
+                border: "1px solid rgb(var(--line))",
+                background: "rgb(var(--paper))",
+                fontFamily: "monospace",
+                fontSize: "0.75rem",
+                color: "rgb(var(--muted))",
+              }}
+            >
+              {wet.bwb_id}
+            </span>
+            <span
+              style={{
+                marginLeft: "auto",
+                fontSize: "0.75rem",
+                color: "rgb(var(--faint))",
+              }}
+            >
+              {wet.artikelen} artikelen · {wet.bijgewerkt_door}
+            </span>
+          </div>
+
+          {/* Actieknopen */}
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
+            <button
+              className="btn btn-secondary"
+              style={{ fontSize: "0.8125rem" }}
+              onClick={() => onBewerken(wet.bwb_id)}
+            >
+              Bewerken
+            </button>
+            <button
+              className="btn btn-danger"
+              style={{ fontSize: "0.8125rem" }}
+              onClick={() => onVerwijderen(wet)}
+            >
+              Verwijderen
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -445,8 +551,25 @@ function BevestigVerwijderen({
         zIndex: 50,
       }}
     >
-      <div className="card" style={{ maxWidth: 420, width: "90%", padding: "1.5rem" }}>
-        <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+      <div
+        style={{
+          background: "rgb(var(--paper))",
+          border: "1px solid rgb(var(--line))",
+          borderRadius: "5px",
+          padding: "1.5rem",
+          maxWidth: 420,
+          width: "90%",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "1rem",
+            fontWeight: 600,
+            color: "rgb(var(--lint))",
+            marginBottom: "0.75rem",
+          }}
+        >
           Wet verwijderen?
         </h3>
         <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))", marginBottom: "1.25rem" }}>
@@ -468,99 +591,7 @@ function BevestigVerwijderen({
   );
 }
 
-// --- Wettenlijst-tabel -----------------------------------------------------
-
-function WettenTabel({
-  wetten,
-  onBewerken,
-  onVerwijderen,
-  bewerkId,
-  onOpslaan,
-  onAnnuleren,
-}: {
-  wetten: WetRead[];
-  onBewerken: (bwb_id: string) => void;
-  onVerwijderen: (wet: WetRead) => void;
-  bewerkId: string | null;
-  onOpslaan: (bwb_id: string, naam: string) => void;
-  onAnnuleren: () => void;
-}) {
-  if (wetten.length === 0) {
-    return (
-      <div
-        style={{
-          padding: "2rem 1.5rem",
-          textAlign: "center",
-          border: "1px dashed rgb(var(--line))",
-          borderRadius: "6px",
-          color: "rgb(var(--muted))",
-          fontSize: "0.875rem",
-        }}
-      >
-        Nog geen wetten in de catalogus. Voeg een wet toe via het formulier hierboven.
-      </div>
-    );
-  }
-
-  return (
-    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-      <table className="tabel">
-        <thead>
-          <tr>
-            <th style={{ width: "14ch" }}>BWB-ID</th>
-            <th>Naam</th>
-            <th style={{ width: "12ch" }}>Bijgewerkt door</th>
-            <th style={{ width: "6ch", textAlign: "center" }}>Artikelen</th>
-            <th style={{ width: "14ch" }}>Acties</th>
-          </tr>
-        </thead>
-        <tbody>
-          {wetten.map((wet) =>
-            wet.bwb_id === bewerkId ? (
-              <BewerkRij
-                key={wet.bwb_id}
-                wet={wet}
-                onOpslaan={onOpslaan}
-                onAnnuleren={onAnnuleren}
-              />
-            ) : (
-              <tr key={wet.bwb_id}>
-                <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{wet.bwb_id}</td>
-                <td style={{ fontWeight: 500 }}>{wet.naam}</td>
-                <td style={{ color: "rgb(var(--muted))", fontSize: "0.8125rem" }}>
-                  {wet.bijgewerkt_door}
-                </td>
-                <td style={{ textAlign: "center", color: "rgb(var(--muted))", fontSize: "0.8125rem" }}>
-                  {wet.artikelen}
-                </td>
-                <td>
-                  <div className="acties">
-                    <button
-                      className="btn btn-secondary"
-                      style={{ fontSize: "0.8125rem" }}
-                      onClick={() => onBewerken(wet.bwb_id)}
-                    >
-                      Bewerk
-                    </button>
-                    <button
-                      className="btn btn-danger"
-                      style={{ fontSize: "0.8125rem" }}
-                      onClick={() => onVerwijderen(wet)}
-                    >
-                      Verwijder
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ),
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// --- Scenario-knoppen (voor snel schakelen) --------------------------------
+// --- Scenario-knoppen (mockup-only) ----------------------------------------
 
 type Scenario = "leeg" | "gevuld" | "toevoegen" | "bewerken" | "resolve";
 
@@ -579,16 +610,17 @@ export default function WettenbankBeheerMockup() {
     setTimeout(() => setSuccesmelding(null), 3000);
   }
 
-  function wetToevoegen(nieuw: { bwb_id: string; naam: string }) {
+  function wetToevoegen(bwb_id: string, naam: string) {
     const wet: WetRead = {
-      ...nieuw,
+      bwb_id,
+      naam,
       bijgewerkt_door: "beheerder",
       bijgewerkt: new Date().toISOString(),
       artikelen: 0,
     };
     setWetten((prev) => [...prev, wet]);
     setToonToevoegen(false);
-    toonSucces(`Wet "${nieuw.naam}" (${nieuw.bwb_id}) toegevoegd.`);
+    toonSucces(`Wet "${naam}" (${bwb_id}) toegevoegd.`);
   }
 
   function wetOpslaan(bwb_id: string, naam: string) {
@@ -634,17 +666,20 @@ export default function WettenbankBeheerMockup() {
       case "resolve":
         setWetten(NEPPE_WETTEN);
         setBewerkId("BWBR0005290");
-        toonSucces("Klik op 'Resolve' in de bewerkrij om het resolve-paneel te openen.");
+        toonSucces("Klik op 'Naam ophalen' in het bewerkformulier om het resolve-paneel te openen.");
         break;
     }
   }
+
+  const bewerkWet = bewerkId ? (wetten.find((w) => w.bwb_id === bewerkId) ?? null) : null;
+  const formulierOpen = toonToevoegen || bewerkId !== null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
       {/* Paginaheader */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
-          <h1 style={{ fontSize: "1.75rem" }}>Wettenbank-beheer</h1>
+          <h1 style={{ fontSize: "1.875rem", fontWeight: 600 }}>Wettenbank-beheer</h1>
           <p style={{ marginTop: "0.25rem", fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
             Wetten toevoegen, bijwerken, resolven en verwijderen uit de catalogus.
           </p>
@@ -657,11 +692,12 @@ export default function WettenbankBeheerMockup() {
         style={{
           display: "flex",
           flexWrap: "wrap",
+          alignItems: "center",
           gap: "0.5rem",
           padding: "0.75rem 1rem",
           background: "rgb(var(--surface))",
           border: "1px solid rgb(var(--line))",
-          borderRadius: "6px",
+          borderRadius: "5px",
         }}
       >
         <span
@@ -671,7 +707,6 @@ export default function WettenbankBeheerMockup() {
             textTransform: "uppercase",
             letterSpacing: "0.08em",
             color: "rgb(var(--faint))",
-            alignSelf: "center",
             marginRight: "0.25rem",
           }}
         >
@@ -699,67 +734,51 @@ export default function WettenbankBeheerMockup() {
       </div>
 
       {/* Feedback-balken */}
-      {succesmelding && <SuccesBalk bericht={succesmelding} />}
-      {foutmelding && <FoutBalk bericht={foutmelding} onSluit={() => setFoutmelding(null)} />}
+      {succesmelding && <SuccesMelding bericht={succesmelding} />}
+      {foutmelding && <FoutMelding bericht={foutmelding} onSluit={() => setFoutmelding(null)} />}
 
-      {/* Wet toevoegen */}
-      {toonToevoegen ? (
-        <ToevoegFormulier
-          bestaandeBwbIds={wetten.map((w) => w.bwb_id)}
-          onToevoegen={wetToevoegen}
-          onAnnuleren={() => setToonToevoegen(false)}
-        />
-      ) : (
-        <div>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setBewerkId(null);
-              setToonToevoegen(true);
-            }}
-          >
-            + Wet toevoegen
-          </button>
-        </div>
-      )}
-
-      {/* Cataloguslijst */}
+      {/* Wetten-sectie */}
       <section>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.75rem",
-            marginBottom: "0.875rem",
-          }}
-        >
-          <h2 style={{ fontSize: "1rem", fontWeight: 600 }}>Catalogus</h2>
-          <span
-            style={{
-              fontSize: "0.6875rem",
-              fontWeight: 600,
-              padding: "0.125rem 0.5rem",
-              borderRadius: "9999px",
-              background: "rgb(var(--lint) / 0.1)",
-              color: "rgb(var(--lint))",
-              border: "1px solid rgb(var(--lint) / 0.25)",
-            }}
-          >
-            {wetten.length} {wetten.length === 1 ? "wet" : "wetten"}
-          </span>
-        </div>
-
-        <WettenTabel
-          wetten={wetten}
-          bewerkId={bewerkId}
-          onBewerken={(id) => {
-            setToonToevoegen(false);
-            setBewerkId(id);
-          }}
-          onVerwijderen={(wet) => setTeVerwijderen(wet)}
-          onOpslaan={wetOpslaan}
-          onAnnuleren={() => setBewerkId(null)}
+        <SectieHeader
+          titel="Wetten"
+          aantal={wetten.length}
+          subtitel="Selecteerbaar bij nieuwe analyse"
         />
+
+        {formulierOpen ? (
+          /* Formulier (toevoegen of bewerken) vervangt de lijst — zelfde patroon als WetEditor */
+          <WetFormulier
+            wet={toonToevoegen ? null : bewerkWet}
+            bestaandeBwbIds={wetten.map((w) => w.bwb_id)}
+            onOpslaan={toonToevoegen ? wetToevoegen : wetOpslaan}
+            onAnnuleren={() => {
+              setToonToevoegen(false);
+              setBewerkId(null);
+            }}
+          />
+        ) : (
+          <>
+            <div style={{ marginBottom: "1rem" }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setBewerkId(null);
+                  setToonToevoegen(true);
+                }}
+              >
+                Nieuwe wet
+              </button>
+            </div>
+            <WettenLijst
+              wetten={wetten}
+              onBewerken={(id) => {
+                setToonToevoegen(false);
+                setBewerkId(id);
+              }}
+              onVerwijderen={(wet) => setTeVerwijderen(wet)}
+            />
+          </>
+        )}
       </section>
 
       {/* Bevestigingsdialoog */}

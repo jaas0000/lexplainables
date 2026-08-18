@@ -161,6 +161,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Me
+         * @description Geeft de eigen accountgegevens terug van de ingelogde gebruiker.
+         */
+        get: operations["me_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/setup": {
         parameters: {
             query?: never;
@@ -212,6 +232,26 @@ export interface paths {
         put?: never;
         /** Verify */
         post: operations["verify_v1_auth_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/wijzig-wachtwoord": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Wijzig Wachtwoord
+         * @description Wijzigt het eigen wachtwoord. Geeft 400 als het huidige wachtwoord onjuist is.
+         */
+        post: operations["wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -693,15 +733,6 @@ export interface components {
             /** Userid */
             userid: string;
         };
-        /** GebruikerInfo */
-        GebruikerInfo: {
-            /** Email */
-            email: string;
-            /** Gebruikersnaam */
-            gebruikersnaam: string;
-            /** Rol */
-            rol: string;
-        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -796,6 +827,20 @@ export interface components {
             /** Tot */
             tot?: string | null;
         };
+        /**
+         * MijnProfiel
+         * @description Eigen accountgegevens — teruggegeven door GET /v1/auth/me.
+         */
+        MijnProfiel: {
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Naam */
+            naam: string;
+            /** Rol */
+            rol: string;
+            /** Totp Ingeschakeld */
+            totp_ingeschakeld: boolean;
+        };
         /** OngelezenAantalOut */
         OngelezenAantalOut: {
             /** Aantal */
@@ -806,12 +851,13 @@ export interface components {
             /** Aantal */
             aantal: number;
         };
-        /** SetupStatus */
+        /** ValidationError */
+
         SetupStatus: {
             /** Needs Setup */
             needs_setup: boolean;
         };
-        /** SetupVerzoek */
+
         SetupVerzoek: {
             /** Email */
             email: string;
@@ -820,7 +866,16 @@ export interface components {
             /** Wachtwoord */
             wachtwoord: string;
         };
-        /** ValidationError */
+
+        GebruikerInfo: {
+            /** Email */
+            email: string;
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Rol */
+            rol: string;
+        };
+
         ValidationError: {
             /** Context */
             ctx?: Record<string, never>;
@@ -854,6 +909,16 @@ export interface components {
              * @default
              */
             rol: string;
+        };
+        /**
+         * WachtwoordWijzigenVerzoek
+         * @description Verzoek om het eigen wachtwoord te wijzigen — body van POST /v1/auth/wijzig-wachtwoord.
+         */
+        WachtwoordWijzigenVerzoek: {
+            /** Huidig Wachtwoord */
+            huidig_wachtwoord: string;
+            /** Nieuw Wachtwoord */
+            nieuw_wachtwoord: string;
         };
         /**
          * WetKeuze
@@ -1334,6 +1399,39 @@ export interface operations {
             };
         };
     };
+    me_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MijnProfiel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+
     setup_v1_auth_setup_post: {
         parameters: {
             query?: never;
@@ -1369,6 +1467,7 @@ export interface operations {
             };
         };
     };
+
     setup_status_v1_auth_setup_status_get: {
         parameters: {
             query?: never;
@@ -1400,6 +1499,7 @@ export interface operations {
             };
         };
     };
+
     verify_v1_auth_verify_post: {
         parameters: {
             query?: never;
@@ -1423,6 +1523,40 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VerifyResult"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WachtwoordWijzigenVerzoek"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

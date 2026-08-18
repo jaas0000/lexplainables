@@ -2,7 +2,7 @@
   "components": {
     "schemas": {
       "AangemaaktAcceptatie": {
-        "description": "Directe bevestiging na aanmaken \u2014 202 Accepted, analyse loopt asynchroon.",
+        "description": "Directe bevestiging na aanmaken — 202 Accepted, analyse loopt asynchroon.",
         "properties": {
           "id": {
             "title": "Id",
@@ -131,7 +131,7 @@
         "type": "object"
       },
       "AnalyseDetail": {
-        "description": "Volledige detailweergave van \u00e9\u00e9n analyse.",
+        "description": "Volledige detailweergave van één analyse.",
         "properties": {
           "analysefocus": {
             "anyOf": [
@@ -301,7 +301,7 @@
         "type": "object"
       },
       "ArtikelKeuze": {
-        "description": "\u00c9\u00e9n artikel binnen een wet \u2014 artikelnummer + padnotatie (hoofdstuk / artikel).",
+        "description": "Één artikel binnen een wet — artikelnummer + padnotatie (hoofdstuk / artikel).",
         "properties": {
           "artikel": {
             "title": "Artikel",
@@ -320,7 +320,7 @@
         "type": "object"
       },
       "BegripInvoer": {
-        "description": "E\u00e9n begrip uit een eventuele bestaande begrippenlijst.",
+        "description": "Eén begrip uit een eventuele bestaande begrippenlijst.",
         "properties": {
           "definitie": {
             "anyOf": [
@@ -345,7 +345,7 @@
         "type": "object"
       },
       "BerichtAdminRead": {
-        "description": "Wat een beheerder terugkrijgt: ook concepten, met wie het bericht aanmaakte \u2014 maar geen\nper-gebruiker `gelezen`-vlag (de admin-lijst is niet gebonden aan \u00e9\u00e9n gebruiker).",
+        "description": "Wat een beheerder terugkrijgt: ook concepten, met wie het bericht aanmaakte — maar geen\nper-gebruiker `gelezen`-vlag (de admin-lijst is niet gebonden aan één gebruiker).",
         "properties": {
           "aangemaakt_door": {
             "title": "Aangemaakt Door",
@@ -431,7 +431,7 @@
         "type": "object"
       },
       "BerichtCreate": {
-        "description": "Wat een beheerder mag sturen bij het aanmaken of bewerken van een bericht \u2014\n`aangemaakt_door` komt niet van de client maar uit de auth-laag (zie router.py), en\n`gepubliceerd` is nooit client-instelbaar bij het aanmaken (altijd een concept, zie\nstore.py `maak`). Bewerken hergebruikt bewust hetzelfde schema (zelfde velden, ander\nendpoint) in plaats van een bijna-identieke tweede class.",
+        "description": "Wat een beheerder mag sturen bij het aanmaken of bewerken van een bericht —\n`aangemaakt_door` komt niet van de client maar uit de auth-laag (zie router.py), en\n`gepubliceerd` is nooit client-instelbaar bij het aanmaken (altijd een concept, zie\nstore.py `maak`). Bewerken hergebruikt bewust hetzelfde schema (zelfde velden, ander\nendpoint) in plaats van een bijna-identieke tweede class.",
         "properties": {
           "inhoud": {
             "maxLength": 10000,
@@ -597,7 +597,7 @@
         "type": "object"
       },
       "BronKeuze": {
-        "description": "\u00c9\u00e9n bronartikel: wet-id, artikelnummer en optioneel lidnummer.",
+        "description": "Één bronartikel: wet-id, artikelnummer en optioneel lidnummer.",
         "properties": {
           "artikel": {
             "title": "Artikel",
@@ -640,7 +640,7 @@
         "type": "object"
       },
       "FeedbackCreate": {
-        "description": "Wat een client mag sturen bij het indienen van feedback \u2014 client_id/userid komen niet\nvan de client zelf maar uit de auth-laag (zie router.py), dus staan hier bewust niet bij.",
+        "description": "Wat een client mag sturen bij het indienen van feedback — client_id/userid komen niet\nvan de client zelf maar uit de auth-laag (zie router.py), dus staan hier bewust niet bij.",
         "properties": {
           "categorie": {
             "enum": [
@@ -864,7 +864,7 @@
         "type": "object"
       },
       "LlmProfielRead": {
-        "description": "Wat de API teruggeeft \u2014 de plaintext API-sleutel verlaat de API nooit.",
+        "description": "Wat de API teruggeeft — de plaintext API-sleutel verlaat de API nooit.",
         "properties": {
           "api_base": {
             "title": "Api Base",
@@ -926,7 +926,7 @@
         "type": "object"
       },
       "LlmProfielUpdate": {
-        "description": "Wat een beheerder meestuurt bij het bijwerken van een profiel.\n\n`naam` ontbreekt bewust: naam is de stabiele identifier en kan niet veranderen.\n`api_sleutel` leeg (None of \"\") \u2192 sleutel ongewijzigd laten (niet overschrijven).",
+        "description": "Wat een beheerder meestuurt bij het bijwerken van een profiel.\n\n`naam` ontbreekt bewust: naam is de stabiele identifier en kan niet veranderen.\n`api_sleutel` leeg (None of \"\") → sleutel ongewijzigd laten (niet overschrijven).",
         "properties": {
           "api_base": {
             "minLength": 1,
@@ -1002,6 +1002,35 @@
           }
         },
         "title": "MarkeerGezienIn",
+        "type": "object"
+      },
+      "MijnProfiel": {
+        "description": "Eigen accountgegevens — teruggegeven door GET /v1/auth/me.",
+        "properties": {
+          "gebruikersnaam": {
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          },
+          "rol": {
+            "title": "Rol",
+            "type": "string"
+          },
+          "totp_ingeschakeld": {
+            "title": "Totp Ingeschakeld",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "naam",
+          "gebruikersnaam",
+          "rol",
+          "totp_ingeschakeld"
+        ],
+        "title": "MijnProfiel",
         "type": "object"
       },
       "OngelezenAantalOut": {
@@ -1151,8 +1180,30 @@
         "title": "VerifyResult",
         "type": "object"
       },
+      "WachtwoordWijzigenVerzoek": {
+        "description": "Verzoek om het eigen wachtwoord te wijzigen — body van POST /v1/auth/wijzig-wachtwoord.",
+        "properties": {
+          "huidig_wachtwoord": {
+            "maxLength": 512,
+            "title": "Huidig Wachtwoord",
+            "type": "string"
+          },
+          "nieuw_wachtwoord": {
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Nieuw Wachtwoord",
+            "type": "string"
+          }
+        },
+        "required": [
+          "huidig_wachtwoord",
+          "nieuw_wachtwoord"
+        ],
+        "title": "WachtwoordWijzigenVerzoek",
+        "type": "object"
+      },
       "WetKeuze": {
-        "description": "\u00c9\u00e9n beschikbare wet \u2014 bwb-id + leesbare naam.",
+        "description": "Één beschikbare wet — bwb-id + leesbare naam.",
         "properties": {
           "bwb_id": {
             "title": "Bwb Id",
@@ -1171,7 +1222,7 @@
         "type": "object"
       },
       "WetStructuur": {
-        "description": "Artikel-structuur van \u00e9\u00e9n wet.",
+        "description": "Artikel-structuur van één wet.",
         "properties": {
           "artikelen": {
             "items": {
@@ -2173,6 +2224,72 @@
         ]
       }
     },
+    "/v1/auth/me": {
+      "get": {
+        "description": "Geeft de eigen accountgegevens terug van de ingelogde gebruiker.",
+        "operationId": "me_v1_auth_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MijnProfiel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/v1/auth/setup": {
       "post": {
         "description": "Maakt de eerste beheerder aan. Retourneert 409 als de tabel al niet leeg is.",
@@ -2337,6 +2454,75 @@
           }
         },
         "summary": "Verify",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/wijzig-wachtwoord": {
+      "post": {
+        "description": "Wijzigt het eigen wachtwoord. Geeft 400 als het huidige wachtwoord onjuist is.",
+        "operationId": "wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WachtwoordWijzigenVerzoek"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wijzig Wachtwoord",
         "tags": [
           "auth"
         ]
@@ -2758,7 +2944,7 @@
         ]
       },
       "get": {
-        "description": "Geef het detail van \u00e9\u00e9n analyse terug.",
+        "description": "Geef het detail van één analyse terug.",
         "operationId": "detail_analyse_v1_projecten__analyse_id__get",
         "parameters": [
           {
@@ -2953,7 +3139,7 @@
     },
     "/v1/wetten/{bwb_id}/structuur": {
       "get": {
-        "description": "Artikel-structuur van \u00e9\u00e9n wet. Geeft 404 bij een onbekend bwb_id.",
+        "description": "Artikel-structuur van één wet. Geeft 404 bij een onbekend bwb_id.",
         "operationId": "get_wet_structuur_v1_wetten__bwb_id__structuur_get",
         "parameters": [
           {
