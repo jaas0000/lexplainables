@@ -11,7 +11,6 @@ import { beheerFetch, BeheerFetchFout } from "@/lib/beheer-fetch";
 type LlmProfielRead = components["schemas"]["LlmProfielRead"];
 type LlmProfielCreate = components["schemas"]["LlmProfielCreate"];
 type LlmProfielUpdate = components["schemas"]["LlmProfielUpdate"];
-// LlmProfielUpdate wordt direct geïnitialiseerd vanuit het profiel (BewerkenFormulier), niet via een constante.
 
 const PROVIDERS = ["azure_ai", "openai", "anthropic"];
 
@@ -625,9 +624,6 @@ export default function LlmProfielenPagina() {
   const [fout, setFout] = useState<string | null>(null);
 
   useEffect(() => {
-    // laden begint als true (initiële state) — geen synchrone setState hier om de
-    // react-hooks/set-state-in-effect-regel te respecteren; state-updates lopen alleen
-    // via de promise-callbacks.
     beheerFetch("/api/admin/profielen")
       .then((data) => setProfielen(data as LlmProfielRead[]))
       .catch((err) => setFout(veldfout(err)))
