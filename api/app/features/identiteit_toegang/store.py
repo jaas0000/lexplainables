@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import bcrypt
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.future import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from .models import Gebruiker, VerifyResult
+from .models import Gebruiker, MijnProfiel, VerifyResult
 
 # Vaste dummy-hash voor timing-oracle-beveiliging bij onbekende gebruiker.
 # Hardcoded constante (cost=12) zodat module-import geen bcrypt-ronde kost op elke cold start.
@@ -64,3 +65,57 @@ async def maak_gebruiker_indien_ontbreekt(
             return False
     await maak_gebruiker(engine, gebruikersnaam, wachtwoord, rol)
     return True
+
+
+async def haal_gebruiker(engine: AsyncEngine, gebruikersnaam: str) -> MijnProfiel:
+    """Haalt het eigen profiel op. Geeft 401 als de gebruiker niet bestaat of inactief is."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        gebruiker = result.scalar_one_or_none()
+
+    if gebruiker is None or not gebruiker.actief:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account niet (meer) actief.",
+        )
+
+    return MijnProfiel(
+        naam=gebruiker.gebruikersnaam,
+        gebruikersnaam=gebruiker.gebruikersnaam,
+        rol=gebruiker.rol,
+        totp_ingeschakeld=False,
+    )
+
+
+async def wijzig_eigen_wachtwoord(
+    engine: AsyncEngine,
+    gebruikersnaam: str,
+    huidig_wachtwoord: str,
+    nieuw_wachtwoord: str,
+) -> None:
+    """Wijzigt het wachtwoord van een gebruiker. Geeft 400 als het huidige wachtwoord onjuist is."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        gebruiker = result.scalar_one_or_none()
+
+        if gebruiker is None or not gebruiker.actief:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Account niet (meer) actief.",
+            )
+
+        if not bcrypt.checkpw(huidig_wachtwoord.encode(), gebruiker.wachtwoord_hash.encode()):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Huidig wachtwoord klopt niet.",
+            )
+
+        gebruiker.wachtwoord_hash = bcrypt.hashpw(
+            nieuw_wachtwoord.encode(), bcrypt.gensalt()
+        ).decode()
+        sess.add(gebruiker)
+        await sess.commit()
