@@ -1,8 +1,8 @@
 # Story 019: App-instellingen (runtime-config)
 
-**Prioriteit:** uitgesteld
+**Prioriteit:** hoog
 **Story points:** 2
-**Service:** `api/` (frontend uitgesteld — wetsanalyse-ai heeft ook geen UI; toggle later via story 021 LLM-log)
+**Service:** `api/` + `frontend/`
 
 ## Verhaal
 
