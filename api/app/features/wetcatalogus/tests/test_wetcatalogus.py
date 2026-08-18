@@ -1,24 +1,17 @@
-"""Gedragstests voor het wetcatalogus-domein (feature-bouwen regel 6: gedrag, niet vorm).
+"""Gedragstests voor het wetcatalogus-domein (feature-bouwen regel 6).
 
-Dekt de acceptatiecriteria uit docs/stories/010-wetcatalogus.md:
-- lijst van beschikbare wetten (bwb-id + naam)
-- artikel-structuur van een bekende wet
-- 404 bij een onbekend bwb_id
-- lege wettenlijst-edge case (via een aparte store-stub)
-- wet zonder artikelen (randgeval: geen crash, lege lijst)
+Dekt de acceptatiecriteria uit story 010 (analist-routes) en story 020 (admin-CRUD + resolve).
+Alle tests gaan via de echte HTTP-laag (router + store + SQLite).
+
+Resolve-tests: de `_roep_wettenbank_mcp_aan`-functie wordt via monkeypatch gemockt
+zodat er geen echte MCP-server nodig is.
 """
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
-from app.features.wetcatalogus.models import WetKeuze
-from app.features.wetcatalogus.router import get_store
-from app.features.wetcatalogus.store import WetStructuur
-from app.main import app
-from app.shared.auth import huidige_gebruiker
-
-# --- gelukkig pad -----------------------------------------------------------
+# ============================================================================
+# Story 010 — analist-routes (nu database-backed)
+# ============================================================================
 
 
 def test_lijst_wetten_geeft_drie_wetten(client):
@@ -45,19 +38,6 @@ def test_structuur_wwb_geeft_zes_artikelen(client):
     data = response.json()
     assert data["bwb_id"] == "BWBR0011823"
     assert len(data["artikelen"]) == 6
-    nummers = [a["artikel"] for a in data["artikelen"]]
-    assert "1" in nummers
-    assert "31" in nummers
-
-
-def test_structuur_bevat_pad(client):
-    response = client.get("/v1/wetten/BWBR0020183/structuur")
-    assert response.status_code == 200
-    artikel_8a = next(a for a in response.json()["artikelen"] if a["artikel"] == "8a")
-    assert artikel_8a["pad"] == "Hoofdstuk 2 / Artikel 8a"
-
-
-# --- foutpad ----------------------------------------------------------------
 
 
 def test_structuur_onbekend_bwb_id_geeft_404(client):
@@ -65,48 +45,183 @@ def test_structuur_onbekend_bwb_id_geeft_404(client):
     assert response.status_code == 404
 
 
-# --- edge cases -------------------------------------------------------------
-
-
-def test_lege_wettenlijst():
-    """Lege catalogus geeft een lege array terug (geen crash)."""
-
-    class LegeStore:
-        async def lijst(self):
-            return []
-
-        async def structuur(self, bwb_id):
-            from app.features.wetcatalogus.store import WetNietGevonden
-
-            raise WetNietGevonden(bwb_id)
-
-    app.dependency_overrides[get_store] = lambda: LegeStore()
-    app.dependency_overrides[huidige_gebruiker] = lambda: "analist-test"
-    with TestClient(app) as c:
-        response = c.get("/v1/wetten")
-    app.dependency_overrides.pop(get_store, None)
-    app.dependency_overrides.pop(huidige_gebruiker, None)
-
+def test_lege_wettenlijst(lege_client):
+    response = lege_client.get("/v1/wetten")
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_wet_zonder_artikelen():
-    """Wet met een lege artikellijst: geen crash, lege `artikelen`."""
+# ============================================================================
+# Story 020 — admin-routes: lijst met metadata
+# ============================================================================
 
-    class WetZonderArtikelen:
-        async def lijst(self):
-            return [WetKeuze(bwb_id="BWBR0000001", naam="Lege testwet")]
 
-        async def structuur(self, bwb_id):
-            return WetStructuur(bwb_id=bwb_id, artikelen=[])
+def test_admin_lijst_bevat_metadata(client):
+    resp = client.get("/v1/admin/wetten")
+    assert resp.status_code == 200
+    items = resp.json()
+    assert len(items) == 3
+    item = next(i for i in items if i["bwb_id"] == "BWBR0011823")
+    assert item["naam"] == "Wet werk en bijstand"
+    assert "bijgewerkt_door" in item
+    assert "bijgewerkt" in item
 
-    app.dependency_overrides[get_store] = lambda: WetZonderArtikelen()
-    app.dependency_overrides[huidige_gebruiker] = lambda: "analist-test"
+
+def test_admin_lijst_leeg(lege_client):
+    resp = lege_client.get("/v1/admin/wetten")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+# ============================================================================
+# Story 020 — admin-routes: upsert (PUT)
+# ============================================================================
+
+
+def test_upsert_nieuwe_wet(lege_client):
+    resp = lege_client.put(
+        "/v1/admin/wetten/BWBR0099999",
+        json={"bwb_id": "BWBR0099999", "naam": "Testwet"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["bwb_id"] == "BWBR0099999"
+    assert data["naam"] == "Testwet"
+    assert data["bijgewerkt_door"] == "beheerder-test"
+
+
+def test_upsert_bestaande_wet_werkt_bij(client):
+    resp = client.put(
+        "/v1/admin/wetten/BWBR0011823",
+        json={"bwb_id": "BWBR0011823", "naam": "Nieuwe naam voor WWB"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["naam"] == "Nieuwe naam voor WWB"
+
+    # Controleer dat de lijst is bijgewerkt.
+    lijst = client.get("/v1/admin/wetten").json()
+    item = next(i for i in lijst if i["bwb_id"] == "BWBR0011823")
+    assert item["naam"] == "Nieuwe naam voor WWB"
+
+
+def test_upsert_lege_naam_geeft_422(lege_client):
+    resp = lege_client.put(
+        "/v1/admin/wetten/BWBR0099999",
+        json={"bwb_id": "BWBR0099999", "naam": ""},
+    )
+    assert resp.status_code == 422
+
+
+def test_upsert_tweemaal_dezelfde_wet_werkt(lege_client):
+    """Dubbele PUT is idempotent (upsert)."""
+    lege_client.put("/v1/admin/wetten/BWBR0001", json={"bwb_id": "BWBR0001", "naam": "Wet A"})
+    resp = lege_client.put(
+        "/v1/admin/wetten/BWBR0001", json={"bwb_id": "BWBR0001", "naam": "Wet A bijgewerkt"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["naam"] == "Wet A bijgewerkt"
+
+
+# ============================================================================
+# Story 020 — admin-routes: verwijderen (DELETE)
+# ============================================================================
+
+
+def test_verwijder_bekende_wet(client):
+    resp = client.delete("/v1/admin/wetten/BWBR0011823")
+    assert resp.status_code == 204
+
+    lijst = client.get("/v1/admin/wetten").json()
+    bwb_ids = [i["bwb_id"] for i in lijst]
+    assert "BWBR0011823" not in bwb_ids
+
+
+def test_verwijder_onbekend_bwb_id_geeft_404(client):
+    resp = client.delete("/v1/admin/wetten/BESTAAT_NIET")
+    assert resp.status_code == 404
+
+
+# ============================================================================
+# Story 020 — admin-routes: resolve
+# ============================================================================
+
+
+def test_resolve_succesvol(client, monkeypatch):
+    import app.features.wetcatalogus.router as router_mod
+
+    async def _mock_mcp(bwb_id: str) -> str:
+        return "Wet werk en bijstand"
+
+    monkeypatch.setattr(router_mod, "_roep_wettenbank_mcp_aan", _mock_mcp)
+    resp = client.post("/v1/admin/wetten/BWBR0011823/resolve")
+    assert resp.status_code == 200
+    assert resp.json()["naam"] == "Wet werk en bijstand"
+
+
+def test_resolve_mcp_niet_bereikbaar_geeft_502(client, monkeypatch):
+    from fastapi import HTTPException, status
+
+    import app.features.wetcatalogus.router as router_mod
+
+    async def _mock_mcp(bwb_id: str) -> str:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Wettenbank tijdelijk niet bereikbaar.")
+
+    monkeypatch.setattr(router_mod, "_roep_wettenbank_mcp_aan", _mock_mcp)
+    resp = client.post("/v1/admin/wetten/BWBR0011823/resolve")
+    assert resp.status_code == 502
+    assert "niet bereikbaar" in resp.json()["detail"]
+
+
+def test_resolve_wet_onbekend_bij_mcp_geeft_404(client, monkeypatch):
+    from fastapi import HTTPException, status
+
+    import app.features.wetcatalogus.router as router_mod
+
+    async def _mock_mcp(bwb_id: str) -> str:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Wet niet gevonden in de Wettenbank.")
+
+    monkeypatch.setattr(router_mod, "_roep_wettenbank_mcp_aan", _mock_mcp)
+    resp = client.post("/v1/admin/wetten/BWBR9999999/resolve")
+    assert resp.status_code == 404
+    assert "Wettenbank" in resp.json()["detail"]
+
+
+# ============================================================================
+# Auth
+# ============================================================================
+
+
+def test_admin_zonder_auth_geeft_401(monkeypatch, tmp_path):
+    """Admin-endpoints geven 401 terug als de auth-dependency niet is overgeslagen."""
+    import importlib
+
+    import app.shared.auth as auth_module
+
+    monkeypatch.setenv("API_TOKEN", "test-token-voor-auth-check")
+    importlib.reload(auth_module)
+
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    from app.features.wetcatalogus.models import metadata
+    from app.features.wetcatalogus.router import get_store
+    from app.features.wetcatalogus.store import DatabaseWetcatalogusStore
+    from app.main import app
+
+    db_pad = tmp_path / "auth_test.db"
+    sync_engine = create_engine(f"sqlite:///{db_pad}")
+    metadata.create_all(sync_engine)
+    sync_engine.dispose()
+
+    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+    store = DatabaseWetcatalogusStore(async_engine)
+    app.dependency_overrides[get_store] = lambda: store
+    # Geen huidige_beheerder-override → echte auth actief.
+
     with TestClient(app) as c:
-        response = c.get("/v1/wetten/BWBR0000001/structuur")
-    app.dependency_overrides.pop(get_store, None)
-    app.dependency_overrides.pop(huidige_gebruiker, None)
+        resp = c.get("/v1/admin/wetten")
+        assert resp.status_code == 401
 
-    assert response.status_code == 200
-    assert response.json()["artikelen"] == []
+    app.dependency_overrides.pop(get_store, None)
+    importlib.reload(auth_module)

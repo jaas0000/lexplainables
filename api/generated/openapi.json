@@ -1141,6 +1141,20 @@
         "title": "OngelezenFeedbackOut",
         "type": "object"
       },
+      "ResolveResultaat": {
+        "description": "Resultaat van een resolve-aanroep: de offici\u00eble citeertitel.",
+        "properties": {
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          }
+        },
+        "required": [
+          "naam"
+        ],
+        "title": "ResolveResultaat",
+        "type": "object"
+      },
       "SetupStatus": {
         "properties": {
           "needs_setup": {
@@ -1302,6 +1316,28 @@
         "title": "WachtwoordWijzigenVerzoek",
         "type": "object"
       },
+      "WetCreate": {
+        "description": "Wat een beheerder meestuurt bij het aanmaken of bijwerken van een wet.",
+        "properties": {
+          "bwb_id": {
+            "minLength": 1,
+            "title": "Bwb Id",
+            "type": "string"
+          },
+          "naam": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Naam",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bwb_id",
+          "naam"
+        ],
+        "title": "WetCreate",
+        "type": "object"
+      },
       "WetKeuze": {
         "description": "\u00c9\u00e9n beschikbare wet \u2014 bwb-id + leesbare naam.",
         "properties": {
@@ -1319,6 +1355,35 @@
           "naam"
         ],
         "title": "WetKeuze",
+        "type": "object"
+      },
+      "WetRead": {
+        "description": "Wat de admin-API teruggeeft \u2014 inclusief beheermetadata.",
+        "properties": {
+          "bijgewerkt": {
+            "title": "Bijgewerkt",
+            "type": "string"
+          },
+          "bijgewerkt_door": {
+            "title": "Bijgewerkt Door",
+            "type": "string"
+          },
+          "bwb_id": {
+            "title": "Bwb Id",
+            "type": "string"
+          },
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bwb_id",
+          "naam",
+          "bijgewerkt_door",
+          "bijgewerkt"
+        ],
+        "title": "WetRead",
         "type": "object"
       },
       "WetStructuur": {
@@ -2686,6 +2751,302 @@
         "summary": "Bewerk Profiel",
         "tags": [
           "llm-profielen-admin"
+        ]
+      }
+    },
+    "/v1/admin/wetten": {
+      "get": {
+        "description": "Lijst catalogus-items inclusief beheermetadata. Alleen voor beheerders.",
+        "operationId": "admin_lijst_wetten_v1_admin_wetten_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WetRead"
+                  },
+                  "title": "Response Admin Lijst Wetten V1 Admin Wetten Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Lijst Wetten",
+        "tags": [
+          "wetcatalogus-admin"
+        ]
+      }
+    },
+    "/v1/admin/wetten/{bwb_id}": {
+      "delete": {
+        "description": "Verwijder een wet uit de catalogus. Geeft 404 als het bwb-id onbekend is.",
+        "operationId": "admin_verwijder_wet_v1_admin_wetten__bwb_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bwb_id",
+            "required": true,
+            "schema": {
+              "title": "Bwb Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Verwijder Wet",
+        "tags": [
+          "wetcatalogus-admin"
+        ]
+      },
+      "put": {
+        "description": "Voeg een wet toe of werk bestaande bij. Beheerder-only.",
+        "operationId": "admin_upsert_wet_v1_admin_wetten__bwb_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bwb_id",
+            "required": true,
+            "schema": {
+              "title": "Bwb Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WetRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Upsert Wet",
+        "tags": [
+          "wetcatalogus-admin"
+        ]
+      }
+    },
+    "/v1/admin/wetten/{bwb_id}/resolve": {
+      "post": {
+        "description": "Haal de offici\u00eble citeertitel van een wet op via de Wettenbank-MCP.\n\nGeeft 502 als de MCP tijdelijk niet bereikbaar is.\nGeeft 404 als het bwb-id onbekend is bij de Wettenbank.",
+        "operationId": "admin_resolve_wet_v1_admin_wetten__bwb_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bwb_id",
+            "required": true,
+            "schema": {
+              "title": "Bwb Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveResultaat"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Resolve Wet",
+        "tags": [
+          "wetcatalogus-admin"
         ]
       }
     },

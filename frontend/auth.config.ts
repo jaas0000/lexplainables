@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
 function isPublic(path: string): boolean {
-  return path === "/login" || path.startsWith("/api/auth");
+  return path === "/login" || path === "/setup" || path.startsWith("/api/auth");
 }
 
 function isDisclaimerExempt(path: string): boolean {
@@ -33,6 +33,12 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request }) {
       const { pathname, search } = request.nextUrl;
+
+      // Ingelogde gebruiker die /setup bezoekt → terug naar home (setup is al gedaan).
+      if (pathname === "/setup" && auth?.user) {
+        return Response.redirect(new URL("/", request.url));
+      }
+
       if (isPublic(pathname)) return true;
       if (!auth?.user) return false;
 

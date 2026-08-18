@@ -214,6 +214,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/wetten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Lijst Wetten
+         * @description Lijst catalogus-items inclusief beheermetadata. Alleen voor beheerders.
+         */
+        get: operations["admin_lijst_wetten_v1_admin_wetten_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/wetten/{bwb_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Admin Upsert Wet
+         * @description Voeg een wet toe of werk bestaande bij. Beheerder-only.
+         */
+        put: operations["admin_upsert_wet_v1_admin_wetten__bwb_id__put"];
+        post?: never;
+        /**
+         * Admin Verwijder Wet
+         * @description Verwijder een wet uit de catalogus. Geeft 404 als het bwb-id onbekend is.
+         */
+        delete: operations["admin_verwijder_wet_v1_admin_wetten__bwb_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/wetten/{bwb_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Resolve Wet
+         * @description Haal de officiële citeertitel van een wet op via de Wettenbank-MCP.
+         *
+         *     Geeft 502 als de MCP tijdelijk niet bereikbaar is.
+         *     Geeft 404 als het bwb-id onbekend is bij de Wettenbank.
+         */
+        post: operations["admin_resolve_wet_v1_admin_wetten__bwb_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/me": {
         parameters: {
             query?: never;
@@ -946,6 +1013,14 @@ export interface components {
             /** Aantal */
             aantal: number;
         };
+        /**
+         * ResolveResultaat
+         * @description Resultaat van een resolve-aanroep: de officiële citeertitel.
+         */
+        ResolveResultaat: {
+            /** Naam */
+            naam: string;
+        };
         /** SetupStatus */
         SetupStatus: {
             /** Needs Setup */
@@ -1013,10 +1088,34 @@ export interface components {
             nieuw_wachtwoord: string;
         };
         /**
+         * WetCreate
+         * @description Wat een beheerder meestuurt bij het aanmaken of bijwerken van een wet.
+         */
+        WetCreate: {
+            /** Bwb Id */
+            bwb_id: string;
+            /** Naam */
+            naam: string;
+        };
+        /**
          * WetKeuze
          * @description Één beschikbare wet — bwb-id + leesbare naam.
          */
         WetKeuze: {
+            /** Bwb Id */
+            bwb_id: string;
+            /** Naam */
+            naam: string;
+        };
+        /**
+         * WetRead
+         * @description Wat de admin-API teruggeeft — inclusief beheermetadata.
+         */
+        WetRead: {
+            /** Bijgewerkt */
+            bijgewerkt: string;
+            /** Bijgewerkt Door */
+            bijgewerkt_door: string;
             /** Bwb Id */
             bwb_id: string;
             /** Naam */
@@ -1651,6 +1750,142 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_lijst_wetten_v1_admin_wetten_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WetRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_upsert_wet_v1_admin_wetten__bwb_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                bwb_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_verwijder_wet_v1_admin_wetten__bwb_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                bwb_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_resolve_wet_v1_admin_wetten__bwb_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                bwb_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolveResultaat"];
+                };
             };
             /** @description Validation Error */
             422: {

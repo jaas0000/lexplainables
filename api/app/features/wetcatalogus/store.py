@@ -1,24 +1,24 @@
 """Store-abstractie voor het wetcatalogus-domein (werkwijze-ADR-0007).
 
-`WetcatalogusStore` beschrijft de operaties die router.py nodig heeft.
-`HardgecodeerdeWetcatalogusStore` is de enige huidige implementatie — statische seed-data
-voor de eerste PoC (story 010 §Acceptatiecriteria: "wetten zijn geseed in de database of
-hardcoded in de router"). Geen SQLAlchemy-engine nodig.
+Story 020: `HardgecodeerdeWetcatalogusStore` is vervangen door `DatabaseWetcatalogusStore`.
+`WetcatalogusStore` (Protocol) is uitgebreid met de nieuwe beheeroperaties.
+De hardgecodeerde structuurdata (`_STRUCTUUR`) blijft als fallback totdat
+tools/wettenbank-mcp gebouwd is en de structuurdata via de MCP kan worden opgehaald.
+
+Businessregel: `verwijder` gooit `WetNietGevonden` als het bwb_id onbekend is.
 """
 
 from __future__ import annotations
 
 from typing import Protocol
 
-from .models import ArtikelKeuze, WetKeuze, WetStructuur
+from sqlalchemy import delete, insert, select, update
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-# Statische seed-data (mockup: frontend/app/mockup/wetcatalogus/page.tsx)
-_WETTEN: list[WetKeuze] = [
-    WetKeuze(bwb_id="BWBR0011823", naam="Wet werk en bijstand"),
-    WetKeuze(bwb_id="BWBR0015703", naam="Wet structuur uitvoeringsorganisatie werk en inkomen"),
-    WetKeuze(bwb_id="BWBR0020183", naam="Participatiewet"),
-]
+from ...shared.tijd import nu
+from .models import ArtikelKeuze, WetKeuze, WetRead, WetStructuur, wet_catalogus, wet_uit_rij
 
+# Hardgecodeerde structuurdata (fallback; wordt vervangen zodra tools/wettenbank-mcp klaar is).
 _STRUCTUUR: dict[str, list[ArtikelKeuze]] = {
     "BWBR0011823": [
         ArtikelKeuze(artikel="1", pad="Hoofdstuk 1 / Artikel 1"),
@@ -49,17 +49,87 @@ class WetNietGevonden(LookupError):
 class WetcatalogusStore(Protocol):
     async def lijst(self) -> list[WetKeuze]: ...
 
+    async def lijst_met_metadata(self) -> list[WetRead]: ...
+
+    async def upsert(self, bwb_id: str, naam: str, bijgewerkt_door: str) -> WetRead: ...
+
+    async def verwijder(self, bwb_id: str) -> None: ...
+
     async def structuur(self, bwb_id: str) -> WetStructuur: ...
 
 
-class HardgecodeerdeWetcatalogusStore:
-    """Statische implementatie — geen database. Vervanging door een SQLAlchemy-variant
-    zodra de catalogus beheerbaar wordt (story n.n.b.)."""
+class DatabaseWetcatalogusStore:
+    """SQLAlchemy Core-implementatie — leest en schrijft uit de `wet_catalogus`-tabel."""
+
+    def __init__(self, engine: AsyncEngine) -> None:
+        self._engine = engine
 
     async def lijst(self) -> list[WetKeuze]:
-        return list(_WETTEN)
+        stmt = select(wet_catalogus.c.bwb_id, wet_catalogus.c.naam).order_by(wet_catalogus.c.naam)
+        async with self._engine.connect() as conn:
+            rijen = (await conn.execute(stmt)).all()
+        return [WetKeuze(bwb_id=rij.bwb_id, naam=rij.naam) for rij in rijen]
+
+    async def lijst_met_metadata(self) -> list[WetRead]:
+        stmt = select(wet_catalogus).order_by(wet_catalogus.c.naam)
+        async with self._engine.connect() as conn:
+            rijen = (await conn.execute(stmt)).all()
+        return [wet_uit_rij(rij) for rij in rijen]
+
+    async def upsert(self, bwb_id: str, naam: str, bijgewerkt_door: str) -> WetRead:
+        moment = nu()
+        async with self._engine.begin() as conn:
+            # Controleer of de wet al bestaat om INSERT vs UPDATE te kiezen.
+            bestaand = await conn.scalar(
+                select(wet_catalogus.c.bwb_id).where(wet_catalogus.c.bwb_id == bwb_id)
+            )
+            if bestaand is None:
+                result = await conn.execute(
+                    insert(wet_catalogus)
+                    .values(
+                        bwb_id=bwb_id,
+                        naam=naam,
+                        bijgewerkt_door=bijgewerkt_door,
+                        bijgewerkt=moment,
+                    )
+                    .returning(wet_catalogus)
+                )
+            else:
+                result = await conn.execute(
+                    update(wet_catalogus)
+                    .where(wet_catalogus.c.bwb_id == bwb_id)
+                    .values(naam=naam, bijgewerkt_door=bijgewerkt_door, bijgewerkt=moment)
+                    .returning(wet_catalogus)
+                )
+            rij = result.one()
+        return wet_uit_rij(rij)
+
+    async def verwijder(self, bwb_id: str) -> None:
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                delete(wet_catalogus)
+                .where(wet_catalogus.c.bwb_id == bwb_id)
+                .returning(wet_catalogus.c.bwb_id)
+            )
+            if result.first() is None:
+                raise WetNietGevonden(f"Wet {bwb_id!r} niet gevonden.")
 
     async def structuur(self, bwb_id: str) -> WetStructuur:
-        if bwb_id not in _STRUCTUUR:
+        """Geeft de artikel-structuur van een wet.
+
+        Huidige implementatie: hardgecodeerde fallback. Wordt vervangen door een
+        MCP-aanroep zodra tools/wettenbank-mcp beschikbaar is.
+        Controleert eerst of het bwb_id in de database bestaat.
+        """
+        wet_bestaat = await self._wet_bestaat(bwb_id)
+        if not wet_bestaat:
             raise WetNietGevonden(f"Wet {bwb_id!r} niet gevonden.")
-        return WetStructuur(bwb_id=bwb_id, artikelen=list(_STRUCTUUR[bwb_id]))
+        artikelen = _STRUCTUUR.get(bwb_id, [])
+        return WetStructuur(bwb_id=bwb_id, artikelen=list(artikelen))
+
+    async def _wet_bestaat(self, bwb_id: str) -> bool:
+        async with self._engine.connect() as conn:
+            rij = await conn.scalar(
+                select(wet_catalogus.c.bwb_id).where(wet_catalogus.c.bwb_id == bwb_id)
+            )
+        return rij is not None
