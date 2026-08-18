@@ -74,4 +74,4 @@ De routerlogica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/routers/ad
 - **Reset-modal**: toont het tijdelijke wachtwoord met een "Kopieer"-knop en de melding "Dit wachtwoord wordt niet meer getoond."
 - **Verwijder-dialoog**: eenvoudige bevestigingsdialoog, geen vrij tekstveld.
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #..., feature/story-014-impl)
