@@ -2,6 +2,7 @@
 
 ## Niet uitgebracht
 
+- Beheerders kunnen nu via het Beheer-scherm wetten toevoegen, hernoemen en verwijderen, waarbij de citeertitel automatisch opgehaald kan worden via de Wettenbank. (PR #15)
 - Bij een lege database kunnen beheerders nu via de `/setup`-pagina eenmalig een eerste beheerdersaccount aanmaken. Na de eerste aanmelding is de setup-pagina niet meer beschikbaar. (PR #13)
 - Gebruikers kunnen hun accountgegevens bekijken en hun wachtwoord wijzigen via de Account-pagina. (PR #12)
 - Analisten kunnen nu een analyse starten door bronartikelen te selecteren, een doel en context op te geven, en vervolgens de voortgang live te volgen. De analyselijst toont alle eigen analyses met status en zoek-/filteropties. (PR #11)

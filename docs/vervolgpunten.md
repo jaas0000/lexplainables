@@ -84,6 +84,22 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ---
 
+## PR #15 — wettenbank-beheer (story 020)
+
+- **MEDIUM** — Crash in BewerkenFormulier na verwijder-terwijl-bewerkt: `wetten.find(...)!` geeft `undefined` als een rij verwijderd wordt terwijl het bewerkformulier al open staat. `setBewerkt(null)` toevoegen in de `verwijder`-functie (`frontend/app/beheer/wetten/page.tsx:279`).
+- **MEDIUM** — TOCTOU race in upsert: SELECT + INSERT/UPDATE is niet atomair op PostgreSQL; twee gelijktijdige PUT-requests op hetzelfde nieuwe `bwb_id` kunnen beiden de INSERT uitvoeren → onafgevangen IntegrityError. Fix: `insert(...).on_conflict_do_update(index_elements=["bwb_id"])` (`api/app/features/wetcatalogus/store.py:83-104`).
+- **MEDIUM** — Geen index op `naam`-kolom: alle lijstqueries sorteren op naam, maar de migratie maakt geen index aan. Voeg `ix_wet_catalogus_naam` toe in een volgende migratie (`api/alembic/versions/0007_wet_catalogus_tabel.py`).
+- **MEDIUM** — Nieuwe `httpx.AsyncClient` per resolve-aanroep: maakt elke keer een nieuwe TCP-verbinding. Maak één lifespan-scoped client aan via FastAPI `lifespan` (`api/app/features/wetcatalogus/router.py:126`).
+- **MEDIUM** — `structuur()` geeft lege artikelenlijst zonder fout als `bwb_id` wel in de DB staat maar niet in `_STRUCTUUR`. Expliciete `WetNietGevonden` gooien of het gedrag documenteren (`api/app/features/wetcatalogus/store.py:117-128`).
+- **LAAG** — `WetCreate.bwb_id` stilzwijgend genegeerd bij mismatch met URL-pad: verwijder het veld uit `WetCreate` of voeg een 422-validatie toe (`api/app/features/wetcatalogus/router.py:80`).
+- **LAAG** — `httpx.ProtocolError` niet afgevangen: bij misvormde MCP-respons propageert als 500 in plaats van 502. Toevoegen aan de except-tuple (`api/app/features/wetcatalogus/router.py:132`).
+- **LAAG** — Dode else-tak in `wet_uit_rij`: `else: str(bijgewerkt)` is onbereikbaar bij `DateTime(timezone=True)` (`api/app/features/wetcatalogus/models.py:74-86`).
+- **LAAG** — `_wet_bestaat` heeft geen hergebruik en kan ingelind worden in `structuur()` (`api/app/features/wetcatalogus/store.py:130-135`).
+- **LAAG** — Duplicaat import `create_engine` in `lege_client` fixture (`api/app/features/wetcatalogus/tests/conftest.py:75`).
+- **LAAG** — `beheer/page.tsx` haalt de volledige wettenlijst op enkel voor de teller naast "Wetten →". Count-endpoint toevoegen of bewust accepteren als tech debt (`frontend/app/beheer/page.tsx:85-92`).
+
+---
+
 ## PR #12 — account-pagina (story 016)
 
 - **Stale comment** in `test_me_met_geldig_token_geeft_profiel`: zegt "TestClient gebruikt de echte app-db" maar de fixture gebruikt na de fix een tmp SQLite. Bijwerken bij de volgende aanraking van dit testbestand.
