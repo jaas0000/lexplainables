@@ -9,9 +9,10 @@ type Rol = "analist" | "beheerder";
 
 interface Gebruiker {
   gebruikersnaam: string;
+  email: string;
   rol: Rol;
   actief: boolean;
-  bijgewerkt: string;
+  totp: boolean;
 }
 
 // ---- Nepdata -------------------------------------------------------------
@@ -19,27 +20,31 @@ interface Gebruiker {
 const NEPPE_GEBRUIKERS: Gebruiker[] = [
   {
     gebruikersnaam: "beheerder",
+    email: "beheerder@belastingdienst.nl",
     rol: "beheerder",
     actief: true,
-    bijgewerkt: "2026-08-15T10:00:00Z",
+    totp: false,
   },
   {
     gebruikersnaam: "j.smeets",
+    email: "j.smeets@belastingdienst.nl",
     rol: "analist",
     actief: true,
-    bijgewerkt: "2026-08-14T08:30:00Z",
+    totp: true,
   },
   {
     gebruikersnaam: "l.vandijk",
+    email: "l.vandijk@belastingdienst.nl",
     rol: "analist",
     actief: true,
-    bijgewerkt: "2026-08-10T14:15:00Z",
+    totp: false,
   },
   {
     gebruikersnaam: "m.bakker",
+    email: "m.bakker@belastingdienst.nl",
     rol: "analist",
     actief: false,
-    bijgewerkt: "2026-08-01T09:00:00Z",
+    totp: false,
   },
 ];
 
@@ -54,13 +59,20 @@ function genereerTijdelijkWachtwoord(): string {
   ).join("");
 }
 
-function datumLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString("nl-NL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+// ---- Tag-stijl (wetsanalyse-ai Tag component equivalent) -----------------
+
+const tagStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  borderRadius: "3px",
+  border: "1px solid rgb(var(--line))",
+  background: "rgb(var(--surface))",
+  padding: "0.125rem 0.5rem",
+  fontFamily: "monospace",
+  fontSize: "0.75rem",
+  color: "rgb(var(--muted))",
+  flexShrink: 0,
+};
 
 // ---- Component -----------------------------------------------------------
 
@@ -68,23 +80,18 @@ export default function GebruikersbeheerMockup() {
   const [gebruikers, setGebruikers] =
     useState<Gebruiker[]>(NEPPE_GEBRUIKERS);
 
-  // Inline rol-bewerking
-  const [bewerkRolVan, setBewerkRolVan] = useState<string | null>(null);
-  const [bewerkRolWaarde, setBewerkRolWaarde] = useState<Rol>("analist");
+  // Nieuw-gebruiker-formulier
+  const [nieuwGebruikersnaam, setNieuwGebruikersnaam] = useState("");
+  const [nieuwEmail, setNieuwEmail] = useState("");
+  const [nieuwRol, setNieuwRol] = useState<Rol>("analist");
 
-  // Verwijder-bevestiging
-  const [verwijderVan, setVerwijderVan] = useState<string | null>(null);
-
-  // Wachtwoord-reset resultaat (eenmalig getoond)
-  const [resetResultaat, setResetResultaat] = useState<{
+  // Tijdelijk wachtwoord (eenmalig getoond)
+  const [tijdelijk, setTijdelijk] = useState<{
     gebruikersnaam: string;
     wachtwoord: string;
   } | null>(null);
 
-  // Gekopieerd-feedback voor het clipboard
-  const [gekopieerd, setGekopieerd] = useState(false);
-
-  // Foutmelding (bijv. laatste beheerder)
+  // Foutmelding
   const [fout, setFout] = useState<string | null>(null);
 
   // ---- Berekende waarden -------------------------------------------------
@@ -102,20 +109,32 @@ export default function GebruikersbeheerMockup() {
 
   // ---- Acties ------------------------------------------------------------
 
-  function rolBewerkStarten(g: Gebruiker) {
-    setBewerkRolVan(g.gebruikersnaam);
-    setBewerkRolWaarde(g.rol);
+  function onAanmaken(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nieuwGebruikersnaam.trim()) return;
+    const nieuw: Gebruiker = {
+      gebruikersnaam: nieuwGebruikersnaam.trim(),
+      email:
+        nieuwEmail.trim() ||
+        `${nieuwGebruikersnaam.trim()}@belastingdienst.nl`,
+      rol: nieuwRol,
+      actief: true,
+      totp: false,
+    };
+    const wachtwoord = genereerTijdelijkWachtwoord();
+    setGebruikers((prev) => [...prev, nieuw]);
+    setTijdelijk({ gebruikersnaam: nieuw.gebruikersnaam, wachtwoord });
+    setNieuwGebruikersnaam("");
+    setNieuwEmail("");
+    setNieuwRol("analist");
     setFout(null);
-    setResetResultaat(null);
   }
 
-  function rolOpslaan(gebruikersnaam: string) {
-    const gebruiker = gebruikers.find(
-      (g) => g.gebruikersnaam === gebruikersnaam,
-    );
+  function onRol(gebruikersnaam: string) {
+    const g = gebruikers.find((u) => u.gebruikersnaam === gebruikersnaam);
+    if (!g) return;
     if (
-      gebruiker?.rol === "beheerder" &&
-      bewerkRolWaarde === "analist" &&
+      g.rol === "beheerder" &&
       isLaatsteActieveBeheerder(gebruikersnaam)
     ) {
       setFout(
@@ -123,73 +142,53 @@ export default function GebruikersbeheerMockup() {
       );
       return;
     }
+    setFout(null);
+    const nieuweRol: Rol = g.rol === "beheerder" ? "analist" : "beheerder";
     setGebruikers((prev) =>
-      prev.map((g) =>
-        g.gebruikersnaam === gebruikersnaam
-          ? { ...g, rol: bewerkRolWaarde, bijgewerkt: new Date().toISOString() }
-          : g,
+      prev.map((u) =>
+        u.gebruikersnaam === gebruikersnaam ? { ...u, rol: nieuweRol } : u,
       ),
     );
-    setBewerkRolVan(null);
-    setFout(null);
   }
 
-  function toggleActief(gebruikersnaam: string) {
-    const gebruiker = gebruikers.find(
-      (g) => g.gebruikersnaam === gebruikersnaam,
-    );
-    if (!gebruiker) return;
-    if (gebruiker.actief && isLaatsteActieveBeheerder(gebruikersnaam)) {
+  function onActief(gebruikersnaam: string) {
+    const g = gebruikers.find((u) => u.gebruikersnaam === gebruikersnaam);
+    if (!g) return;
+    if (g.actief && isLaatsteActieveBeheerder(gebruikersnaam)) {
       setFout("Kan de laatste actieve beheerder niet deactiveren.");
       return;
     }
     setFout(null);
     setGebruikers((prev) =>
-      prev.map((g) =>
-        g.gebruikersnaam === gebruikersnaam
-          ? { ...g, actief: !g.actief, bijgewerkt: new Date().toISOString() }
-          : g,
+      prev.map((u) =>
+        u.gebruikersnaam === gebruikersnaam
+          ? { ...u, actief: !u.actief }
+          : u,
       ),
     );
   }
 
-  function wachtwoordResetten(gebruikersnaam: string) {
+  function onReset(gebruikersnaam: string) {
     setFout(null);
-    setGekopieerd(false);
-    setResetResultaat({
+    setTijdelijk({
       gebruikersnaam,
       wachtwoord: genereerTijdelijkWachtwoord(),
     });
   }
 
-  function kopieerWachtwoord(wachtwoord: string) {
-    void navigator.clipboard.writeText(wachtwoord);
-    setGekopieerd(true);
-    setTimeout(() => setGekopieerd(false), 2000);
-  }
-
-  function verwijderenStarten(gebruikersnaam: string) {
+  function onVerwijder(gebruikersnaam: string) {
     if (isLaatsteActieveBeheerder(gebruikersnaam)) {
       setFout("Kan de laatste actieve beheerder niet verwijderen.");
       return;
     }
+    if (!confirm(`Gebruiker "${gebruikersnaam}" verwijderen?`)) return;
     setFout(null);
-    setBewerkRolVan(null);
-    setVerwijderVan(gebruikersnaam);
-  }
-
-  function verwijderenBevestigen() {
-    if (!verwijderVan) return;
     setGebruikers((prev) =>
-      prev.filter((g) => g.gebruikersnaam !== verwijderVan),
+      prev.filter((u) => u.gebruikersnaam !== gebruikersnaam),
     );
-    setVerwijderVan(null);
-    setFout(null);
   }
 
   // ---- Render ------------------------------------------------------------
-
-  const aantalActief = gebruikers.filter((g) => g.actief).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
@@ -202,7 +201,11 @@ export default function GebruikersbeheerMockup() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: "1.75rem" }}>Gebruikersbeheer</h1>
+          <h1
+            style={{ fontSize: "1.875rem", fontWeight: 600 }}
+          >
+            Gebruikersbeheer
+          </h1>
           <p
             style={{
               marginTop: "0.25rem",
@@ -210,7 +213,7 @@ export default function GebruikersbeheerMockup() {
               color: "rgb(var(--muted))",
             }}
           >
-            Beheer accounts: rollen, actief-status en wachtwoorden.
+            Beheer accounts, rollen, actief-status en wachtwoorden.
           </p>
         </div>
         <span
@@ -256,79 +259,49 @@ export default function GebruikersbeheerMockup() {
         </div>
       )}
 
-      {/* ---- Wachtwoord-reset-resultaat ---- */}
-      {resetResultaat && (
+      {/* ---- Tijdelijk wachtwoord ---- */}
+      {tijdelijk && (
         <div
           className="melding melding-waarschuwing"
-          style={{ flexDirection: "column", gap: "0.75rem" }}
+          style={{ flexDirection: "column", gap: "0.5rem" }}
         >
-          <div>
-            <strong style={{ fontSize: "0.9375rem" }}>
-              Tijdelijk wachtwoord — noteer dit nu
-            </strong>
-            <p
-              style={{
-                marginTop: "0.25rem",
-                fontSize: "0.875rem",
-                color: "rgb(var(--ink))",
-              }}
-            >
-              Voor{" "}
-              <span
-                style={{ fontFamily: "monospace", fontWeight: 600 }}
-              >
-                {resetResultaat.gebruikersnaam}
-              </span>
-              :
-            </p>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              flexWrap: "wrap",
-            }}
-          >
+          <strong style={{ fontSize: "0.9375rem" }}>
+            Tijdelijk wachtwoord — noteer dit nu
+          </strong>
+          <p style={{ fontSize: "0.875rem" }}>
+            Voor{" "}
+            <span style={{ fontWeight: 500 }}>
+              {tijdelijk.gebruikersnaam}
+            </span>
+            :{" "}
             <code
               style={{
-                padding: "0.375rem 0.75rem",
+                borderRadius: "3px",
                 background: "rgb(var(--paper))",
-                border: "1px solid rgb(var(--line))",
-                borderRadius: "4px",
+                padding: "0.125rem 0.375rem",
                 fontFamily: "monospace",
-                fontSize: "1rem",
-                letterSpacing: "0.05em",
-                color: "rgb(var(--ink))",
+                fontSize: "0.875rem",
               }}
             >
-              {resetResultaat.wachtwoord}
+              {tijdelijk.wachtwoord}
             </code>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: "0.8125rem" }}
-              onClick={() => kopieerWachtwoord(resetResultaat.wachtwoord)}
-            >
-              {gekopieerd ? "Gekopieerd!" : "Kopieer"}
-            </button>
-          </div>
+          </p>
           <p
             style={{
-              fontSize: "0.8125rem",
+              marginTop: "0.25rem",
+              fontSize: "0.75rem",
               color: "rgb(var(--muted))",
-              fontStyle: "italic",
             }}
           >
-            Dit wachtwoord wordt niet opnieuw getoond. Deel het veilig
-            met de gebruiker.
+            Dit wachtwoord wordt niet opnieuw getoond. Deel het veilig; de
+            gebruiker logt er meteen mee in.
           </p>
-          <div>
+          <div style={{ marginTop: "0.25rem" }}>
             <button
               type="button"
               className="btn btn-secondary"
               style={{ fontSize: "0.8125rem" }}
-              onClick={() => setResetResultaat(null)}
+              onClick={() => setTijdelijk(null)}
             >
               Sluiten
             </button>
@@ -336,262 +309,190 @@ export default function GebruikersbeheerMockup() {
         </div>
       )}
 
-      {/* ---- Gebruikerstabel ---- */}
+      {/* ---- Gebruikerssectie ---- */}
       <section>
         <SectieHeader
           titel="Gebruikers"
           aantal={gebruikers.length}
-          subtitel={`${aantalActief} actief`}
+          subtitel="Toegang tot de webapp"
         />
 
+        {/* Toevoeg-formulier */}
+        <form
+          onSubmit={onAanmaken}
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+            alignItems: "flex-end",
+            marginBottom: "1rem",
+          }}
+        >
+          <div>
+            <label
+              className="field-label"
+              htmlFor="nieuw-gebruikersnaam"
+            >
+              Gebruikersnaam
+            </label>
+            <input
+              id="nieuw-gebruikersnaam"
+              type="text"
+              className="field-input"
+              required
+              autoCapitalize="none"
+              placeholder="jdoe"
+              value={nieuwGebruikersnaam}
+              onChange={(e) => setNieuwGebruikersnaam(e.target.value)}
+              style={{ width: "12rem" }}
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: "14rem" }}>
+            <label className="field-label" htmlFor="nieuw-email">
+              E-mailadres
+            </label>
+            <input
+              id="nieuw-email"
+              type="email"
+              className="field-input"
+              required
+              placeholder="naam@belastingdienst.nl"
+              value={nieuwEmail}
+              onChange={(e) => setNieuwEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="nieuw-rol">
+              Rol
+            </label>
+            <select
+              id="nieuw-rol"
+              className="field-input"
+              value={nieuwRol}
+              onChange={(e) => setNieuwRol(e.target.value as Rol)}
+              style={{ width: "auto" }}
+            >
+              <option value="analist">analist</option>
+              <option value="beheerder">beheerder</option>
+            </select>
+          </div>
+          <button type="submit" className="btn btn-primary">
+            Gebruiker toevoegen
+          </button>
+        </form>
+
+        {/* Gebruikerslijst */}
         {gebruikers.length === 0 ? (
-          <p
-            style={{
-              fontSize: "0.875rem",
-              color: "rgb(var(--faint))",
-              fontStyle: "italic",
-              padding: "1.5rem 0",
-            }}
-          >
-            Geen gebruikers gevonden.
+          <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
+            Nog geen gebruikers.
           </p>
         ) : (
-          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-            <table className="tabel">
-              <thead>
-                <tr>
-                  <th>Gebruikersnaam</th>
-                  <th>Rol</th>
-                  <th>Actief</th>
-                  <th>Bijgewerkt</th>
-                  <th>Acties</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gebruikers.map((g) => (
-                  <tr key={g.gebruikersnaam}>
-                    {/* Naam */}
-                    <td>
-                      <span
-                        style={{
-                          fontFamily: "monospace",
-                          fontWeight: 500,
-                          fontSize: "0.875rem",
-                        }}
-                      >
-                        {g.gebruikersnaam}
-                      </span>
-                    </td>
-
-                    {/* Rol — normaal of inline bewerken */}
-                    <td>
-                      {bewerkRolVan === g.gebruikersnaam ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.375rem",
-                          }}
-                        >
-                          <select
-                            className="field-input"
-                            value={bewerkRolWaarde}
-                            onChange={(e) =>
-                              setBewerkRolWaarde(e.target.value as Rol)
-                            }
-                            autoFocus
-                            style={{
-                              minHeight: "1.875rem",
-                              height: "1.875rem",
-                              padding: "0.125rem 0.5rem",
-                              fontSize: "0.8125rem",
-                              width: "auto",
-                            }}
-                          >
-                            <option value="analist">analist</option>
-                            <option value="beheerder">beheerder</option>
-                          </select>
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            style={{
-                              fontSize: "0.75rem",
-                              padding: "0.25rem 0.625rem",
-                              minHeight: "1.875rem",
-                            }}
-                            onClick={() => rolOpslaan(g.gebruikersnaam)}
-                          >
-                            OK
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{
-                              fontSize: "0.75rem",
-                              padding: "0.25rem 0.5rem",
-                              minHeight: "1.875rem",
-                            }}
-                            onClick={() => setBewerkRolVan(null)}
-                            aria-label="Annuleren"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ) : (
-                        <span
-                          style={{
-                            fontSize: "0.875rem",
-                            color: "rgb(var(--ink))",
-                          }}
-                        >
-                          {g.rol}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Actief */}
-                    <td>
-                      <span
-                        className={`badge ${g.actief ? "badge-gepubliceerd" : "badge-concept"}`}
-                      >
-                        {g.actief ? "ja" : "nee"}
-                      </span>
-                    </td>
-
-                    {/* Bijgewerkt */}
-                    <td
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.75rem",
+            }}
+          >
+            {gebruikers.map((g) => (
+              <div
+                key={g.gebruikersnaam}
+                className="card"
+                style={{ padding: "1rem" }}
+              >
+                {/* Info-rij */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                  }}
+                >
+                  <span
+                    style={{ fontWeight: 600, color: "rgb(var(--ink))" }}
+                  >
+                    {g.gebruikersnaam}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "rgb(var(--muted))",
+                    }}
+                  >
+                    {g.email}
+                  </span>
+                  <span style={tagStyle}>{g.rol}</span>
+                  {g.totp && <span style={tagStyle}>2FA ✓</span>}
+                  {!g.actief && (
+                    <span
                       style={{
-                        fontSize: "0.8125rem",
-                        color: "rgb(var(--faint))",
-                        whiteSpace: "nowrap",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        borderRadius: "9999px",
+                        border: "1px solid rgb(213 43 30 / 0.4)",
+                        background: "rgb(213 43 30 / 0.1)",
+                        padding: "0.125rem 0.625rem",
+                        fontSize: "0.75rem",
+                        fontWeight: 500,
+                        color: "rgb(var(--fout))",
+                        flexShrink: 0,
                       }}
                     >
-                      {datumLabel(g.bijgewerkt)}
-                    </td>
+                      gedeactiveerd
+                    </span>
+                  )}
+                </div>
 
-                    {/* Acties */}
-                    <td>
-                      <div className="acties">
-                        {bewerkRolVan !== g.gebruikersnaam && (
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{ fontSize: "0.8125rem" }}
-                            onClick={() => rolBewerkStarten(g)}
-                          >
-                            Rol wijzigen
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: "0.8125rem" }}
-                          onClick={() => toggleActief(g.gebruikersnaam)}
-                        >
-                          {g.actief ? "Deactiveren" : "Activeren"}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: "0.8125rem" }}
-                          onClick={() =>
-                            wachtwoordResetten(g.gebruikersnaam)
-                          }
-                        >
-                          Wachtwoord resetten
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-danger"
-                          style={{ fontSize: "0.8125rem" }}
-                          onClick={() =>
-                            verwijderenStarten(g.gebruikersnaam)
-                          }
-                        >
-                          Verwijderen
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                {/* Acties-rij */}
+                <div
+                  className="acties"
+                  style={{ marginTop: "0.75rem" }}
+                >
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{
+                      fontSize: "0.8125rem",
+                      color: "rgb(var(--muted))",
+                      border: "1px solid transparent",
+                    }}
+                    onClick={() => onRol(g.gebruikersnaam)}
+                  >
+                    {g.rol === "beheerder"
+                      ? "Maak analist"
+                      : "Maak beheerder"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: "0.8125rem" }}
+                    onClick={() => onActief(g.gebruikersnaam)}
+                  >
+                    {g.actief ? "Deactiveren" : "Activeren"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: "0.8125rem" }}
+                    onClick={() => onReset(g.gebruikersnaam)}
+                  >
+                    Wachtwoord resetten
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    style={{ fontSize: "0.8125rem" }}
+                    onClick={() => onVerwijder(g.gebruikersnaam)}
+                  >
+                    Verwijderen
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>
-
-      {/* ---- Verwijder-dialoog (modal overlay) ---- */}
-      {verwijderVan && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.35)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 100,
-          }}
-          onClick={() => setVerwijderVan(null)}
-        >
-          <div
-            className="card"
-            style={{ maxWidth: 420, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2
-              style={{
-                fontSize: "1.0625rem",
-                fontWeight: 600,
-                marginBottom: "0.75rem",
-                color: "rgb(var(--ink))",
-              }}
-            >
-              Account verwijderen
-            </h2>
-            <p
-              style={{
-                fontSize: "0.9375rem",
-                color: "rgb(var(--ink))",
-                marginBottom: "0.25rem",
-              }}
-            >
-              Weet je zeker dat je{" "}
-              <span style={{ fontFamily: "monospace", fontWeight: 600 }}>
-                {verwijderVan}
-              </span>{" "}
-              wilt verwijderen?
-            </p>
-            <p
-              style={{
-                fontSize: "0.8125rem",
-                color: "rgb(var(--muted))",
-                marginBottom: "1.25rem",
-              }}
-            >
-              Deze actie kan niet ongedaan worden gemaakt.
-            </p>
-            <div
-              style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}
-            >
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setVerwijderVan(null)}
-              >
-                Annuleren
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={verwijderenBevestigen}
-              >
-                Ja, verwijderen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
