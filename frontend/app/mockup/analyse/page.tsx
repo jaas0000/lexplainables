@@ -366,71 +366,25 @@ function StatusSchermShell({
 
 function HeroBanner({ onNieuw }: { onNieuw: () => void }) {
   return (
-    <div
-      style={{
-        background: "rgb(var(--communicatiekleur))",
-        borderRadius: "8px",
-        padding: "2rem 2.5rem",
-        marginBottom: "1.5rem",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "1.25rem",
-        }}
-      >
-        <div>
-          <p
-            style={{
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.7)",
-              marginBottom: "0.5rem",
-            }}
-          >
+    <div className="rounded-button rounded-br-vorm bg-lint px-6 py-8 text-paper sm:px-10 sm:py-10">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-prose">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-paper/70">
             Juridisch Analyseschema
           </p>
-          <h1
-            style={{
-              fontSize: "1.75rem",
-              fontWeight: 700,
-              color: "white",
-              margin: 0,
-            }}
-          >
-            Analyses
-          </h1>
-          <p
-            style={{
-              fontSize: "0.875rem",
-              color: "rgba(255,255,255,0.85)",
-              marginTop: "0.5rem",
-              maxWidth: "36rem",
-            }}
-          >
+          <h1 className="mt-2 font-display text-3xl font-semibold text-paper">Analyses</h1>
+          <p className="mt-2 text-sm text-paper/85">
             Elke analyse duidt een werkgebied — één of meer bronnen (wetsartikel of lid) —
             brongetrouw volgens het Juridisch Analyseschema: markeren &amp; classificeren, daarna
             begrippen &amp; afleidingsregels.
           </p>
         </div>
-        <div>
-          <button
-            className="btn"
-            style={{
-              background: "white",
-              color: "rgb(var(--lint))",
-              fontWeight: 600,
-              border: "none",
-            }}
-            onClick={onNieuw}
-          >
-            Nieuwe analyse
-          </button>
-        </div>
+        <button
+          className="w-full rounded-button border-2 border-paper bg-transparent px-4 py-2 text-sm font-semibold text-paper transition-colors hover:bg-paper/10 sm:w-auto sm:self-start"
+          onClick={onNieuw}
+        >
+          Nieuwe analyse
+        </button>
       </div>
     </div>
   );
