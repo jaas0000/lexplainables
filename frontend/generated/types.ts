@@ -246,6 +246,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projecten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lijst Analyses
+         * @description Geef alle analyses terug die de ingelogde gebruiker mag zien.
+         */
+        get: operations["lijst_analyses_v1_projecten_get"];
+        put?: never;
+        /**
+         * Maak Analyse
+         * @description Maak een nieuwe analyse aan en start de achtergrond-job (202 Accepted).
+         */
+        post: operations["maak_analyse_v1_projecten_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projecten/{analyse_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detail Analyse
+         * @description Geef het detail van één analyse terug.
+         */
+        get: operations["detail_analyse_v1_projecten__analyse_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Verwijder Analyse
+         * @description Verwijder een analyse (eigen of, voor een beheerder, elke analyse).
+         */
+        delete: operations["verwijder_analyse_v1_projecten__analyse_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projecten/{analyse_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analyse Events
+         * @description SSE-stroom: stuurt status-updates tot de analyse terminaal is (klaar/fout).
+         */
+        get: operations["analyse_events_v1_projecten__analyse_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/wetten": {
         parameters: {
             query?: never;
@@ -290,12 +358,106 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AangemaaktAcceptatie
+         * @description Directe bevestiging na aanmaken — 202 Accepted, analyse loopt asynchroon.
+         */
+        AangemaaktAcceptatie: {
+            /** Id */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "wachtrij" | "actief" | "review" | "klaar" | "fout";
+        };
         /** AdminBerichtenPaginaOut */
         AdminBerichtenPaginaOut: {
             /** Items */
             items: components["schemas"]["BerichtAdminRead"][];
             /** Totaal */
             totaal: number;
+        };
+        /**
+         * AnalyseAanmaken
+         * @description Wat een ingelogde gebruiker meestuurt bij het aanmaken van een analyse.
+         */
+        AnalyseAanmaken: {
+            /** Analysefocus */
+            analysefocus?: string | null;
+            /** Begrippenlijst */
+            begrippenlijst?: components["schemas"]["BegripInvoer"][] | null;
+            /** Bronnen */
+            bronnen: components["schemas"]["BronKeuze"][];
+            /**
+             * Human In The Loop
+             * @default true
+             */
+            human_in_the_loop: boolean;
+            /** Model Profiel */
+            model_profiel?: string | null;
+            /** Naam */
+            naam?: string | null;
+            /** Omschrijving */
+            omschrijving?: string | null;
+        };
+        /**
+         * AnalyseDetail
+         * @description Volledige detailweergave van één analyse.
+         */
+        AnalyseDetail: {
+            /** Analysefocus */
+            analysefocus: string | null;
+            /** Begrippenlijst */
+            begrippenlijst: components["schemas"]["BegripInvoer"][] | null;
+            /**
+             * Bijgewerkt
+             * Format: date-time
+             */
+            bijgewerkt: string;
+            /** Bronnen */
+            bronnen: components["schemas"]["BronKeuze"][];
+            /** Foutmelding */
+            foutmelding: string | null;
+            /** Huidige Fase */
+            huidige_fase: string | null;
+            /** Human In The Loop */
+            human_in_the_loop: boolean;
+            /** Id */
+            id: string;
+            /** Model Profiel */
+            model_profiel: string | null;
+            /** Naam */
+            naam: string;
+            /** Omschrijving */
+            omschrijving: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "wachtrij" | "actief" | "review" | "klaar" | "fout";
+        };
+        /**
+         * AnalyseOverzicht
+         * @description Samenvatting voor de analyselijst.
+         */
+        AnalyseOverzicht: {
+            /**
+             * Bijgewerkt
+             * Format: date-time
+             */
+            bijgewerkt: string;
+            /** Bronnen */
+            bronnen: components["schemas"]["BronKeuze"][];
+            /** Id */
+            id: string;
+            /** Naam */
+            naam: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "wachtrij" | "actief" | "review" | "klaar" | "fout";
         };
         /**
          * ArtikelKeuze
@@ -306,6 +468,16 @@ export interface components {
             artikel: string;
             /** Pad */
             pad: string;
+        };
+        /**
+         * BegripInvoer
+         * @description Eén begrip uit een eventuele bestaande begrippenlijst.
+         */
+        BegripInvoer: {
+            /** Definitie */
+            definitie?: string | null;
+            /** Naam */
+            naam: string;
         };
         /**
          * BerichtAdminRead
@@ -414,6 +586,18 @@ export interface components {
             items: components["schemas"]["BerichtRead"][];
             /** Totaal */
             totaal: number;
+        };
+        /**
+         * BronKeuze
+         * @description Één bronartikel: wet-id, artikelnummer en optioneel lidnummer.
+         */
+        BronKeuze: {
+            /** Artikel */
+            artikel: string;
+            /** Bwb Id */
+            bwb_id: string;
+            /** Lid */
+            lid?: string | null;
         };
         /** FeedbackBevestigd */
         FeedbackBevestigd: {
@@ -1239,6 +1423,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FeedbackBevestigd"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lijst_analyses_v1_projecten_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyseOverzicht"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    maak_analyse_v1_projecten_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyseAanmaken"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AangemaaktAcceptatie"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detail_analyse_v1_projecten__analyse_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyseDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verwijder_analyse_v1_projecten__analyse_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyse_events_v1_projecten__analyse_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

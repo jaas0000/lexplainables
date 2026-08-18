@@ -1,6 +1,32 @@
 {
   "components": {
     "schemas": {
+      "AangemaaktAcceptatie": {
+        "description": "Directe bevestiging na aanmaken \u2014 202 Accepted, analyse loopt asynchroon.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "wachtrij",
+              "actief",
+              "review",
+              "klaar",
+              "fout"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "AangemaaktAcceptatie",
+        "type": "object"
+      },
       "AdminBerichtenPaginaOut": {
         "properties": {
           "items": {
@@ -22,6 +48,258 @@
         "title": "AdminBerichtenPaginaOut",
         "type": "object"
       },
+      "AnalyseAanmaken": {
+        "description": "Wat een ingelogde gebruiker meestuurt bij het aanmaken van een analyse.",
+        "properties": {
+          "analysefocus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysefocus"
+          },
+          "begrippenlijst": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BegripInvoer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Begrippenlijst"
+          },
+          "bronnen": {
+            "items": {
+              "$ref": "#/components/schemas/BronKeuze"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Bronnen",
+            "type": "array"
+          },
+          "human_in_the_loop": {
+            "default": true,
+            "title": "Human In The Loop",
+            "type": "boolean"
+          },
+          "model_profiel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Profiel"
+          },
+          "naam": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Naam"
+          },
+          "omschrijving": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Omschrijving"
+          }
+        },
+        "required": [
+          "bronnen"
+        ],
+        "title": "AnalyseAanmaken",
+        "type": "object"
+      },
+      "AnalyseDetail": {
+        "description": "Volledige detailweergave van \u00e9\u00e9n analyse.",
+        "properties": {
+          "analysefocus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysefocus"
+          },
+          "begrippenlijst": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BegripInvoer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Begrippenlijst"
+          },
+          "bijgewerkt": {
+            "format": "date-time",
+            "title": "Bijgewerkt",
+            "type": "string"
+          },
+          "bronnen": {
+            "items": {
+              "$ref": "#/components/schemas/BronKeuze"
+            },
+            "title": "Bronnen",
+            "type": "array"
+          },
+          "foutmelding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foutmelding"
+          },
+          "huidige_fase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Huidige Fase"
+          },
+          "human_in_the_loop": {
+            "title": "Human In The Loop",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "model_profiel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Profiel"
+          },
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          },
+          "omschrijving": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Omschrijving"
+          },
+          "status": {
+            "enum": [
+              "wachtrij",
+              "actief",
+              "review",
+              "klaar",
+              "fout"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "naam",
+          "bronnen",
+          "status",
+          "bijgewerkt",
+          "omschrijving",
+          "analysefocus",
+          "model_profiel",
+          "human_in_the_loop",
+          "begrippenlijst",
+          "huidige_fase",
+          "foutmelding"
+        ],
+        "title": "AnalyseDetail",
+        "type": "object"
+      },
+      "AnalyseOverzicht": {
+        "description": "Samenvatting voor de analyselijst.",
+        "properties": {
+          "bijgewerkt": {
+            "format": "date-time",
+            "title": "Bijgewerkt",
+            "type": "string"
+          },
+          "bronnen": {
+            "items": {
+              "$ref": "#/components/schemas/BronKeuze"
+            },
+            "title": "Bronnen",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "wachtrij",
+              "actief",
+              "review",
+              "klaar",
+              "fout"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "naam",
+          "bronnen",
+          "status",
+          "bijgewerkt"
+        ],
+        "title": "AnalyseOverzicht",
+        "type": "object"
+      },
       "ArtikelKeuze": {
         "description": "\u00c9\u00e9n artikel binnen een wet \u2014 artikelnummer + padnotatie (hoofdstuk / artikel).",
         "properties": {
@@ -39,6 +317,31 @@
           "pad"
         ],
         "title": "ArtikelKeuze",
+        "type": "object"
+      },
+      "BegripInvoer": {
+        "description": "E\u00e9n begrip uit een eventuele bestaande begrippenlijst.",
+        "properties": {
+          "definitie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Definitie"
+          },
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          }
+        },
+        "required": [
+          "naam"
+        ],
+        "title": "BegripInvoer",
         "type": "object"
       },
       "BerichtAdminRead": {
@@ -291,6 +594,36 @@
           "totaal"
         ],
         "title": "BerichtenPaginaOut",
+        "type": "object"
+      },
+      "BronKeuze": {
+        "description": "\u00c9\u00e9n bronartikel: wet-id, artikelnummer en optioneel lidnummer.",
+        "properties": {
+          "artikel": {
+            "title": "Artikel",
+            "type": "string"
+          },
+          "bwb_id": {
+            "title": "Bwb Id",
+            "type": "string"
+          },
+          "lid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lid"
+          }
+        },
+        "required": [
+          "bwb_id",
+          "artikel"
+        ],
+        "title": "BronKeuze",
         "type": "object"
       },
       "FeedbackBevestigd": {
@@ -2037,6 +2370,364 @@
         "summary": "Dien Feedback In",
         "tags": [
           "feedback"
+        ]
+      }
+    },
+    "/v1/projecten": {
+      "get": {
+        "description": "Geef alle analyses terug die de ingelogde gebruiker mag zien.",
+        "operationId": "lijst_analyses_v1_projecten_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AnalyseOverzicht"
+                  },
+                  "title": "Response Lijst Analyses V1 Projecten Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lijst Analyses",
+        "tags": [
+          "projecten"
+        ]
+      },
+      "post": {
+        "description": "Maak een nieuwe analyse aan en start de achtergrond-job (202 Accepted).",
+        "operationId": "maak_analyse_v1_projecten_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyseAanmaken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AangemaaktAcceptatie"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Maak Analyse",
+        "tags": [
+          "projecten"
+        ]
+      }
+    },
+    "/v1/projecten/{analyse_id}": {
+      "delete": {
+        "description": "Verwijder een analyse (eigen of, voor een beheerder, elke analyse).",
+        "operationId": "verwijder_analyse_v1_projecten__analyse_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analyse_id",
+            "required": true,
+            "schema": {
+              "title": "Analyse Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verwijder Analyse",
+        "tags": [
+          "projecten"
+        ]
+      },
+      "get": {
+        "description": "Geef het detail van \u00e9\u00e9n analyse terug.",
+        "operationId": "detail_analyse_v1_projecten__analyse_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analyse_id",
+            "required": true,
+            "schema": {
+              "title": "Analyse Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyseDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Detail Analyse",
+        "tags": [
+          "projecten"
+        ]
+      }
+    },
+    "/v1/projecten/{analyse_id}/events": {
+      "get": {
+        "description": "SSE-stroom: stuurt status-updates tot de analyse terminaal is (klaar/fout).",
+        "operationId": "analyse_events_v1_projecten__analyse_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analyse_id",
+            "required": true,
+            "schema": {
+              "title": "Analyse Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyse Events",
+        "tags": [
+          "projecten"
         ]
       }
     },
