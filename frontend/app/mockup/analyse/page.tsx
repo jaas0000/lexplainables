@@ -1,10 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AnalyseStatus = "wachtrij" | "actief" | "review" | "klaar" | "fout";
+type AnalyseStatus =
+  | "queued"
+  | "act2-runt"
+  | "wacht-op-review-act2"
+  | "act3-runt"
+  | "wacht-op-review-act3"
+  | "bouwt"
+  | "klaar"
+  | "fout";
 
 type BronKeuze = { bwb_id: string; artikel: string; lid: string };
 
@@ -32,6 +40,22 @@ const NEP_WETTEN = [
 // O(1) bwb_id → naam lookup
 const WETTEN_NAAM = new Map(NEP_WETTEN.map((w) => [w.bwb_id, w.naam]));
 
+// Nep-artikelstructuur per wet voor de autocomplete in het formulier
+const NEP_STRUCTUUR: Record<string, { artikelen: string[]; leden: Record<string, string[]> }> = {
+  "BWBR0011823": {
+    artikelen: ["1", "5", "7", "9", "10", "11", "17", "18", "44", "60", "74"],
+    leden: { "9": ["1", "2", "3"], "10": ["1", "2"], "44": ["1", "2", "3"] },
+  },
+  "BWBR0015703": {
+    artikelen: ["1", "5", "7", "8", "33", "62", "73"],
+    leden: { "7": ["1", "2", "3"], "33": ["1", "2", "3", "4"] },
+  },
+  "BWBR0020183": {
+    artikelen: ["1", "7", "7a", "8", "8a", "10", "10a", "11", "44", "74", "78"],
+    leden: { "8a": ["1", "2", "3"], "10": ["1", "2"], "44": ["1", "2", "3"], "74": ["1", "2", "3", "4"] },
+  },
+};
+
 const INIT_ANALYSES: AnalyseOverzicht[] = [
   {
     id: "a1b2c3",
@@ -47,7 +71,7 @@ const INIT_ANALYSES: AnalyseOverzicht[] = [
       { bwb_id: "BWBR0015703", artikel: "7", lid: "" },
       { bwb_id: "BWBR0015703", artikel: "33", lid: "" },
     ],
-    status: "actief",
+    status: "wacht-op-review-act2",
     bijgewerkt: "2026-08-14T10:15:00Z",
   },
   {
@@ -57,7 +81,7 @@ const INIT_ANALYSES: AnalyseOverzicht[] = [
       { bwb_id: "BWBR0020183", artikel: "8a", lid: "" },
       { bwb_id: "BWBR0020183", artikel: "10", lid: "" },
     ],
-    status: "wachtrij",
+    status: "wacht-op-review-act3",
     bijgewerkt: "2026-08-14T09:00:00Z",
   },
   {
@@ -67,14 +91,25 @@ const INIT_ANALYSES: AnalyseOverzicht[] = [
     status: "fout",
     bijgewerkt: "2026-08-13T16:45:00Z",
   },
+  {
+    id: "m3n4o5",
+    naam: "Zvw inkomensafhankelijke bijdrage",
+    bronnen: [{ bwb_id: "BWBR0011823", artikel: "5", lid: "" }],
+    status: "queued",
+    bijgewerkt: "2026-08-15T08:00:00Z",
+  },
 ];
 
+// Labels en kleuren exact overgenomen uit wetsanalyse-ai/frontend/lib/states.ts STATE_LABEL
 const STATUS_META: Record<AnalyseStatus, { label: string; kleur: string }> = {
-  wachtrij: { label: "Wachtrij", kleur: "rgb(var(--waarschuwing))" },
-  actief:   { label: "Actief",   kleur: "rgb(var(--info))" },
-  review:   { label: "Review",   kleur: "rgb(var(--info))" },
-  klaar:    { label: "Klaar",    kleur: "rgb(var(--succes))" },
-  fout:     { label: "Fout",     kleur: "rgb(var(--fout))" },
+  queued:                  { label: "In wachtrij",              kleur: "rgb(var(--muted))" },
+  "act2-runt":             { label: "Activiteit 2 — markeren",  kleur: "rgb(var(--info))" },
+  "wacht-op-review-act2":  { label: "Wacht op review (act. 2)", kleur: "rgb(var(--gold))" },
+  "act3-runt":             { label: "Activiteit 3 — begrippen", kleur: "rgb(var(--info))" },
+  "wacht-op-review-act3":  { label: "Wacht op review (act. 3)", kleur: "rgb(var(--gold))" },
+  bouwt:                   { label: "Rapport samenstellen",      kleur: "rgb(var(--info))" },
+  klaar:                   { label: "Klaar",                     kleur: "rgb(var(--succes))" },
+  fout:                    { label: "Fout",                      kleur: "rgb(var(--fout))" },
 };
 
 // Gesimuleerde SSE-fases voor het lopend-scherm
@@ -96,7 +131,7 @@ type Variant =
   | "status-fout";
 
 const VARIANTEN: { id: Variant; label: string }[] = [
-  { id: "lijst",           label: "Analyselijst" },
+  { id: "lijst",           label: "Projecten" },
   { id: "formulier",       label: "Aanmaken-formulier" },
   { id: "status-wachtrij", label: "Status — wachtrij" },
   { id: "status-lopend",   label: "Status — lopend" },
@@ -126,7 +161,93 @@ function formatDatum(iso: string): string {
   });
 }
 
+// ─── Statussen die als "lopend" gelden voor de variant-routing ───────────────
+const LOPENDE_STATUSSEN: AnalyseStatus[] = [
+  "act2-runt", "wacht-op-review-act2", "act3-runt", "wacht-op-review-act3", "bouwt",
+];
+
 // ─── Kleine hulpcomponenten ───────────────────────────────────────────────────
+
+// Inline artikel-autocomplete: toont gefilterde suggesties uit NEP_STRUCTUUR bij typen
+function ArtikelCombobox({
+  bwbId,
+  value,
+  onChange,
+}: {
+  bwbId: string;
+  value: string;
+  onChange: (artikel: string) => void;
+}) {
+  const listboxId = useId();
+  const [open, setOpen] = useState(false);
+  const artikelen = bwbId ? (NEP_STRUCTUUR[bwbId]?.artikelen ?? []) : [];
+  const opties = artikelen.filter((a) =>
+    value === "" ? true : a.toLowerCase().startsWith(value.toLowerCase())
+  );
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        className="field-input"
+        style={{ width: "6rem" }}
+        type="text"
+        placeholder="9"
+        value={value}
+        autoComplete="off"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+      />
+      {open && opties.length > 0 && (
+        <ul
+          id={listboxId}
+          role="listbox"
+          style={{
+            position: "absolute",
+            zIndex: 20,
+            top: "100%",
+            left: 0,
+            background: "rgb(var(--paper))",
+            border: "1px solid rgb(var(--line))",
+            borderRadius: "4px",
+            padding: "0.25rem 0",
+            listStyle: "none",
+            margin: "2px 0 0 0",
+            maxHeight: "11rem",
+            overflowY: "auto",
+            minWidth: "8rem",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          }}
+        >
+          {opties.map((a) => (
+            <li
+              key={a}
+              role="option"
+              aria-selected={value === a}
+              style={{
+                padding: "0.375rem 0.75rem",
+                fontSize: "0.875rem",
+                cursor: "pointer",
+                color: "rgb(var(--ink))",
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(a);
+                setOpen(false);
+              }}
+            >
+              Art. {a}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 // Status-dot: gekleurde cirkel + tekst, zoals in de wetsanalyse-ai tabel
 function StatusDot({ status }: { status: AnalyseStatus }) {
@@ -324,6 +445,8 @@ function FilterBar({
   setStatusFilter,
   wetFilter,
   setWetFilter,
+  sortering,
+  setSortering,
 }: {
   zoek: string;
   setZoek: (v: string) => void;
@@ -331,6 +454,8 @@ function FilterBar({
   setStatusFilter: (v: string) => void;
   wetFilter: string;
   setWetFilter: (v: string) => void;
+  sortering: "nieuwste" | "oudste";
+  setSortering: (v: "nieuwste" | "oudste") => void;
 }) {
   return (
     <div
@@ -352,14 +477,17 @@ function FilterBar({
       />
       <select
         className="field-input"
-        style={{ width: "10rem", flex: "0 0 auto" }}
+        style={{ width: "13rem", flex: "0 0 auto" }}
         value={statusFilter}
         onChange={(e) => setStatusFilter(e.target.value)}
       >
         <option value="">Alle statussen</option>
-        <option value="wachtrij">Wachtrij</option>
-        <option value="actief">Actief</option>
-        <option value="review">Review</option>
+        <option value="queued">In wachtrij</option>
+        <option value="act2-runt">Activiteit 2 — markeren</option>
+        <option value="wacht-op-review-act2">Wacht op review (act. 2)</option>
+        <option value="act3-runt">Activiteit 3 — begrippen</option>
+        <option value="wacht-op-review-act3">Wacht op review (act. 3)</option>
+        <option value="bouwt">Rapport samenstellen</option>
         <option value="klaar">Klaar</option>
         <option value="fout">Fout</option>
       </select>
@@ -375,6 +503,15 @@ function FilterBar({
             {w.naam}
           </option>
         ))}
+      </select>
+      <select
+        className="field-input"
+        style={{ width: "10rem", flex: "0 0 auto" }}
+        value={sortering}
+        onChange={(e) => setSortering(e.target.value as "nieuwste" | "oudste")}
+      >
+        <option value="nieuwste">Nieuwste eerst</option>
+        <option value="oudste">Oudste eerst</option>
       </select>
     </div>
   );
@@ -425,37 +562,65 @@ function BronRij({
         </select>
       </div>
 
-      {/* Artikel */}
+      {/* Artikel — autocomplete als een wet gekozen is */}
       <div>
         <label className="field-label">
           Artikel{" "}
           <span style={{ color: "rgb(var(--fout))", fontWeight: 700 }}>*</span>
         </label>
-        <input
-          className="field-input"
-          style={{ width: "6rem" }}
-          type="text"
-          placeholder="9"
-          value={bron.artikel}
-          onChange={(e) => onUpdate({ artikel: e.target.value, lid: "" })}
-          autoComplete="off"
-        />
+        {bron.bwb_id ? (
+          <ArtikelCombobox
+            bwbId={bron.bwb_id}
+            value={bron.artikel}
+            onChange={(a) => onUpdate({ artikel: a, lid: "" })}
+          />
+        ) : (
+          <input
+            className="field-input"
+            style={{ width: "6rem" }}
+            type="text"
+            placeholder="9"
+            value={bron.artikel}
+            onChange={(e) => onUpdate({ artikel: e.target.value, lid: "" })}
+            autoComplete="off"
+            disabled
+          />
+        )}
       </div>
 
-      {/* Lid (optioneel) */}
+      {/* Lid — keuzelijst als leden bekend zijn, anders vrije invoer */}
       <div>
         <label className="field-label" style={{ color: "rgb(var(--muted))" }}>
           Lid
         </label>
-        <input
-          className="field-input"
-          style={{ width: "5rem" }}
-          type="text"
-          placeholder="1"
-          value={bron.lid}
-          onChange={(e) => onUpdate({ lid: e.target.value })}
-          autoComplete="off"
-        />
+        {(() => {
+          const leden = (bron.bwb_id && bron.artikel)
+            ? (NEP_STRUCTUUR[bron.bwb_id]?.leden[bron.artikel] ?? [])
+            : [];
+          return leden.length > 0 ? (
+          <select
+            className="field-input"
+            style={{ width: "5rem" }}
+            value={bron.lid}
+            onChange={(e) => onUpdate({ lid: e.target.value })}
+          >
+            <option value="">Hele artikel</option>
+            {leden.map((l) => (
+              <option key={l} value={l}>Lid {l}</option>
+            ))}
+          </select>
+          ) : (
+          <input
+            className="field-input"
+            style={{ width: "5rem" }}
+            type="text"
+            placeholder="1"
+            value={bron.lid}
+            onChange={(e) => onUpdate({ lid: e.target.value })}
+            autoComplete="off"
+          />
+          );
+        })()}
       </div>
 
       {/* Verwijder */}
@@ -747,6 +912,30 @@ function AanmakenFormulier({ onNavigeer }: { onNavigeer: (v: Variant) => void })
                 onChange={(e) => setBegrippenTekst(e.target.value)}
                 style={{ resize: "vertical", fontFamily: "monospace", fontSize: "0.8125rem" }}
               />
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.8125rem",
+                    color: "rgb(var(--muted))",
+                    marginBottom: "0.25rem",
+                  }}
+                >
+                  Of upload een bestand (.csv, .json, .txt):
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,.json,.txt"
+                  style={{ fontSize: "0.8125rem", color: "rgb(var(--ink))" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    const reader = new FileReader();
+                    reader.onload = () => setBegrippenTekst(String(reader.result ?? ""));
+                    reader.readAsText(f);
+                  }}
+                />
+              </div>
             </div>
           </details>
 
@@ -834,25 +1023,32 @@ function AnalyseLijst({
   const [zoek, setZoek] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [wetFilter, setWetFilter] = useState("");
+  const [sortering, setSortering] = useState<"nieuwste" | "oudste">("nieuwste");
   const [geselecteerd, setGeselecteerd] = useState<Set<string>>(new Set());
 
-  const gefilterd = analyses.filter((a) => {
-    if (statusFilter && a.status !== statusFilter) return false;
-    if (wetFilter && !a.bronnen.some((b) => b.bwb_id === wetFilter)) return false;
-    if (zoek) {
-      const q = zoek.toLowerCase();
-      if (
-        !a.naam.toLowerCase().includes(q) &&
-        !a.id.toLowerCase().includes(q) &&
-        !a.bronnen.some(
-          (b) =>
-            b.bwb_id.toLowerCase().includes(q) || b.artikel.toLowerCase().includes(q)
+  const gefilterd = analyses
+    .filter((a) => {
+      if (statusFilter && a.status !== statusFilter) return false;
+      if (wetFilter && !a.bronnen.some((b) => b.bwb_id === wetFilter)) return false;
+      if (zoek) {
+        const q = zoek.toLowerCase();
+        if (
+          !a.naam.toLowerCase().includes(q) &&
+          !a.id.toLowerCase().includes(q) &&
+          !a.bronnen.some(
+            (b) =>
+              b.bwb_id.toLowerCase().includes(q) || b.artikel.toLowerCase().includes(q)
+          )
         )
-      )
-        return false;
-    }
-    return true;
-  });
+          return false;
+      }
+      return true;
+    })
+    .sort((a, b) =>
+      sortering === "nieuwste"
+        ? b.bijgewerkt.localeCompare(a.bijgewerkt)
+        : a.bijgewerkt.localeCompare(b.bijgewerkt)
+    );
 
   const alleGeselecteerd =
     gefilterd.length > 0 && gefilterd.every((a) => geselecteerd.has(a.id));
@@ -886,6 +1082,8 @@ function AnalyseLijst({
         setStatusFilter={setStatusFilter}
         wetFilter={wetFilter}
         setWetFilter={setWetFilter}
+        sortering={sortering}
+        setSortering={setSortering}
       />
 
       {gefilterd.length === 0 ? (
@@ -1025,7 +1223,7 @@ function StatusSchermWachtrij({
   onVerwijder: () => void;
 }) {
   return (
-    <StatusSchermShell naam={naam} status="wachtrij" onTerug={onTerug}>
+    <StatusSchermShell naam={naam} status="queued" onTerug={onTerug}>
       <div className="card" style={{ marginBottom: "1.25rem" }}>
         <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
           De analyse staat in de wachtrij en wacht op beschikbare verwerkingscapaciteit. De pagina
@@ -1058,7 +1256,7 @@ function StatusSchermLopend({
   }, []);
 
   return (
-    <StatusSchermShell naam={naam} status="actief" onTerug={onTerug}>
+    <StatusSchermShell naam={naam} status="act2-runt" onTerug={onTerug}>
       <div
         className="card"
         style={{
@@ -1203,19 +1401,22 @@ export default function AnalyseMockup() {
     const a = analyses.find((x) => x.id === id);
     if (!a) return;
     const variantMap: Record<AnalyseStatus, Variant> = {
-      wachtrij: "status-wachtrij",
-      actief:   "status-lopend",
-      review:   "status-lopend",
-      klaar:    "status-klaar",
-      fout:     "status-fout",
+      queued:                  "status-wachtrij",
+      "act2-runt":             "status-lopend",
+      "wacht-op-review-act2":  "status-lopend",
+      "act3-runt":             "status-lopend",
+      "wacht-op-review-act3":  "status-lopend",
+      bouwt:                   "status-lopend",
+      klaar:                   "status-klaar",
+      fout:                    "status-fout",
     };
     setVariant(variantMap[a.status]);
   }
 
   // Per-variant lookup — dient voor zowel rendering als disabled-state in de switcher
   const analyseVoor = {
-    wachtrij: analyses.find((a) => a.status === "wachtrij"),
-    lopend:   analyses.find((a) => a.status === "actief" || a.status === "review"),
+    wachtrij: analyses.find((a) => a.status === "queued"),
+    lopend:   analyses.find((a) => LOPENDE_STATUSSEN.includes(a.status)),
     klaar:    analyses.find((a) => a.status === "klaar"),
     fout:     analyses.find((a) => a.status === "fout"),
   };
@@ -1230,8 +1431,12 @@ export default function AnalyseMockup() {
   }
 
   return (
-    <div className="main">
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        [role=option]:hover { background: rgb(var(--surface)); }
+        [role=option][aria-selected=true] { background: rgb(var(--surface)); }
+      `}</style>
 
       {/* Mockup-badge rechtsboven (verplicht) */}
       <div
@@ -1319,6 +1524,6 @@ export default function AnalyseMockup() {
           onVerwijder={() => verwijderAnalyse(analyseVoor.fout!.id)}
         />
       )}
-    </div>
+    </>
   );
 }

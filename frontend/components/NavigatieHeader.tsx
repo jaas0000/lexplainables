@@ -12,12 +12,17 @@ export function NavigatieHeader() {
   if (!session?.user) return null;
 
   const isBeheer = pathname.startsWith("/beheer") || pathname.startsWith("/mockup/beheer");
+  const isProjecten =
+    pathname.startsWith("/projecten") || pathname.startsWith("/mockup/analyse");
 
   return (
     <nav className="nav">
-      <button className="nav-link nav-link--placeholder" disabled title="Nog niet beschikbaar">
+      <Link
+        href="/mockup/analyse"
+        className={`nav-link${isProjecten ? " nav-link--active" : ""}`}
+      >
         Projecten
-      </button>
+      </Link>
       <button className="nav-link nav-link--placeholder" disabled title="Nog niet beschikbaar">
         Assistent
       </button>
