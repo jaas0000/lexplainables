@@ -1,24 +1,38 @@
-"""Routelaag voor het wetcatalogus-domein — feature-bouwen regel 5: auth-checks en
-businesslogica die niet uit de vorm (models.py) volgen.
+"""Routelaag voor het wetcatalogus-domein — feature-bouwen regel 5.
 
-Auth: alle endpoints vereisen een ingelogde gebruiker (`huidige_gebruiker`). Geen
-rolbeperking — zowel analisten als beheerders mogen de catalogus raadplegen (story 010 §Auth).
+Story 010: analist-endpoints (GET /v1/wetten, GET /v1/wetten/{bwb_id}/structuur).
+Story 020: admin-endpoints (GET/PUT/DELETE /v1/admin/wetten,
+POST /v1/admin/wetten/{bwb_id}/resolve).
+
+Resolve-endpoint: roept de Wettenbank-MCP aan via HTTP (WETTENBANK_MCP_URL env-var).
+Geeft 502 als de MCP niet bereikbaar is, 404 als het bwb-id onbekend is bij de MCP.
 """
 
 from __future__ import annotations
 
+import json
+import os
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from ...shared.auth import huidige_gebruiker
-from .models import WetKeuze, WetStructuur
-from .store import HardgecodeerdeWetcatalogusStore, WetcatalogusStore, WetNietGevonden
+from ...db import get_engine
+from ...shared.auth import GebruikerContext, huidige_beheerder, huidige_gebruiker
+from .models import ResolveResultaat, WetCreate, WetKeuze, WetRead, WetStructuur
+from .store import DatabaseWetcatalogusStore, WetcatalogusStore, WetNietGevonden
+
+WETTENBANK_MCP_URL = os.getenv("WETTENBANK_MCP_URL", "http://localhost:8000")
 
 router = APIRouter(prefix="/wetten", tags=["wetcatalogus"])
+admin_router = APIRouter(prefix="/admin/wetten", tags=["wetcatalogus-admin"])
 
 
 def get_store() -> WetcatalogusStore:
     """FastAPI-dependency — tests overschrijven dit via `app.dependency_overrides[get_store]`."""
-    return HardgecodeerdeWetcatalogusStore()
+    return DatabaseWetcatalogusStore(get_engine())
+
+
+# --- analist-endpoints (story 010 — ongewijzigd qua contract) -----------------
 
 
 @router.get("", response_model=list[WetKeuze])
@@ -41,3 +55,131 @@ async def get_wet_structuur(
         return await store.structuur(bwb_id)
     except WetNietGevonden as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+# --- admin-endpoints (story 020) ----------------------------------------------
+
+
+@admin_router.get("", response_model=list[WetRead])
+async def admin_lijst_wetten(
+    _beheerder: GebruikerContext = Depends(huidige_beheerder),
+    store: WetcatalogusStore = Depends(get_store),
+) -> list[WetRead]:
+    """Lijst catalogus-items inclusief beheermetadata. Alleen voor beheerders."""
+    return await store.lijst_met_metadata()
+
+
+@admin_router.put("/{bwb_id}", response_model=WetRead)
+async def admin_upsert_wet(
+    bwb_id: str,
+    body: WetCreate,
+    beheerder: GebruikerContext = Depends(huidige_beheerder),
+    store: WetcatalogusStore = Depends(get_store),
+) -> WetRead:
+    """Voeg een wet toe of werk bestaande bij. Beheerder-only."""
+    return await store.upsert(bwb_id, naam=body.naam, bijgewerkt_door=beheerder.gebruikersnaam)
+
+
+@admin_router.delete("/{bwb_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_verwijder_wet(
+    bwb_id: str,
+    _beheerder: GebruikerContext = Depends(huidige_beheerder),
+    store: WetcatalogusStore = Depends(get_store),
+) -> None:
+    """Verwijder een wet uit de catalogus. Geeft 404 als het bwb-id onbekend is."""
+    try:
+        await store.verwijder(bwb_id)
+    except WetNietGevonden as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@admin_router.post("/{bwb_id}/resolve", response_model=ResolveResultaat)
+async def admin_resolve_wet(
+    bwb_id: str,
+    _beheerder: GebruikerContext = Depends(huidige_beheerder),
+) -> ResolveResultaat:
+    """Haal de officiële citeertitel van een wet op via de Wettenbank-MCP.
+
+    Geeft 502 als de MCP tijdelijk niet bereikbaar is.
+    Geeft 404 als het bwb-id onbekend is bij de Wettenbank.
+    """
+    naam = await _roep_wettenbank_mcp_aan(bwb_id)
+    return ResolveResultaat(naam=naam)
+
+
+async def _roep_wettenbank_mcp_aan(bwb_id: str) -> str:
+    """HTTP-aanroep naar de Wettenbank-MCP voor de citeertitel van een wet.
+
+    De MCP-server wordt aangesproken via een JSON-RPC POST naar WETTENBANK_MCP_URL.
+    Mockbaar via monkeypatch in tests.
+    """
+    payload = {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+            "name": "wettenbank_structuur",
+            "arguments": {"bwbId": bwb_id},
+        },
+        "id": 1,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"{WETTENBANK_MCP_URL}/",
+                json=payload,
+                headers={"Content-Type": "application/json", "Accept": "application/json"},
+            )
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as exc:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Wettenbank tijdelijk niet bereikbaar.",
+        ) from exc
+
+    if not resp.is_success:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Wettenbank tijdelijk niet bereikbaar.",
+        )
+
+    data = resp.json()
+
+    # JSON-RPC fout → wet niet gevonden of andere fout.
+    if "error" in data:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "Wet niet gevonden in de Wettenbank.",
+        )
+
+    # Parseer de MCP-tool-result: content-blokken met type=text bevatten JSON.
+    result = data.get("result", {})
+    content = result.get("content", []) if isinstance(result, dict) else []
+    for blok in content:
+        if not isinstance(blok, dict):
+            continue
+        if blok.get("type") != "text":
+            continue
+        try:
+            payload_data = json.loads(blok["text"])
+        except (json.JSONDecodeError, KeyError):
+            continue
+        if isinstance(payload_data, dict) and payload_data.get("is_error"):
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND,
+                "Wet niet gevonden in de Wettenbank.",
+            )
+        citeertitel = (
+            (
+                payload_data.get("citeertitel")
+                or payload_data.get("titel")
+                or payload_data.get("naam")
+            )
+            if isinstance(payload_data, dict)
+            else None
+        )
+        if citeertitel:
+            return str(citeertitel)
+
+    raise HTTPException(
+        status.HTTP_404_NOT_FOUND,
+        "Wet niet gevonden in de Wettenbank.",
+    )
