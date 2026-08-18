@@ -100,15 +100,22 @@ async def maak_gebruiker_admin(
     wachtwoord: str,
     rol: str = "analist",
 ) -> GebruikerRead:
-    """Maakt een gebruiker aan via admin-API; gooit GebruikersnaamAlInGebruik bij duplicaat."""
+    """Maakt een gebruiker aan via admin-API; gooit GebruikersnaamAlInGebruik bij duplicaat.
+
+    Check en insert lopen in één transactie zodat er geen TOCTOU-window is.
+    """
     async with AsyncSession(engine) as sess:
         bestaand = await sess.execute(
             select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
         )
         if bestaand.scalar_one_or_none() is not None:
             raise GebruikersnaamAlInGebruik(gebruikersnaam)
-    g = await maak_gebruiker(engine, gebruikersnaam, wachtwoord, rol)
-    return _naar_read(g)
+        wachtwoord_hash = bcrypt.hashpw(wachtwoord.encode(), bcrypt.gensalt()).decode()
+        g = Gebruiker(gebruikersnaam=gebruikersnaam, wachtwoord_hash=wachtwoord_hash, rol=rol)
+        sess.add(g)
+        await sess.commit()
+        await sess.refresh(g)
+        return _naar_read(g)
 
 
 async def lijst_gebruikers(engine: AsyncEngine) -> list[GebruikerRead]:
