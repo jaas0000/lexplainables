@@ -40,12 +40,9 @@ async def maak_eerste_beheerder(
         if existing.scalar_one_or_none() is not None:
             raise GebruikerFout("Setup al voltooid.")
 
-        dubbel = await sess.execute(
-            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
-        )
-        if dubbel.scalar_one_or_none() is not None:
-            raise GebruikerFout("Gebruikersnaam al in gebruik.")
-
+        # De tabel is hier bewezen leeg, dus een gebruikersnaam-duplicaat is niet mogelijk.
+        # De UNIQUE-constraint op gebruikersnaam (migratie 0003) vangt toekomstige
+        # race-conditions op databaseniveau op.
         wachtwoord_hash = bcrypt.hashpw(wachtwoord.encode(), bcrypt.gensalt()).decode()
         gebruiker = Gebruiker(
             gebruikersnaam=gebruikersnaam,

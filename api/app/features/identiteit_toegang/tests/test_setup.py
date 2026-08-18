@@ -12,10 +12,11 @@ Gedrag getest:
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -39,6 +40,17 @@ def db_pad(tmp_path) -> Path:
     return tmp_path / "test.db"
 
 
+@pytest_asyncio.fixture
+async def async_engine(db_pad) -> AsyncIterator[AsyncEngine]:
+    """Kortlevende async SQLite-engine met het volledige schema aangemaakt."""
+    sync_engine = create_engine(f"sqlite:///{db_pad}")
+    SQLModel.metadata.create_all(sync_engine)
+    sync_engine.dispose()
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+    yield engine
+    await engine.dispose()
+
+
 @pytest.fixture
 def client(db_pad) -> Iterator[TestClient]:
     """Elke test krijgt een eigen, lege SQLite-database."""
@@ -46,8 +58,8 @@ def client(db_pad) -> Iterator[TestClient]:
     SQLModel.metadata.create_all(sync_engine)
     sync_engine.dispose()
 
-    async_engine: AsyncEngine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
-    app.dependency_overrides[get_engine] = lambda: async_engine
+    async_eng: AsyncEngine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+    app.dependency_overrides[get_engine] = lambda: async_eng
 
     with TestClient(app) as test_client:
         yield test_client
@@ -59,26 +71,14 @@ def client(db_pad) -> Iterator[TestClient]:
 
 
 @pytest.mark.asyncio
-async def test_tabel_leeg_bij_lege_db(db_pad):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    SQLModel.metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    assert await tabel_leeg(engine) is True
-    await engine.dispose()
+async def test_tabel_leeg_bij_lege_db(async_engine):
+    assert await tabel_leeg(async_engine) is True
 
 
 @pytest.mark.asyncio
-async def test_tabel_leeg_na_gebruiker(db_pad):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    SQLModel.metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    await maak_gebruiker(engine, "beheerder", "wachtwoord123")
-    assert await tabel_leeg(engine) is False
-    await engine.dispose()
+async def test_tabel_leeg_na_gebruiker(async_engine):
+    await maak_gebruiker(async_engine, "beheerder", "wachtwoord123")
+    assert await tabel_leeg(async_engine) is False
 
 
 # --- GET /v1/auth/setup-status ---

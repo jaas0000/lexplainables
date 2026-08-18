@@ -39,3 +39,31 @@ export async function apiProxy(
     },
   });
 }
+
+/**
+ * Publieke proxy voor endpoints die geen X-User-Id nodig hebben (bijv. setup-flow).
+ * Stuurt alleen het machine-token mee.
+ */
+export async function publiekApiProxy(
+  pad: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const upstream = await fetch(`${API_BASE_URL}${pad}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${API_TOKEN}`,
+      ...(init.headers as Record<string, string>),
+    },
+    cache: "no-store",
+  });
+
+  const body = upstream.status === 204 ? null : await upstream.text();
+  return new Response(body, {
+    status: upstream.status,
+    headers: {
+      "Content-Type":
+        upstream.headers.get("Content-Type") ?? "application/json",
+    },
+  });
+}
