@@ -171,11 +171,8 @@ async def verwijder_gebruiker(
         if g is None:
             raise GebruikerNietGevonden(gebruikersnaam)
 
-        if g.gebruikersnaam == ingelogd_als:
-            # Eigen account verwijderen is alleen verboden als dit de laatste actieve beheerder is.
-            # De invariant-check hieronder dekt dit geval ook.
-            pass
-
+        # Eigen account verwijderen is toegestaan zolang de invariant-check hieronder doorkomt
+        # (ingelogd_als wordt bewaard voor toekomstige uitbreiding, b.v. audit-log).
         if g.actief and g.rol == "beheerder":
             actieve_beheerders = await sess.execute(
                 select(Gebruiker).where(
