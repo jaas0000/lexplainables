@@ -7,11 +7,19 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.future import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from .models import Gebruiker, VerifyResult
+from .models import Gebruiker, MijnProfiel, VerifyResult
 
 # Vaste dummy-hash voor timing-oracle-beveiliging bij onbekende gebruiker.
 # Hardcoded constante (cost=12) zodat module-import geen bcrypt-ronde kost op elke cold start.
 _DUMMY_HASH = b"$2b$12$aPK8gqAEWjX6MHVbvpshbeUk9q3j2hMZBhg1kx2Gm9ptWc0HvYCZe"
+
+
+class GebruikerNietActief(LookupError):
+    """Gebruiker bestaat niet of is inactief."""
+
+
+class WachtwoordOnjuist(ValueError):
+    """Huidig wachtwoord klopt niet."""
 
 
 async def verifieer_credentials(
@@ -64,3 +72,54 @@ async def maak_gebruiker_indien_ontbreekt(
             return False
     await maak_gebruiker(engine, gebruikersnaam, wachtwoord, rol)
     return True
+
+
+async def haal_gebruiker(engine: AsyncEngine, gebruikersnaam: str) -> MijnProfiel:
+    """Haalt het eigen profiel op. Gooit GebruikerNietActief als account ontbreekt of inactief."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        gebruiker = result.scalar_one_or_none()
+
+    if gebruiker is None or not gebruiker.actief:
+        raise GebruikerNietActief(gebruikersnaam)
+
+    return MijnProfiel(
+        naam=gebruiker.gebruikersnaam,
+        gebruikersnaam=gebruiker.gebruikersnaam,
+        rol=gebruiker.rol,
+        totp_ingeschakeld=False,
+    )
+
+
+async def wijzig_eigen_wachtwoord(
+    engine: AsyncEngine,
+    gebruikersnaam: str,
+    huidig_wachtwoord: str,
+    nieuw_wachtwoord: str,
+) -> None:
+    """Wijzigt het wachtwoord. Gooit GebruikerNietActief of WachtwoordOnjuist bij fouten."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        gebruiker = result.scalar_one_or_none()
+
+    if gebruiker is None or not gebruiker.actief:
+        raise GebruikerNietActief(gebruikersnaam)
+
+    # bcrypt buiten de sessie: CPU-gebonden operatie, DB-verbinding hoeft niet open te blijven.
+    if not bcrypt.checkpw(huidig_wachtwoord.encode(), gebruiker.wachtwoord_hash.encode()):
+        raise WachtwoordOnjuist()
+
+    nieuw_hash = bcrypt.hashpw(nieuw_wachtwoord.encode(), bcrypt.gensalt()).decode()
+
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        gebruiker = result.scalar_one()
+        gebruiker.wachtwoord_hash = nieuw_hash
+        sess.add(gebruiker)
+        await sess.commit()
