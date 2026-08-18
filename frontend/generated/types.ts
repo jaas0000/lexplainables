@@ -210,6 +210,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/wetten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lijst Wetten
+         * @description Lijst van beschikbare wetten (bwb-id + naam). Vereist een ingelogde gebruiker.
+         */
+        get: operations["lijst_wetten_v1_wetten_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/wetten/{bwb_id}/structuur": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Wet Structuur
+         * @description Artikel-structuur van één wet. Geeft 404 bij een onbekend bwb_id.
+         */
+        get: operations["get_wet_structuur_v1_wetten__bwb_id__structuur_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -220,6 +260,16 @@ export interface components {
             items: components["schemas"]["BerichtAdminRead"][];
             /** Totaal */
             totaal: number;
+        };
+        /**
+         * ArtikelKeuze
+         * @description Één artikel binnen een wet — artikelnummer + padnotatie (hoofdstuk / artikel).
+         */
+        ArtikelKeuze: {
+            /** Artikel */
+            artikel: string;
+            /** Pad */
+            pad: string;
         };
         /**
          * BerichtAdminRead
@@ -437,6 +487,26 @@ export interface components {
              * @default
              */
             rol: string;
+        };
+        /**
+         * WetKeuze
+         * @description Één beschikbare wet — bwb-id + leesbare naam.
+         */
+        WetKeuze: {
+            /** Bwb Id */
+            bwb_id: string;
+            /** Naam */
+            naam: string;
+        };
+        /**
+         * WetStructuur
+         * @description Artikel-structuur van één wet.
+         */
+        WetStructuur: {
+            /** Artikelen */
+            artikelen: components["schemas"]["ArtikelKeuze"][];
+            /** Bwb Id */
+            bwb_id: string;
         };
     };
     responses: never;
@@ -911,6 +981,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FeedbackBevestigd"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lijst_wetten_v1_wetten_get: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WetKeuze"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_wet_structuur_v1_wetten__bwb_id__structuur_get: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                bwb_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WetStructuur"];
                 };
             };
             /** @description Validation Error */
