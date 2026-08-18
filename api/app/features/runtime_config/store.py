@@ -16,6 +16,7 @@ import json
 import time
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -42,6 +43,9 @@ def _cache_leeg() -> None:
 class RuntimeConfigStore:
     def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
+        # Dialect-aware insert — eenmalig bepaald bij constructie (berichten/store.py r137-138).
+        is_pg = engine.url.get_backend_name() == "postgresql"
+        self._insert_fn = pg_insert if is_pg else sqlite_insert
 
     async def lees_alle(self) -> AppInstellingen:
         """Geef alle instellingen terug; gebruikt TTL-cache."""
@@ -77,7 +81,7 @@ class RuntimeConfigStore:
             async with self._engine.begin() as conn:
                 for sleutel, waarde in te_schrijven.items():
                     stmt = (
-                        sqlite_insert(app_instellingen)
+                        self._insert_fn(app_instellingen)
                         .values(sleutel=sleutel, waarde=waarde, bijgewerkt=moment)
                         .on_conflict_do_update(
                             index_elements=["sleutel"],
