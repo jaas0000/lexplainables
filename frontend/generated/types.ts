@@ -125,6 +125,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/profielen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lijst Profielen */
+        get: operations["lijst_profielen_v1_admin_profielen_get"];
+        put?: never;
+        /** Maak Profiel */
+        post: operations["maak_profiel_v1_admin_profielen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/profielen/{naam}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Bewerk Profiel */
+        put: operations["bewerk_profiel_v1_admin_profielen__naam__put"];
+        post?: never;
+        /** Verwijder Profiel */
+        delete: operations["verwijder_profiel_v1_admin_profielen__naam__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/verify": {
         parameters: {
             query?: never;
@@ -437,6 +473,90 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * LlmProfielCreate
+         * @description Wat een beheerder meestuurt bij het aanmaken van een profiel.
+         */
+        LlmProfielCreate: {
+            /** Api Base */
+            api_base: string;
+            /** Api Sleutel */
+            api_sleutel?: string | null;
+            /** Api Versie */
+            api_versie?: string | null;
+            /**
+             * Is Standaard
+             * @default false
+             */
+            is_standaard: boolean;
+            /** Model */
+            model: string;
+            /** Naam */
+            naam: string;
+            /** Provider */
+            provider: string;
+            /**
+             * Temperatuur
+             * @default 0
+             */
+            temperatuur: number;
+        };
+        /**
+         * LlmProfielRead
+         * @description Wat de API teruggeeft — de plaintext API-sleutel verlaat de API nooit.
+         */
+        LlmProfielRead: {
+            /** Api Base */
+            api_base: string;
+            /** Api Versie */
+            api_versie: string | null;
+            /** Is Standaard */
+            is_standaard: boolean;
+            /** Model */
+            model: string;
+            /** Naam */
+            naam: string;
+            /** Provider */
+            provider: string;
+            /** Sleutel Ingesteld */
+            sleutel_ingesteld: boolean;
+            /** Temperatuur */
+            temperatuur: number;
+            /**
+             * Updated
+             * Format: date-time
+             */
+            updated: string;
+        };
+        /**
+         * LlmProfielUpdate
+         * @description Wat een beheerder meestuurt bij het bijwerken van een profiel.
+         *
+         *     `naam` ontbreekt bewust: naam is de stabiele identifier en kan niet veranderen.
+         *     `api_sleutel` leeg (None of "") → sleutel ongewijzigd laten (niet overschrijven).
+         */
+        LlmProfielUpdate: {
+            /** Api Base */
+            api_base: string;
+            /** Api Sleutel */
+            api_sleutel?: string | null;
+            /** Api Versie */
+            api_versie?: string | null;
+            /**
+             * Is Standaard
+             * @default false
+             */
+            is_standaard: boolean;
+            /** Model */
+            model: string;
+            /** Provider */
+            provider: string;
+            /**
+             * Temperatuur
+             * @default 0
+             */
+            temperatuur: number;
         };
         /** MarkeerGezienIn */
         MarkeerGezienIn: {
@@ -806,6 +926,144 @@ export interface operations {
             };
             path: {
                 feedback_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lijst_profielen_v1_admin_profielen_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmProfielRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    maak_profiel_v1_admin_profielen_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LlmProfielCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmProfielRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bewerk_profiel_v1_admin_profielen__naam__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                naam: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LlmProfielUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmProfielRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verwijder_profiel_v1_admin_profielen__naam__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                naam: string;
             };
             cookie?: never;
         };
