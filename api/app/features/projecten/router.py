@@ -132,21 +132,16 @@ async def analyse_events(
     )
 
 
-async def _voer_analyse_uit(
-    analyse_id: str, human_in_the_loop: bool, store: AnalyseStore | None = None
-) -> None:
+async def _voer_analyse_uit(analyse_id: str, human_in_the_loop: bool, store: AnalyseStore) -> None:
     """PoC-placeholder-job: simuleert een analyse met statusovergangen.
 
     Echte analyselogica (MCP-aanroepen, LLM-orchestratie) komt in story 013+. Deze
     implementatie simuleert de tijdvertraging en statusovergangen zodat de SSE-stroom
     en de frontend al te testen zijn.
 
-    `store` wordt meegegeven vanuit de router zodat tests de dependency-override (test-engine)
-    doorvoeren in de achtergrond-job — anders roept de job `get_engine()` aan op de
-    globale engine en vindt de tabel niet in de test-database.
+    `store` wordt meegegeven vanuit de router (`taken.add_task`) zodat tests de
+    dependency-override (test-engine) doorvoeren in de achtergrond-job.
     """
-    if store is None:
-        store = SqlAlchemyAnalyseStore(get_engine())
     try:
         await asyncio.sleep(2)
         await store.zet_status(analyse_id, "actief", "Bronnen ophalen")

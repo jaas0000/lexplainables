@@ -130,10 +130,9 @@ class SqlAlchemyAnalyseStore:
         stmt = delete(analyses).where(analyses.c.id == analyse_id)
         if not is_beheerder:
             stmt = stmt.where(analyses.c.gebruiker_id == gebruiker_id)
-        stmt = stmt.returning(analyses.c.id)
         async with self._engine.begin() as conn:
             result = await conn.execute(stmt)
-        if result.first() is None:
+        if result.rowcount == 0:
             raise AnalyseNietGevonden(f"Analyse {analyse_id} niet gevonden.")
 
     async def zet_status(

@@ -131,16 +131,15 @@ def analyse_overzicht_uit_rij(rij) -> AnalyseOverzicht:
 
 
 def analyse_detail_uit_rij(rij) -> AnalyseDetail:
-    """Expliciete mapping databaserij → AnalyseDetail (werkwijze-ADR-0011)."""
-    naam = rij.naam or _naam_afleiden(rij.bronnen or [])
-    bronnen = [BronKeuze(**b) for b in (rij.bronnen or [])]
+    """Expliciete mapping databaserij → AnalyseDetail (werkwijze-ADR-0011).
+
+    Bouwt voort op analyse_overzicht_uit_rij om naam- en bronnen-afleiding niet te
+    dupliceren.
+    """
+    overzicht = analyse_overzicht_uit_rij(rij)
     begrippen = [BegripInvoer(**b) for b in rij.begrippenlijst] if rij.begrippenlijst else None
     return AnalyseDetail(
-        id=rij.id,
-        naam=naam,
-        bronnen=bronnen,
-        status=rij.status,
-        bijgewerkt=rij.bijgewerkt,
+        **overzicht.model_dump(),
         omschrijving=rij.omschrijving,
         analysefocus=rij.analysefocus,
         model_profiel=rij.model_profiel,
