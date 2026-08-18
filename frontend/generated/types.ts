@@ -125,6 +125,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/gebruikers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Haal Gebruikers Op */
+        get: operations["haal_gebruikers_op_v1_admin_gebruikers_get"];
+        put?: never;
+        /** Maak Gebruiker Aan */
+        post: operations["maak_gebruiker_aan_v1_admin_gebruikers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/gebruikers/{gebruikersnaam}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Verwijder Gebruiker Endpoint */
+        delete: operations["verwijder_gebruiker_endpoint_v1_admin_gebruikers__gebruikersnaam__delete"];
+        options?: never;
+        head?: never;
+        /** Wijzig Gebruiker Endpoint */
+        patch: operations["wijzig_gebruiker_endpoint_v1_admin_gebruikers__gebruikersnaam__patch"];
+        trace?: never;
+    };
+    "/v1/admin/gebruikers/{gebruikersnaam}/reset-wachtwoord": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Wachtwoord Endpoint */
+        post: operations["reset_wachtwoord_endpoint_v1_admin_gebruikers__gebruikersnaam__reset_wachtwoord_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/profielen": {
         parameters: {
             query?: never;
@@ -653,6 +706,39 @@ export interface components {
             /** Userid */
             userid: string;
         };
+        /** GebruikerCreate */
+        GebruikerCreate: {
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /**
+             * Rol
+             * @default analist
+             */
+            rol: string;
+            /** Wachtwoord */
+            wachtwoord: string;
+        };
+        /** GebruikerPatch */
+        GebruikerPatch: {
+            /** Actief */
+            actief?: boolean | null;
+            /** Rol */
+            rol?: string | null;
+        };
+        /** GebruikerRead */
+        GebruikerRead: {
+            /**
+             * Aangemaakt Op
+             * Format: date-time
+             */
+            aangemaakt_op: string;
+            /** Actief */
+            actief: boolean;
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Rol */
+            rol: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -756,6 +842,13 @@ export interface components {
         OngelezenFeedbackOut: {
             /** Aantal */
             aantal: number;
+        };
+        /** TijdelijkWachtwoord */
+        TijdelijkWachtwoord: {
+            /** Gebruikersnaam */
+            gebruikersnaam: string;
+            /** Tijdelijk Wachtwoord */
+            tijdelijk_wachtwoord: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -1121,6 +1214,178 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    haal_gebruikers_op_v1_admin_gebruikers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GebruikerRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    maak_gebruiker_aan_v1_admin_gebruikers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GebruikerCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GebruikerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verwijder_gebruiker_endpoint_v1_admin_gebruikers__gebruikersnaam__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                gebruikersnaam: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    wijzig_gebruiker_endpoint_v1_admin_gebruikers__gebruikersnaam__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                gebruikersnaam: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GebruikerPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GebruikerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_wachtwoord_endpoint_v1_admin_gebruikers__gebruikersnaam__reset_wachtwoord_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                gebruikersnaam: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TijdelijkWachtwoord"];
+                };
             };
             /** @description Validation Error */
             422: {

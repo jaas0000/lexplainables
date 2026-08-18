@@ -759,6 +759,88 @@
         "title": "FeedbackRead",
         "type": "object"
       },
+      "GebruikerCreate": {
+        "properties": {
+          "gebruikersnaam": {
+            "maxLength": 64,
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "rol": {
+            "default": "analist",
+            "title": "Rol",
+            "type": "string"
+          },
+          "wachtwoord": {
+            "minLength": 8,
+            "title": "Wachtwoord",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gebruikersnaam",
+          "wachtwoord"
+        ],
+        "title": "GebruikerCreate",
+        "type": "object"
+      },
+      "GebruikerPatch": {
+        "properties": {
+          "actief": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actief"
+          },
+          "rol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rol"
+          }
+        },
+        "title": "GebruikerPatch",
+        "type": "object"
+      },
+      "GebruikerRead": {
+        "properties": {
+          "aangemaakt_op": {
+            "format": "date-time",
+            "title": "Aangemaakt Op",
+            "type": "string"
+          },
+          "actief": {
+            "title": "Actief",
+            "type": "boolean"
+          },
+          "gebruikersnaam": {
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "rol": {
+            "title": "Rol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gebruikersnaam",
+          "rol",
+          "actief",
+          "aangemaakt_op"
+        ],
+        "title": "GebruikerRead",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1005,6 +1087,24 @@
           "aantal"
         ],
         "title": "OngelezenFeedbackOut",
+        "type": "object"
+      },
+      "TijdelijkWachtwoord": {
+        "properties": {
+          "gebruikersnaam": {
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "tijdelijk_wachtwoord": {
+            "title": "Tijdelijk Wachtwoord",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gebruikersnaam",
+          "tijdelijk_wachtwoord"
+        ],
+        "title": "TijdelijkWachtwoord",
         "type": "object"
       },
       "ValidationError": {
@@ -1816,6 +1916,371 @@
         "summary": "Verwijder Feedback",
         "tags": [
           "feedback-admin"
+        ]
+      }
+    },
+    "/v1/admin/gebruikers": {
+      "get": {
+        "operationId": "haal_gebruikers_op_v1_admin_gebruikers_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GebruikerRead"
+                  },
+                  "title": "Response Haal Gebruikers Op V1 Admin Gebruikers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Haal Gebruikers Op",
+        "tags": [
+          "gebruikers-admin"
+        ]
+      },
+      "post": {
+        "operationId": "maak_gebruiker_aan_v1_admin_gebruikers_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GebruikerCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GebruikerRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Maak Gebruiker Aan",
+        "tags": [
+          "gebruikers-admin"
+        ]
+      }
+    },
+    "/v1/admin/gebruikers/{gebruikersnaam}": {
+      "delete": {
+        "operationId": "verwijder_gebruiker_endpoint_v1_admin_gebruikers__gebruikersnaam__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gebruikersnaam",
+            "required": true,
+            "schema": {
+              "title": "Gebruikersnaam",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verwijder Gebruiker Endpoint",
+        "tags": [
+          "gebruikers-admin"
+        ]
+      },
+      "patch": {
+        "operationId": "wijzig_gebruiker_endpoint_v1_admin_gebruikers__gebruikersnaam__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gebruikersnaam",
+            "required": true,
+            "schema": {
+              "title": "Gebruikersnaam",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GebruikerPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GebruikerRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wijzig Gebruiker Endpoint",
+        "tags": [
+          "gebruikers-admin"
+        ]
+      }
+    },
+    "/v1/admin/gebruikers/{gebruikersnaam}/reset-wachtwoord": {
+      "post": {
+        "operationId": "reset_wachtwoord_endpoint_v1_admin_gebruikers__gebruikersnaam__reset_wachtwoord_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gebruikersnaam",
+            "required": true,
+            "schema": {
+              "title": "Gebruikersnaam",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TijdelijkWachtwoord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Wachtwoord Endpoint",
+        "tags": [
+          "gebruikers-admin"
         ]
       }
     },
