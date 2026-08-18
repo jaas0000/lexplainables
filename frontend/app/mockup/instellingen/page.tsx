@@ -3,79 +3,22 @@
 import React, { useState } from "react";
 import { SectieHeader } from "@/components/beheer/SectieHeader";
 
-// Lokale interfaces — nepdata, geen gegenereerde types nodig in fase 1
-interface BoolInstelling {
-  sleutel: string;
-  label: string;
-  beschrijving: string;
-  type: "bool";
-  waarde: boolean;
-}
+type Variant = "uit" | "aan" | "bezig-aanzetten" | "bezig-uitzetten" | "fout";
 
-type Instelling = BoolInstelling;
-
-type Variant = "overzicht" | "inline-bewerken" | "opgeslagen" | "fout";
-
-const NEPDATA: Instelling[] = [
-  {
-    sleutel: "capture_llm_calls",
-    label: "LLM-calls vastleggen",
-    beschrijving:
-      "Sla alle LLM-aanroepen (prompt + respons) op in de database voor later inzage. Schakel alleen in als dat nodig is — de opgeslagen inhoud kan gevoelige tekst bevatten.",
-    type: "bool",
-    waarde: false,
-  },
+const VARIANTEN: { waarde: Variant; label: string }[] = [
+  { waarde: "uit", label: "Uit (standaard)" },
+  { waarde: "aan", label: "Aan" },
+  { waarde: "bezig-aanzetten", label: "Bezig — aanzetten" },
+  { waarde: "bezig-uitzetten", label: "Bezig — uitzetten" },
+  { waarde: "fout", label: "Foutmelding" },
 ];
 
 export default function InstellingenMockup() {
-  const [variant, setVariant] = useState<Variant>("overzicht");
-  const [instellingen, setInstellingen] = useState<Instelling[]>(NEPDATA);
-  const [bewerkSleutel, setBewerkSleutel] = useState<string | null>(null);
-  const [bewerkWaarde, setBewerkWaarde] = useState<boolean>(false);
-  const [melding, setMelding] = useState<{ type: "succes" | "fout"; tekst: string } | null>(null);
+  const [variant, setVariant] = useState<Variant>("uit");
 
-  function bewerkStarten(inst: BoolInstelling) {
-    setBewerkSleutel(inst.sleutel);
-    setBewerkWaarde(inst.waarde);
-    setMelding(null);
-    setVariant("inline-bewerken");
-  }
-
-  function annuleren() {
-    setBewerkSleutel(null);
-    setVariant("overzicht");
-  }
-
-  function opslaan() {
-    if (variant === "fout") {
-      setMelding({ type: "fout", tekst: "Kon instelling niet opslaan. Probeer opnieuw." });
-      setBewerkSleutel(null);
-      setVariant("overzicht");
-      return;
-    }
-
-    setInstellingen((prev) =>
-      prev.map((inst) =>
-        inst.sleutel === bewerkSleutel && inst.type === "bool"
-          ? { ...inst, waarde: bewerkWaarde }
-          : inst
-      )
-    );
-    setBewerkSleutel(null);
-    setMelding({ type: "succes", tekst: "Instelling opgeslagen." });
-    setVariant("opgeslagen");
-    setTimeout(() => {
-      setVariant("overzicht");
-      setMelding(null);
-    }, 3000);
-  }
-
-  const VARIANTEN: { waarde: Variant; label: string }[] = [
-    { waarde: "overzicht", label: "Overzicht" },
-    { waarde: "inline-bewerken", label: "Inline bewerken" },
-    { waarde: "opgeslagen", label: "Na opslaan (succes)" },
-    { waarde: "fout", label: "Na opslaan (fout)" },
-  ];
+  const capture = variant === "aan" || variant === "bezig-uitzetten";
+  const bezig = variant === "bezig-aanzetten" || variant === "bezig-uitzetten";
+  const fout = variant === "fout";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -89,18 +32,7 @@ export default function InstellingenMockup() {
           gap: "0.5rem",
         }}
       >
-        <div>
-          <h1 style={{ fontSize: "1.375rem" }}>Instellingen</h1>
-          <p
-            style={{
-              marginTop: "0.25rem",
-              fontSize: "0.875rem",
-              color: "rgb(var(--muted))",
-            }}
-          >
-            Runtime-configuratie van de applicatie. Wijzigingen zijn direct actief.
-          </p>
-        </div>
+        <h1 style={{ fontSize: "1.375rem" }}>Instellingen</h1>
         <span
           style={{
             flexShrink: 0,
@@ -131,37 +63,14 @@ export default function InstellingenMockup() {
           fontSize: "0.8rem",
         }}
       >
-        <span
-          style={{
-            color: "rgb(var(--faint))",
-            alignSelf: "center",
-            marginRight: "0.25rem",
-          }}
-        >
+        <span style={{ color: "rgb(var(--faint))", alignSelf: "center", marginRight: "0.25rem" }}>
           Variant:
         </span>
         {VARIANTEN.map((v) => (
           <button
             key={v.waarde}
             type="button"
-            onClick={() => {
-              setMelding(null);
-              setBewerkSleutel(null);
-              if (v.waarde === "inline-bewerken") {
-                bewerkStarten(instellingen[0] as BoolInstelling);
-              } else if (v.waarde === "opgeslagen") {
-                setMelding({ type: "succes", tekst: "Instelling opgeslagen." });
-                setVariant("opgeslagen");
-              } else if (v.waarde === "fout") {
-                setMelding({
-                  type: "fout",
-                  tekst: "Kon instelling niet opslaan. Probeer opnieuw.",
-                });
-                setVariant("fout");
-              } else {
-                setVariant("overzicht");
-              }
-            }}
+            onClick={() => setVariant(v.waarde)}
             style={{
               padding: "0.25rem 0.625rem",
               borderRadius: "4px",
@@ -169,18 +78,9 @@ export default function InstellingenMockup() {
               fontSize: "0.8rem",
               cursor: "pointer",
               fontFamily: "inherit",
-              background:
-                variant === v.waarde
-                  ? "rgb(var(--lint))"
-                  : "rgb(var(--paper))",
-              color:
-                variant === v.waarde
-                  ? "rgb(var(--paper))"
-                  : "rgb(var(--muted))",
-              borderColor:
-                variant === v.waarde
-                  ? "rgb(var(--lint))"
-                  : "rgb(var(--line))",
+              background: variant === v.waarde ? "rgb(var(--lint))" : "rgb(var(--paper))",
+              color: variant === v.waarde ? "rgb(var(--paper))" : "rgb(var(--muted))",
+              borderColor: variant === v.waarde ? "rgb(var(--lint))" : "rgb(var(--line))",
             }}
           >
             {v.label}
@@ -188,211 +88,105 @@ export default function InstellingenMockup() {
         ))}
       </div>
 
-      {/* Sectie: Instellingen */}
+      {/* Sectie */}
       <section>
         <SectieHeader
-          titel="Instellingen"
-          subtitel="Wijzigingen zijn direct van kracht (max. 10 seconden cache)."
+          titel="LLM-invoer vastleggen"
+          subtitel="prompts + respons, voor analyse"
         />
 
-        {/* Melding na opslaan */}
-        {melding && (
-          <div
-            className={melding.type === "succes" ? "" : "melding melding-fout"}
-            style={
-              melding.type === "succes"
-                ? {
-                    marginBottom: "1rem",
-                    padding: "0.625rem 1rem",
-                    borderRadius: "4px",
-                    background: "rgb(var(--succes) / 0.08)",
-                    border: "1px solid rgb(var(--succes) / 0.3)",
-                    color: "rgb(var(--succes))",
-                    fontSize: "0.875rem",
-                  }
-                : { marginBottom: "1rem" }
-            }
-            role="alert"
-          >
-            {melding.tekst}
-          </div>
-        )}
-
-        {/* Tabel */}
+        {/* Kaart — grijs blok zoals wetsanalyse-ai */}
         <div
           style={{
+            marginBottom: "1rem",
+            padding: "1rem",
+            background: "rgb(var(--surface))",
             border: "1px solid rgb(var(--line))",
             borderRadius: "6px",
-            overflow: "hidden",
           }}
         >
-          <table className="tabel">
-            <thead>
-              <tr>
-                <th style={{ width: "14rem" }}>Sleutel</th>
-                <th>Omschrijving</th>
-                <th style={{ width: "8rem", textAlign: "center" }}>Waarde</th>
-                <th style={{ width: "8rem" }}>Acties</th>
-              </tr>
-            </thead>
-            <tbody>
-              {instellingen.map((inst) => {
-                const isBewerken = bewerkSleutel === inst.sleutel;
-                return (
-                  <tr key={inst.sleutel}>
-                    {/* Sleutel */}
-                    <td>
-                      <span
-                        style={{
-                          fontFamily: "monospace",
-                          fontSize: "0.8125rem",
-                          color: "rgb(var(--muted))",
-                        }}
-                      >
-                        {inst.sleutel}
-                      </span>
-                      <div
-                        style={{
-                          fontSize: "0.8125rem",
-                          fontWeight: 500,
-                          color: "rgb(var(--ink))",
-                          marginTop: "0.125rem",
-                        }}
-                      >
-                        {inst.label}
-                      </div>
-                    </td>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "0.75rem",
+            }}
+          >
+            {/* Tekst links */}
+            <div style={{ flex: 1, minWidth: "16rem" }}>
+              <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "rgb(var(--ink))" }}>
+                Vastleggen van LLM-calls
+              </p>
+              <p style={{ marginTop: "0.125rem", fontSize: "0.75rem", color: "rgb(var(--muted))" }}>
+                Legt per call de letterlijke system/user-prompt en de ruwe respons vast (incl.
+                auto-correctie en gefaalde calls). Standaard uit; aanzetten kost extra opslag per analyse.
+              </p>
+            </div>
 
-                    {/* Beschrijving */}
-                    <td>
-                      <span
-                        style={{
-                          fontSize: "0.8125rem",
-                          color: "rgb(var(--muted))",
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {inst.beschrijving}
-                      </span>
-                    </td>
+            {/* Tag + knop rechts */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  padding: "0.125rem 0.5rem",
+                  borderRadius: "9999px",
+                  background: capture
+                    ? "rgb(var(--succes) / 0.1)"
+                    : "rgb(var(--faint) / 0.15)",
+                  color: capture ? "rgb(var(--succes))" : "rgb(var(--muted))",
+                  border: `1px solid ${capture ? "rgb(var(--succes) / 0.3)" : "rgb(var(--line))"}`,
+                  fontWeight: 500,
+                }}
+              >
+                {capture ? "aan" : "uit"}
+              </span>
+              <button
+                type="button"
+                disabled={bezig}
+                style={{
+                  padding: "0.5rem 1rem",
+                  borderRadius: "4px",
+                  border: "none",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  fontFamily: "inherit",
+                  cursor: bezig ? "default" : "pointer",
+                  background: capture
+                    ? "rgb(var(--surface))"
+                    : "rgb(var(--lint))",
+                  color: capture ? "rgb(var(--ink))" : "white",
+                  boxShadow: capture ? "inset 0 0 0 1px rgb(var(--line))" : "none",
+                  opacity: bezig ? 0.6 : 1,
+                }}
+              >
+                {bezig
+                  ? "Bezig…"
+                  : capture
+                  ? "Uitzetten"
+                  : "Aanzetten"}
+              </button>
+            </div>
+          </div>
 
-                    {/* Waarde / inline edit */}
-                    <td style={{ textAlign: "center" }}>
-                      {isBewerken && inst.type === "bool" ? (
-                        /* Toggle in bewerkingsmodus */
-                        <button
-                          type="button"
-                          aria-label={bewerkWaarde ? "Aan — klik om uit te zetten" : "Uit — klik om aan te zetten"}
-                          onClick={() => setBewerkWaarde((v) => !v)}
-                          style={{
-                            position: "relative",
-                            display: "inline-flex",
-                            width: "2.75rem",
-                            height: "1.5rem",
-                            borderRadius: "9999px",
-                            border: "none",
-                            cursor: "pointer",
-                            background: bewerkWaarde
-                              ? "rgb(var(--succes))"
-                              : "rgb(var(--line))",
-                            transition: "background 0.2s",
-                            padding: 0,
-                          }}
-                        >
-                          <span
-                            style={{
-                              position: "absolute",
-                              top: "0.1875rem",
-                              left: bewerkWaarde ? "1.3125rem" : "0.1875rem",
-                              width: "1.125rem",
-                              height: "1.125rem",
-                              borderRadius: "9999px",
-                              background: "white",
-                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                              transition: "left 0.2s",
-                            }}
-                          />
-                        </button>
-                      ) : (
-                        /* Waarde in leesmodus */
-                        inst.type === "bool" && (
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "0.25rem",
-                              fontSize: "0.8125rem",
-                              fontWeight: 500,
-                              color: inst.waarde
-                                ? "rgb(var(--succes))"
-                                : "rgb(var(--muted))",
-                            }}
-                          >
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "0.5rem",
-                                height: "0.5rem",
-                                borderRadius: "9999px",
-                                background: inst.waarde
-                                  ? "rgb(var(--succes))"
-                                  : "rgb(var(--faint))",
-                              }}
-                            />
-                            {inst.waarde ? "Aan" : "Uit"}
-                          </span>
-                        )
-                      )}
-                    </td>
-
-                    {/* Acties */}
-                    <td>
-                      {isBewerken ? (
-                        <div className="acties">
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            style={{ fontSize: "0.8125rem" }}
-                            onClick={opslaan}
-                          >
-                            Opslaan
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{ fontSize: "0.8125rem" }}
-                            onClick={annuleren}
-                          >
-                            Annuleren
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: "0.8125rem" }}
-                          onClick={() => bewerkStarten(inst as BoolInstelling)}
-                        >
-                          Bewerken
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {/* Foutmelding */}
+          {fout && (
+            <div
+              role="alert"
+              style={{
+                marginTop: "0.75rem",
+                padding: "0.5rem 0.875rem",
+                borderRadius: "4px",
+                background: "rgb(var(--fout) / 0.08)",
+                border: "1px solid rgb(var(--fout) / 0.3)",
+                color: "rgb(var(--fout))",
+                fontSize: "0.8125rem",
+              }}
+            >
+              Kon instelling niet opslaan. Probeer opnieuw.
+            </div>
+          )}
         </div>
-
-        <p
-          style={{
-            marginTop: "0.75rem",
-            fontSize: "0.75rem",
-            color: "rgb(var(--faint))",
-          }}
-        >
-          Klik op &ldquo;Bewerken&rdquo; om een instelling aan te passen. Wijzigingen worden direct in de database opgeslagen.
-        </p>
       </section>
     </div>
   );
