@@ -981,6 +981,35 @@
         "title": "MarkeerGezienIn",
         "type": "object"
       },
+      "MijnProfiel": {
+        "description": "Eigen accountgegevens \u2014 teruggegeven door GET /v1/auth/me.",
+        "properties": {
+          "gebruikersnaam": {
+            "title": "Gebruikersnaam",
+            "type": "string"
+          },
+          "naam": {
+            "title": "Naam",
+            "type": "string"
+          },
+          "rol": {
+            "title": "Rol",
+            "type": "string"
+          },
+          "totp_ingeschakeld": {
+            "title": "Totp Ingeschakeld",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "naam",
+          "gebruikersnaam",
+          "rol",
+          "totp_ingeschakeld"
+        ],
+        "title": "MijnProfiel",
+        "type": "object"
+      },
       "OngelezenAantalOut": {
         "properties": {
           "aantal": {
@@ -1086,6 +1115,28 @@
           "ok"
         ],
         "title": "VerifyResult",
+        "type": "object"
+      },
+      "WachtwoordWijzigenVerzoek": {
+        "description": "Verzoek om het eigen wachtwoord te wijzigen \u2014 body van POST /v1/auth/wijzig-wachtwoord.",
+        "properties": {
+          "huidig_wachtwoord": {
+            "maxLength": 512,
+            "title": "Huidig Wachtwoord",
+            "type": "string"
+          },
+          "nieuw_wachtwoord": {
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Nieuw Wachtwoord",
+            "type": "string"
+          }
+        },
+        "required": [
+          "huidig_wachtwoord",
+          "nieuw_wachtwoord"
+        ],
+        "title": "WachtwoordWijzigenVerzoek",
         "type": "object"
       },
       "WetKeuze": {
@@ -2110,6 +2161,72 @@
         ]
       }
     },
+    "/v1/auth/me": {
+      "get": {
+        "description": "Geeft de eigen accountgegevens terug van de ingelogde gebruiker.",
+        "operationId": "me_v1_auth_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MijnProfiel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/v1/auth/verify": {
       "post": {
         "operationId": "verify_v1_auth_verify_post",
@@ -2164,6 +2281,75 @@
           }
         },
         "summary": "Verify",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/wijzig-wachtwoord": {
+      "post": {
+        "description": "Wijzigt het eigen wachtwoord. Geeft 400 als het huidige wachtwoord onjuist is.",
+        "operationId": "wijzig_wachtwoord_v1_auth_wijzig_wachtwoord_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WachtwoordWijzigenVerzoek"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wijzig Wachtwoord",
         "tags": [
           "auth"
         ]
