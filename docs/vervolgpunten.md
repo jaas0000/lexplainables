@@ -122,6 +122,19 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ---
 
+## PR #16 — app-instellingen / runtime-config (story 019)
+
+- **MEDIUM** — `frontend/app/api/admin/instellingen/route.ts` r13-14: `req.text()` + vaste `Content-Type: application/json` in `buildBackendHeaders` — nu correct (browser stuurt JSON), maar impliciete aanname die breekt als een caller een andere Content-Type gebruikt.
+- **MEDIUM** — `api/app/features/runtime_config/store.py` r34, r50-52: `_cache: dict[str, object]` dwingt een `isinstance`-check en twee `# type: ignore` af. Een `@dataclass`-entry of `_CacheEntry | None`-variabele maakt dit weg.
+- **MEDIUM** — `api/app/features/runtime_config/models.py` r89, r95: `json` en `logging` als inline imports in `_str_naar_bool` — horen op module-niveau; `logger = logging.getLogger(__name__)` als module-constante.
+- **LAAG** — `api/app/features/runtime_config/store.py` r88-90: na elke schrijfactie cache wissen + nieuwe `SELECT *` — de geschreven waarden zijn al bekend, round-trip overbodig.
+- **LAAG** — `api/app/features/runtime_config/store.py` r78-87: per-sleutel upsert in loop — nu 1 query, bij méér instellingen N sequentiële queries binnen één transactie.
+- **LAAG** — `frontend/app/beheer/instellingen/page.tsx` r18-29: `useEffect` zonder `AbortController` — geen lek in React 18, maar netwerk-request loopt onnodig door na unmount.
+- **LAAG** — `frontend/app/beheer/instellingen/page.tsx`: 197 regels inline styles voor één kaart — kaart-layout en status-badge herhalen patronen die extraction verdienen (zie `SectieHeader` als precedent).
+- **LAAG** — `api/app/features/runtime_config/store.py` + `api/app/features/berichten/store.py`: dialect-check `conn.engine.url.get_backend_name()` staat nu in twee stores; extraheer naar `api/app/shared/db.py` als `dialect_insert_fn(engine)`.
+
+---
+
 ## Frontend — berichten fase 2
 
 - **BFF-rolautorisatie**: `app/api/admin/berichten/` controleert `session.user.rol` niet — momenteel alleen beheerders actief, maar de BFF hoort rolautorisatie te dragen zodra analisten bestaan.
