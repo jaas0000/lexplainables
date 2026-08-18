@@ -42,7 +42,6 @@ export default function StartPagina() {
         <Link href="/mockup/rapport" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
           Rapport (story 013)
         </Link>
-<<<<<<< HEAD
         <Link href="/mockup/gebruikersbeheer" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
           Gebruikersbeheer (story 014)
         </Link>
@@ -54,10 +53,9 @@ export default function StartPagina() {
         </Link>
         <Link href="/mockup/instellingen" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
           Instellingen (story 019)
-=======
+        </Link>
         <Link href="/mockup/wettenbank-beheer" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
           Wettenbank-beheer (story 020)
->>>>>>> e715250 (feat(wettenbank-beheer-mockup): interactieve mockup fase 1 (story 020))
         </Link>
       </nav>
 
