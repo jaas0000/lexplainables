@@ -178,6 +178,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/instellingen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lees Instellingen */
+        get: operations["lees_instellingen_v1_admin_instellingen_get"];
+        /** Pas Instellingen Aan */
+        put: operations["pas_instellingen_aan_v1_admin_instellingen_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/profielen": {
         parameters: {
             query?: never;
@@ -658,6 +676,25 @@ export interface components {
              * @enum {string}
              */
             status: "wachtrij" | "actief" | "review" | "klaar" | "fout";
+        };
+        /**
+         * AppInstellingen
+         * @description Huidige waarden van alle runtime-instellingen.
+         */
+        AppInstellingen: {
+            /**
+             * Capture Llm Calls
+             * @default false
+             */
+            capture_llm_calls: boolean;
+        };
+        /**
+         * AppInstellingenPatch
+         * @description Gedeeltelijke update — weggelaten velden blijven ongewijzigd.
+         */
+        AppInstellingenPatch: {
+            /** Capture Llm Calls */
+            capture_llm_calls?: boolean | null;
         };
         /**
          * ArtikelKeuze
@@ -1611,6 +1648,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TijdelijkWachtwoord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lees_instellingen_v1_admin_instellingen_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppInstellingen"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pas_instellingen_aan_v1_admin_instellingen_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppInstellingenPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppInstellingen"];
                 };
             };
             /** @description Validation Error */

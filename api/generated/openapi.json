@@ -300,6 +300,36 @@
         "title": "AnalyseOverzicht",
         "type": "object"
       },
+      "AppInstellingen": {
+        "description": "Huidige waarden van alle runtime-instellingen.",
+        "properties": {
+          "capture_llm_calls": {
+            "default": false,
+            "title": "Capture Llm Calls",
+            "type": "boolean"
+          }
+        },
+        "title": "AppInstellingen",
+        "type": "object"
+      },
+      "AppInstellingenPatch": {
+        "description": "Gedeeltelijke update \u2014 weggelaten velden blijven ongewijzigd.",
+        "properties": {
+          "capture_llm_calls": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Llm Calls"
+          }
+        },
+        "title": "AppInstellingenPatch",
+        "type": "object"
+      },
       "ArtikelKeuze": {
         "description": "\u00c9\u00e9n artikel binnen een wet \u2014 artikelnummer + padnotatie (hoofdstuk / artikel).",
         "properties": {
@@ -2460,6 +2490,144 @@
         "summary": "Reset Wachtwoord Endpoint",
         "tags": [
           "gebruikers-admin"
+        ]
+      }
+    },
+    "/v1/admin/instellingen": {
+      "get": {
+        "operationId": "lees_instellingen_v1_admin_instellingen_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppInstellingen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lees Instellingen",
+        "tags": [
+          "runtime-config-admin"
+        ]
+      },
+      "put": {
+        "operationId": "pas_instellingen_aan_v1_admin_instellingen_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppInstellingenPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppInstellingen"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pas Instellingen Aan",
+        "tags": [
+          "runtime-config-admin"
         ]
       }
     },
