@@ -2,12 +2,40 @@
 
 from __future__ import annotations
 
+import secrets
+
 import bcrypt
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.future import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from .models import Gebruiker, VerifyResult
+from .models import Gebruiker, GebruikerRead, TijdelijkWachtwoord, VerifyResult
+
+GELDIGE_ROLLEN = {"beheerder", "analist"}
+
+
+class GebruikerNietGevonden(Exception):
+    pass
+
+
+class LaatsteBeheerder(Exception):
+    """Raised wanneer een actie de laatste actieve beheerder zou verwijderen of degraderen."""
+
+    pass
+
+
+class GebruikersnaamAlInGebruik(Exception):
+    pass
+
+
+def _naar_read(g: Gebruiker) -> GebruikerRead:
+    return GebruikerRead(
+        gebruikersnaam=g.gebruikersnaam,
+        rol=g.rol,
+        actief=g.actief,
+        aangemaakt_op=g.aangemaakt_op,
+    )
+
 
 # Vaste dummy-hash voor timing-oracle-beveiliging bij onbekende gebruiker.
 # Hardcoded constante (cost=12) zodat module-import geen bcrypt-ronde kost op elke cold start.
@@ -64,3 +92,120 @@ async def maak_gebruiker_indien_ontbreekt(
             return False
     await maak_gebruiker(engine, gebruikersnaam, wachtwoord, rol)
     return True
+
+
+async def maak_gebruiker_admin(
+    engine: AsyncEngine,
+    gebruikersnaam: str,
+    wachtwoord: str,
+    rol: str = "analist",
+) -> GebruikerRead:
+    """Maakt een gebruiker aan via admin-API; gooit GebruikersnaamAlInGebruik bij duplicaat."""
+    async with AsyncSession(engine) as sess:
+        bestaand = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        if bestaand.scalar_one_or_none() is not None:
+            raise GebruikersnaamAlInGebruik(gebruikersnaam)
+    g = await maak_gebruiker(engine, gebruikersnaam, wachtwoord, rol)
+    return _naar_read(g)
+
+
+async def lijst_gebruikers(engine: AsyncEngine) -> list[GebruikerRead]:
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(select(Gebruiker).order_by(Gebruiker.aangemaakt_op))
+        return [_naar_read(g) for g in result.scalars().all()]
+
+
+async def wijzig_gebruiker(
+    engine: AsyncEngine,
+    gebruikersnaam: str,
+    *,
+    rol: str | None,
+    actief: bool | None,
+) -> GebruikerRead:
+    """Wijzigt rol en/of actief-status. Gooit LaatsteBeheerder als invariant geschonden."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        g = result.scalar_one_or_none()
+        if g is None:
+            raise GebruikerNietGevonden(gebruikersnaam)
+
+        # Controleer de invariant als de actie de gebruiker zou deactiveren of degraderen.
+        zou_deactiveren = actief is False and g.actief
+        zou_degraderen = rol == "analist" and g.rol == "beheerder"
+        if (zou_deactiveren or zou_degraderen) and g.actief and g.rol == "beheerder":
+            actieve_beheerders = await sess.execute(
+                select(Gebruiker).where(
+                    Gebruiker.rol == "beheerder",
+                    Gebruiker.actief == True,  # noqa: E712
+                )
+            )
+            if len(actieve_beheerders.scalars().all()) <= 1:
+                raise LaatsteBeheerder(gebruikersnaam)
+
+        if rol is not None:
+            g.rol = rol
+        if actief is not None:
+            g.actief = actief
+        sess.add(g)
+        await sess.commit()
+        await sess.refresh(g)
+        return _naar_read(g)
+
+
+async def verwijder_gebruiker(
+    engine: AsyncEngine,
+    gebruikersnaam: str,
+    *,
+    ingelogd_als: str,
+) -> None:
+    """Verwijdert gebruiker. Gooit LaatsteBeheerder als dit de laatste actieve beheerder is."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        g = result.scalar_one_or_none()
+        if g is None:
+            raise GebruikerNietGevonden(gebruikersnaam)
+
+        if g.gebruikersnaam == ingelogd_als:
+            # Eigen account verwijderen is alleen verboden als dit de laatste actieve beheerder is.
+            # De invariant-check hieronder dekt dit geval ook.
+            pass
+
+        if g.actief and g.rol == "beheerder":
+            actieve_beheerders = await sess.execute(
+                select(Gebruiker).where(
+                    Gebruiker.rol == "beheerder",
+                    Gebruiker.actief == True,  # noqa: E712
+                )
+            )
+            if len(actieve_beheerders.scalars().all()) <= 1:
+                raise LaatsteBeheerder(gebruikersnaam)
+
+        await sess.delete(g)
+        await sess.commit()
+
+
+async def reset_wachtwoord(
+    engine: AsyncEngine,
+    gebruikersnaam: str,
+) -> TijdelijkWachtwoord:
+    """Genereert een veilig tijdelijk wachtwoord, slaat de hash op, geeft plaintext terug."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        g = result.scalar_one_or_none()
+        if g is None:
+            raise GebruikerNietGevonden(gebruikersnaam)
+
+        tijdelijk = secrets.token_urlsafe(12)
+        g.wachtwoord_hash = bcrypt.hashpw(tijdelijk.encode(), bcrypt.gensalt()).decode()
+        sess.add(g)
+        await sess.commit()
+
+    return TijdelijkWachtwoord(gebruikersnaam=gebruikersnaam, tijdelijk_wachtwoord=tijdelijk)
