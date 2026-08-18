@@ -51,6 +51,9 @@ export default function StartPagina() {
         <Link href="/mockup/account" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
           Account (story 016)
         </Link>
+        <Link href="/mockup/instellingen" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+          Instellingen (story 019)
+        </Link>
       </nav>
 
       <div

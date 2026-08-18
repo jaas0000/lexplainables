@@ -646,8 +646,29 @@ export default function BeheerPagina() {
 
       {/* ---- Sectie: Instellingen ---- */}
       <section>
-        <SectieHeader titel="Instellingen" subtitel="nog niet gebouwd" />
-        <LeegePlaceholder tekst="Systeeminstellingen en configuratie verschijnen hier." />
+        <SectieHeader titel="Instellingen" />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "1rem",
+            background: "rgb(var(--surface))",
+            border: "1px solid rgb(var(--line))",
+            borderRadius: "6px",
+          }}
+        >
+          <span style={{ fontSize: "0.875rem", color: "rgb(var(--ink))" }}>
+            Runtime-configuratie van de applicatie
+          </span>
+          <Link
+            href="/beheer/instellingen"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.8125rem" }}
+          >
+            Beheer instellingen →
+          </Link>
+        </div>
       </section>
     </div>
   );
