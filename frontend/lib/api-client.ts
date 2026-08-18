@@ -1,7 +1,20 @@
 import "server-only";
 
-const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8000";
+export const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8000";
 const API_TOKEN = process.env.API_TOKEN ?? "";
+
+/** Gedeelde auth-headers voor BFF → API communicatie. */
+export function buildBackendHeaders(
+  gebruikersnaam: string,
+  extra: Record<string, string> = {},
+): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${API_TOKEN}`,
+    "X-User-Id": gebruikersnaam,
+    ...extra,
+  };
+}
 
 export async function apiProxy(
   pad: string,
@@ -10,12 +23,10 @@ export async function apiProxy(
 ): Promise<Response> {
   const upstream = await fetch(`${API_BASE_URL}${pad}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${API_TOKEN}`,
-      "X-User-Id": gebruikersnaam,
-      ...init.headers,
-    },
+    headers: buildBackendHeaders(
+      gebruikersnaam,
+      init.headers as Record<string, string>,
+    ),
     cache: "no-store",
   });
 

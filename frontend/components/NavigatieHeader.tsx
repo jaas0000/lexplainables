@@ -11,22 +11,30 @@ export function NavigatieHeader() {
 
   if (!session?.user) return null;
 
-  const isBeheer = pathname.startsWith("/beheer") || pathname.startsWith("/mockup/beheer");
-  const isProjecten =
-    pathname.startsWith("/projecten") || pathname.startsWith("/mockup/analyse");
+  const isBeheer =
+    pathname.startsWith("/beheer") || pathname.startsWith("/mockup/beheer");
 
   return (
     <nav className="nav">
-      <Link
-        href="/mockup/analyse"
-        className={`nav-link${isProjecten ? " nav-link--active" : ""}`}
+      <button
+        className="nav-link nav-link--placeholder"
+        disabled
+        title="Nog niet beschikbaar"
       >
         Projecten
-      </Link>
-      <button className="nav-link nav-link--placeholder" disabled title="Nog niet beschikbaar">
+      </button>
+      <button
+        className="nav-link nav-link--placeholder"
+        disabled
+        title="Nog niet beschikbaar"
+      >
         Assistent
       </button>
-      <button className="nav-link nav-link--placeholder" disabled title="Nog niet beschikbaar">
+      <button
+        className="nav-link nav-link--placeholder"
+        disabled
+        title="Nog niet beschikbaar"
+      >
         Account
       </button>
       <Link
@@ -51,7 +59,11 @@ export function NavigatieHeader() {
         <span className="nav-gebruiker-naam">{session.user.name}</span>
         <button
           className="btn btn-secondary"
-          style={{ fontSize: "0.8rem", minHeight: "1.75rem", padding: "0.25rem 0.625rem" }}
+          style={{
+            fontSize: "0.8rem",
+            minHeight: "1.75rem",
+            padding: "0.25rem 0.625rem",
+          }}
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
           Uitloggen
