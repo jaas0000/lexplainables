@@ -15,6 +15,7 @@ from .features.feedback.router import admin_router as feedback_admin_router
 from .features.feedback.router import router as feedback_router
 from .features.identiteit_toegang.router import router as auth_router
 from .features.llm_profielen.router import admin_router as llm_profielen_admin_router
+from .features.projecten.router import router as projecten_router
 from .features.wetcatalogus.router import router as wetcatalogus_router
 
 app = FastAPI(title="wetsanalyse-api (referentie-implementatie)")
@@ -44,3 +45,4 @@ app.include_router(berichten_admin_router, prefix="/v1")
 app.include_router(auth_router, prefix="/v1")
 app.include_router(wetcatalogus_router, prefix="/v1")
 app.include_router(llm_profielen_admin_router, prefix="/v1")
+app.include_router(projecten_router, prefix="/v1")
