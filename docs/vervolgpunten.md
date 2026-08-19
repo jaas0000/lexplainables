@@ -4,6 +4,12 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #27 — llm_calls verhuizen naar eigen feature-map
+
+- **`docs/architectuur/c4-model.md` niet bijgewerkt**: nieuwe feature-map `api/app/features/llm_calls/` wordt niet genoemd in de L3-`api`-sectie. Bijwerken samen met de al openstaande c4-punten van eerdere PRs in een volgende architectuurslag.
+
+---
+
 ## PR #22 — Werkplek annotatie-UI (story 023)
 
 - **`docs/architectuur/c4-model.md` niet bijgewerkt**: L3-sectie `frontend` bevat geen `werkplek`-pagina's (`app/werkplek/`, `app/werkplek/[slug]/`) en de nieuwe `components/annotatie/`-map (ElementenKolom, AuditlogTabblad, NieuwDocumentFormulier). Bijwerken samen met de al openstaande c4-punten van eerdere PRs in een volgende architectuurslag.
