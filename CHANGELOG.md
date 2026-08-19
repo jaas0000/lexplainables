@@ -2,6 +2,7 @@
 
 ## Niet uitgebracht
 
+- Analisten kunnen wetsartikelen als annotatie-documenten aanmaken, door de agent voorgestelde JAS-elementen beoordelen (goedkeuren, bewerken of afwijzen) en een volledig auditlog raadplegen. (PR #21)
 - Beheerders kunnen nu de vastgelegde LLM-aanroepen per analyse bekijken: gebruikte prompts, modelnaam en token-verbruik per aanroep. (PR #20)
 - Beheerders kunnen nu programmatische API-tokens aanmaken en intrekken via `/beheer/api-tokens`. Tokens worden als SHA-256-hash opgeslagen; het volledige token is alleen bij aanmaken eenmalig zichtbaar. (PR #18)
 - Analisten kunnen na een afgeronde analyse het rapport bekijken: bronnen, begrippen en afleidingsregels worden overzichtelijk weergegeven en het rapport is te downloaden als Markdown-bestand. (PR #19)

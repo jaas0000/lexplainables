@@ -4,6 +4,12 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #21 — Annotatie-backend (story 022)
+
+- **`docs/architectuur/c4-model.md` niet bijgewerkt**: L3-sectie `api` bevat geen `annotatie`-component; L2-tekst vermeldt "annotatie ... nog niet" terwijl de feature nu gebouwd is. Bijwerken samen met de al openstaande c4-punten van PRs #9–#18 in een volgende architectuurslag.
+
+---
+
 ## PR #20 — LLM-calls log (story 021)
 
 - **Frontend CI structureel kapot op push-events**: `frontend-ci.yml` faalt bij elke push met "workflow file issue" (0s, geen job output). Hierdoor draaien `check-generated-types`, `check-ts-style` en `test-frontend-e2e` niet op PRs. Los op als apart vervolgpunt (raakt alle frontend-PRs, niet specifiek deze).

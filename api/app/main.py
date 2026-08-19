@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from .features.annotatie.router import router as annotatie_router
 from .features.api_tokens.router import admin_router as api_tokens_admin_router
 from .features.berichten.router import admin_router as berichten_admin_router
 from .features.berichten.router import router as berichten_router
@@ -54,3 +55,4 @@ app.include_router(llm_profielen_admin_router, prefix="/v1")
 app.include_router(runtime_config_admin_router, prefix="/v1")
 app.include_router(projecten_router, prefix="/v1")
 app.include_router(api_tokens_admin_router, prefix="/v1")
+app.include_router(annotatie_router, prefix="/v1")
