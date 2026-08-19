@@ -1,11 +1,14 @@
 """Gedeelde authenticatie via API_TOKEN-gate en X-User-Id-header (ADR-0003).
 
-`huidige_beheerder` verifieert het machine-token van de BFF (constant-time vergelijking)
-en leest de gebruikersidentiteit uit de X-User-Id-header die de BFF zet vanuit de
-Auth.js-sessie. De BFF is verantwoordelijk voor rolautorisatie.
+`huidige_beheerder` verifieert het machine-token van de BFF (twee bronnen: statische env-var
+en DB-tokens uit `api_tokens`) en leest de gebruikersidentiteit uit de X-User-Id-header die
+de BFF zet vanuit de Auth.js-sessie. De BFF is verantwoordelijk voor rolautorisatie.
 
 `vereist_api_token` is een losse dependency voor routes die wel de token maar niet de
-gebruikersidentiteit nodig hebben (bijv. /v1/auth/verify).
+gebruikersidentiteit nodig hebben (bijv. /v1/auth/verify). De verificatievolgorde:
+1. Statische `API_TOKEN` uit de omgeving (constant-time vergelijking) — bootstrap-pad.
+2. DB-tokens uit `api_tokens`-tabel (SHA-256-hash-lookup) — intrekbaar, per beheerder.
+Bij een DB-treffer wordt `laatste_gebruik` best-effort bijgeschreven.
 
 `huidige_gebruiker` is een tijdelijke stand-in voor publieke routes (nog ongewijzigd).
 """
@@ -36,28 +39,45 @@ def _niet_geautoriseerd(detail: str = "Niet geautoriseerd.") -> HTTPException:
     )
 
 
-def vereist_api_token(
+async def vereist_api_token(
     authorization: str | None = Header(None),
 ) -> None:
-    """Verifieert de API_TOKEN uit de Authorization-header (constant-time)."""
-    if not API_TOKEN:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="API-token niet geconfigureerd.",
-        )
+    """Verifieert het token uit de Authorization-header via twee bronnen.
+
+    Bron 1: statische API_TOKEN (constant-time). Bron 2: DB-tokens (SHA-256-hash).
+    Bij een DB-treffer: `laatste_gebruik` best-effort bijwerken.
+    """
     if not authorization:
         raise _niet_geautoriseerd()
+
     token = authorization.removeprefix("Bearer ").strip()
-    if not hmac.compare_digest(token.encode(), API_TOKEN.encode()):
-        raise _niet_geautoriseerd()
+
+    # 1. Statische token — bootstrap-pad, werkt ook zonder database.
+    if API_TOKEN and hmac.compare_digest(token.encode(), API_TOKEN.encode()):
+        return
+
+    # 2. DB-tokens — lazy import om circulaire imports bij module-load te vermijden.
+    try:
+        from ..db import get_engine
+        from ..features.api_tokens.store import SqlAlchemyApiTokenStore
+
+        store = SqlAlchemyApiTokenStore(get_engine())
+        token_id = await store.verifieer(token)
+        if token_id:
+            await store.update_laatste_gebruik(token_id)
+            return
+    except Exception:  # noqa: BLE001 — DB niet beschikbaar mag geen 500 geven; val door naar 401
+        pass
+
+    raise _niet_geautoriseerd()
 
 
-def huidige_beheerder(
+async def huidige_beheerder(
     authorization: str | None = Header(None),
     x_user_id: str | None = Header(None, alias="X-User-Id"),
 ) -> GebruikerContext:
-    """Verifieert API_TOKEN + leest gebruikersidentiteit uit X-User-Id-header."""
-    vereist_api_token(authorization)
+    """Verifieert API_TOKEN (statisch of DB) + leest gebruikersidentiteit uit X-User-Id-header."""
+    await vereist_api_token(authorization)
     if not x_user_id:
         raise _niet_geautoriseerd()
     return GebruikerContext(gebruikersnaam=x_user_id, rol="beheerder")

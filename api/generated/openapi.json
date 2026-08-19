@@ -313,6 +313,137 @@
         "title": "AnalyseOverzicht",
         "type": "object"
       },
+      "ApiTokenAangemaakt": {
+        "description": "Eenmalige response bij aanmaken \u2014 bevat het plaintext-token.",
+        "properties": {
+          "aangemaakt_door": {
+            "title": "Aangemaakt Door",
+            "type": "string"
+          },
+          "aangemaakt_op": {
+            "format": "date-time",
+            "title": "Aangemaakt Op",
+            "type": "string"
+          },
+          "actief": {
+            "title": "Actief",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "laatste_gebruik": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Laatste Gebruik"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "token_prefix": {
+            "title": "Token Prefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "token_prefix",
+          "scope",
+          "actief",
+          "aangemaakt_door",
+          "aangemaakt_op",
+          "laatste_gebruik",
+          "token"
+        ],
+        "title": "ApiTokenAangemaakt",
+        "type": "object"
+      },
+      "ApiTokenAanmakenVerzoek": {
+        "properties": {
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "title": "ApiTokenAanmakenVerzoek",
+        "type": "object"
+      },
+      "ApiTokenRead": {
+        "properties": {
+          "aangemaakt_door": {
+            "title": "Aangemaakt Door",
+            "type": "string"
+          },
+          "aangemaakt_op": {
+            "format": "date-time",
+            "title": "Aangemaakt Op",
+            "type": "string"
+          },
+          "actief": {
+            "title": "Actief",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "laatste_gebruik": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Laatste Gebruik"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "token_prefix": {
+            "title": "Token Prefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "token_prefix",
+          "scope",
+          "actief",
+          "aangemaakt_door",
+          "aangemaakt_op",
+          "laatste_gebruik"
+        ],
+        "title": "ApiTokenRead",
+        "type": "object"
+      },
       "AppInstellingen": {
         "description": "Huidige waarden van alle runtime-instellingen.",
         "properties": {
@@ -1531,6 +1662,218 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/admin/api-tokens": {
+      "get": {
+        "description": "Lijst alle actieve API-tokens. Bevat nooit het plaintext-token.",
+        "operationId": "lijst_tokens_v1_admin_api_tokens_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApiTokenRead"
+                  },
+                  "title": "Response Lijst Tokens V1 Admin Api Tokens Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lijst Tokens",
+        "tags": [
+          "api-tokens-admin"
+        ]
+      },
+      "post": {
+        "description": "Maak een nieuw API-token. Het plaintext-token is eenmalig zichtbaar in de response.",
+        "operationId": "maak_token_v1_admin_api_tokens_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiTokenAanmakenVerzoek"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTokenAangemaakt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Maak Token",
+        "tags": [
+          "api-tokens-admin"
+        ]
+      }
+    },
+    "/v1/admin/api-tokens/{token_id}": {
+      "delete": {
+        "description": "Trek een token in. 404 als het token onbekend is of al ingetrokken was.",
+        "operationId": "trek_token_in_v1_admin_api_tokens__token_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "title": "Token Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trek Token In",
+        "tags": [
+          "api-tokens-admin"
+        ]
+      }
+    },
     "/v1/admin/berichten": {
       "get": {
         "operationId": "lijst_alle_berichten_v1_admin_berichten_get",
