@@ -343,6 +343,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/annotatie/documenten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lijst Documenten */
+        get: operations["lijst_documenten_v1_annotatie_documenten_get"];
+        put?: never;
+        /** Maak Document */
+        post: operations["maak_document_v1_annotatie_documenten_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/annotatie/documenten/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Document */
+        get: operations["get_document_v1_annotatie_documenten__slug__get"];
+        put?: never;
+        post?: never;
+        /** Verwijder Document */
+        delete: operations["verwijder_document_v1_annotatie_documenten__slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/annotatie/documenten/{slug}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Audit */
+        get: operations["get_audit_v1_annotatie_documenten__slug__audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/annotatie/documenten/{slug}/elementen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Zet Elementen
+         * @description Vervangt de elementenlijst volledig.
+         *
+         *     Ongeldige JAS-klasse of lege tekst → element overgeslagen.
+         */
+        put: operations["zet_elementen_v1_annotatie_documenten__slug__elementen_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/annotatie/documenten/{slug}/elementen/{element_id}/beslissing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registreer Beslissing
+         * @description Registreert een human-beslissing op één element. Valideert type-specifieke vereisten
+         *     (afgedwongen door `BeslissingInvoer` validator → 422 bij ontbrekende velden).
+         */
+        post: operations["registreer_beslissing_v1_annotatie_documenten__slug__elementen__element_id__beslissing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/me": {
         parameters: {
             query?: never;
@@ -644,6 +740,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projecten/{analyse_id}/rapport": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Haal Rapport
+         * @description Geef het rapport als JSON terug.
+         *
+         *     404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.
+         */
+        get: operations["haal_rapport_v1_projecten__analyse_id__rapport_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projecten/{analyse_id}/rapport.md": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Haal Rapport Md
+         * @description Geef het rapport als Markdown-download.
+         *
+         *     404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.
+         *     Content-Disposition: attachment; filename="rapport-{analyse_id}.md"
+         */
+        get: operations["haal_rapport_md_v1_projecten__analyse_id__rapport_md_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/wetten": {
         parameters: {
             query?: never;
@@ -689,6 +830,11 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * Aandacht
+         * @enum {string}
+         */
+        Aandacht: "groen" | "geel" | "rood";
+        /**
          * AangemaaktAcceptatie
          * @description Directe bevestiging na aanmaken — 202 Accepted, analyse loopt asynchroon.
          */
@@ -707,6 +853,15 @@ export interface components {
             items: components["schemas"]["BerichtAdminRead"][];
             /** Totaal */
             totaal: number;
+        };
+        /** Alternatief */
+        Alternatief: {
+            /** Klasse */
+            klasse: string;
+            /** Tekst */
+            tekst: string;
+            /** Toelichting */
+            toelichting: string;
         };
         /**
          * AnalyseAanmaken
@@ -792,6 +947,78 @@ export interface components {
              * @enum {string}
              */
             status: "wachtrij" | "actief" | "review" | "klaar" | "fout";
+        };
+        /** AnnotatieDocument */
+        AnnotatieDocument: {
+            /** Aangemaakt */
+            aangemaakt: string;
+            /** Artikel */
+            artikel: string;
+            /** Bijgewerkt */
+            bijgewerkt: string;
+            /** Bwb Id */
+            bwb_id: string;
+            /** Client Id */
+            client_id: string;
+            /** Elementen */
+            elementen?: components["schemas"]["AnnotatieElement"][];
+            /**
+             * Lid
+             * @default
+             */
+            lid: string;
+            /** Slug */
+            slug: string;
+            /** @default voorgesteld */
+            status: components["schemas"]["DocumentStatus"];
+            /** Werkgebied */
+            werkgebied: string;
+        };
+        /** AnnotatieElement */
+        AnnotatieElement: {
+            aandacht?: components["schemas"]["Aandacht"] | null;
+            /** Alternatieven */
+            alternatieven?: components["schemas"]["Alternatief"][];
+            /** Beslissingen */
+            beslissingen?: components["schemas"]["Beslissing"][];
+            /** Critic */
+            critic?: string | null;
+            /** Diff */
+            diff?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Herkomst
+             * @default
+             */
+            herkomst: string;
+            /** Id */
+            id: string;
+            /** Klasse */
+            klasse: string;
+            /** @default voorgesteld */
+            levenscyclus: components["schemas"]["Levenscyclus"];
+            /**
+             * Lid
+             * @default
+             */
+            lid: string;
+            /** Span */
+            span?: {
+                [key: string]: unknown;
+            } | null;
+            /** Tekst */
+            tekst: string;
+            /**
+             * Toelichting
+             * @default
+             */
+            toelichting: string;
+            /**
+             * Vindplaats
+             * @default
+             */
+            vindplaats: string;
         };
         /**
          * ApiTokenAangemaakt
@@ -879,6 +1106,32 @@ export interface components {
             /** Pad */
             pad: string;
         };
+        /** AuditRegel */
+        AuditRegel: {
+            /** Actie */
+            actie: string;
+            /** Actor */
+            actor: string;
+            /** Client Id */
+            client_id: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /** Document Slug */
+            document_slug: string;
+            /** Element Id */
+            element_id: string | null;
+            /** Id */
+            id: number;
+            /** Tijdstip */
+            tijdstip: string;
+        };
+        /** AuditlogOut */
+        AuditlogOut: {
+            /** Items */
+            items: components["schemas"]["AuditRegel"][];
+        };
         /**
          * BegripInvoer
          * @description Eén begrip uit een eventuele bestaande begrippenlijst.
@@ -889,6 +1142,11 @@ export interface components {
             /** Naam */
             naam: string;
         };
+        /**
+         * BeoordelingsReden
+         * @enum {string}
+         */
+        BeoordelingsReden: "onduidelijk" | "fout_klasse" | "fout_tekst" | "dubbeling" | "overig";
         /**
          * BerichtAdminRead
          * @description Wat een beheerder terugkrijgt: ook concepten, met wie het bericht aanmaakte — maar geen
@@ -997,6 +1255,34 @@ export interface components {
             /** Totaal */
             totaal: number;
         };
+        /** Beslissing */
+        Beslissing: {
+            /** Actor */
+            actor: string;
+            /** Opmerking */
+            opmerking?: string | null;
+            reden?: components["schemas"]["BeoordelingsReden"] | null;
+            /** Tijd */
+            tijd: string;
+            type: components["schemas"]["BeslissingType"];
+            /** Wijziging */
+            wijziging?: {
+                [key: string]: unknown;
+            };
+        };
+        /** BeslissingInvoer */
+        BeslissingInvoer: {
+            /** Opmerking */
+            opmerking?: string | null;
+            reden?: components["schemas"]["BeoordelingsReden"] | null;
+            type: components["schemas"]["BeslissingType"];
+            wijziging?: components["schemas"]["WijzigingInvoer"] | null;
+        };
+        /**
+         * BeslissingType
+         * @enum {string}
+         */
+        BeslissingType: "goedkeuren" | "bewerken" | "afwijzen" | "opmerking";
         /**
          * BronKeuze
          * @description Één bronartikel: wet-id, artikelnummer en optioneel lidnummer.
@@ -1008,6 +1294,88 @@ export interface components {
             bwb_id: string;
             /** Lid */
             lid?: string | null;
+        };
+        /** DocumentAanmaken */
+        DocumentAanmaken: {
+            /** Artikel */
+            artikel: string;
+            /** Bwb Id */
+            bwb_id: string;
+            /** Lid */
+            lid?: string | null;
+            /** Werkgebied */
+            werkgebied: string;
+        };
+        /** DocumentSamenvatting */
+        DocumentSamenvatting: {
+            /** Aantal Elementen */
+            aantal_elementen: number;
+            /** Artikel */
+            artikel: string;
+            /** Bijgewerkt */
+            bijgewerkt: string;
+            /** Bwb Id */
+            bwb_id: string;
+            /** Lid */
+            lid: string;
+            /** Slug */
+            slug: string;
+            status: components["schemas"]["DocumentStatus"];
+            /** Werkgebied */
+            werkgebied: string;
+        };
+        /**
+         * DocumentStatus
+         * @enum {string}
+         */
+        DocumentStatus: "voorgesteld" | "gedeeltelijk_gereviewd" | "klaar";
+        /** DocumentenLijstOut */
+        DocumentenLijstOut: {
+            /** Items */
+            items: components["schemas"]["DocumentSamenvatting"][];
+        };
+        /** ElementInvoer */
+        ElementInvoer: {
+            aandacht?: components["schemas"]["Aandacht"] | null;
+            /** Alternatieven */
+            alternatieven?: components["schemas"]["Alternatief"][];
+            /** Critic */
+            critic?: string | null;
+            /** Klasse */
+            klasse: string;
+            /**
+             * Lid
+             * @default
+             */
+            lid: string;
+            /** Span */
+            span?: {
+                [key: string]: unknown;
+            } | null;
+            /** Tekst */
+            tekst: string;
+            /**
+             * Toelichting
+             * @default
+             */
+            toelichting: string;
+            /**
+             * Vindplaats
+             * @default
+             */
+            vindplaats: string;
+        };
+        /** ElementenInvoer */
+        ElementenInvoer: {
+            /** Elementen */
+            elementen: components["schemas"]["ElementInvoer"][];
+        };
+        /** ElementenZettenOut */
+        ElementenZettenOut: {
+            /** Aanvaard */
+            aanvaard: number;
+            /** Verworpen */
+            verworpen: number;
         };
         /** FeedbackBevestigd */
         FeedbackBevestigd: {
@@ -1110,6 +1478,11 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * Levenscyclus
+         * @enum {string}
+         */
+        Levenscyclus: "voorgesteld" | "critic_gecheckt" | "human_goedgekeurd" | "bewerkt" | "afgewezen";
         /**
          * LlmCallRead
          * @description Vastgelegde LLM-aanroep, leesbaar via GET /v1/projecten/{id}/llm-calls.
@@ -1371,6 +1744,17 @@ export interface components {
             artikelen: components["schemas"]["ArtikelKeuze"][];
             /** Bwb Id */
             bwb_id: string;
+        };
+        /** WijzigingInvoer */
+        WijzigingInvoer: {
+            /** Klasse */
+            klasse?: string | null;
+            /** Lid */
+            lid?: string | null;
+            /** Tekst */
+            tekst?: string | null;
+            /** Toelichting */
+            toelichting?: string | null;
         };
     };
     responses: never;
@@ -2307,6 +2691,247 @@ export interface operations {
             };
         };
     };
+    lijst_documenten_v1_annotatie_documenten_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+            };
+            header: {
+                "X-User-Id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentenLijstOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    maak_document_v1_annotatie_documenten_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentAanmaken"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotatieDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_document_v1_annotatie_documenten__slug__get: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotatieDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verwijder_document_v1_annotatie_documenten__slug__delete: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_audit_v1_annotatie_documenten__slug__audit_get: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditlogOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    zet_elementen_v1_annotatie_documenten__slug__elementen_put: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ElementenInvoer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ElementenZettenOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    registreer_beslissing_v1_annotatie_documenten__slug__elementen__element_id__beslissing_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+                element_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeslissingInvoer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotatieDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     me_v1_auth_me_get: {
         parameters: {
             query?: never;
@@ -2857,6 +3482,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LlmCallRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    haal_rapport_v1_projecten__analyse_id__rapport_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    haal_rapport_md_v1_projecten__analyse_id__rapport_md_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

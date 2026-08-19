@@ -14,6 +14,7 @@ export function NavigatieHeader() {
   const isBeheer =
     pathname.startsWith("/beheer") || pathname.startsWith("/mockup/beheer");
   const isAccount = pathname.startsWith("/account");
+  const isWerkplek = pathname.startsWith("/werkplek");
 
   return (
     <nav className="nav">
@@ -24,6 +25,12 @@ export function NavigatieHeader() {
       >
         Projecten
       </button>
+      <Link
+        href="/werkplek"
+        className={`nav-link${isWerkplek ? " nav-link--active" : ""}`}
+      >
+        Werkplek
+      </Link>
       <button
         className="nav-link nav-link--placeholder"
         disabled
