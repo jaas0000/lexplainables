@@ -16,10 +16,9 @@ import json
 import time
 
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from ...shared.db import upsert
 from ...shared.tijd import nu
 from .models import (
     SLEUTEL_CAPTURE_LLM_CALLS,
@@ -43,9 +42,6 @@ def _cache_leeg() -> None:
 class RuntimeConfigStore:
     def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
-        # Dialect-aware insert — eenmalig bepaald bij constructie (berichten/store.py r137-138).
-        is_pg = engine.url.get_backend_name() == "postgresql"
-        self._insert_fn = pg_insert if is_pg else sqlite_insert
 
     async def lees_alle(self) -> AppInstellingen:
         """Geef alle instellingen terug; gebruikt TTL-cache."""
@@ -80,13 +76,12 @@ class RuntimeConfigStore:
             moment = nu()
             async with self._engine.begin() as conn:
                 for sleutel, waarde in te_schrijven.items():
-                    stmt = (
-                        self._insert_fn(app_instellingen)
-                        .values(sleutel=sleutel, waarde=waarde, bijgewerkt=moment)
-                        .on_conflict_do_update(
-                            index_elements=["sleutel"],
-                            set_={"waarde": waarde, "bijgewerkt": moment},
-                        )
+                    stmt = upsert(
+                        conn,
+                        app_instellingen,
+                        values={"sleutel": sleutel, "waarde": waarde, "bijgewerkt": moment},
+                        conflict_cols=["sleutel"],
+                        update_cols=["waarde", "bijgewerkt"],
                     )
                     await conn.execute(stmt)
             _cache.pop("alle", None)

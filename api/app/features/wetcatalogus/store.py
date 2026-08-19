@@ -12,9 +12,10 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from ...shared.db import upsert
 from ...shared.tijd import nu
 from .models import ArtikelKeuze, WetKeuze, WetRead, WetStructuur, wet_catalogus, wet_uit_rij
 
@@ -77,30 +78,23 @@ class DatabaseWetcatalogusStore:
         return [wet_uit_rij(rij) for rij in rijen]
 
     async def upsert(self, bwb_id: str, naam: str, bijgewerkt_door: str) -> WetRead:
+        # Vervangt de eerdere check-then-insert/update door één dialect-aware upsert met
+        # RETURNING (zowel Postgres als SQLite 3.35+ steunen dit). Zie `shared/db.py`.
         moment = nu()
+        stmt = upsert(
+            self._engine,
+            wet_catalogus,
+            values={
+                "bwb_id": bwb_id,
+                "naam": naam,
+                "bijgewerkt_door": bijgewerkt_door,
+                "bijgewerkt": moment,
+            },
+            conflict_cols=["bwb_id"],
+            update_cols=["naam", "bijgewerkt_door", "bijgewerkt"],
+        ).returning(wet_catalogus)
         async with self._engine.begin() as conn:
-            # Controleer of de wet al bestaat om INSERT vs UPDATE te kiezen.
-            bestaand = await conn.scalar(
-                select(wet_catalogus.c.bwb_id).where(wet_catalogus.c.bwb_id == bwb_id)
-            )
-            if bestaand is None:
-                result = await conn.execute(
-                    insert(wet_catalogus)
-                    .values(
-                        bwb_id=bwb_id,
-                        naam=naam,
-                        bijgewerkt_door=bijgewerkt_door,
-                        bijgewerkt=moment,
-                    )
-                    .returning(wet_catalogus)
-                )
-            else:
-                result = await conn.execute(
-                    update(wet_catalogus)
-                    .where(wet_catalogus.c.bwb_id == bwb_id)
-                    .values(naam=naam, bijgewerkt_door=bijgewerkt_door, bijgewerkt=moment)
-                    .returning(wet_catalogus)
-                )
+            result = await conn.execute(stmt)
             rij = result.one()
         return wet_uit_rij(rij)
 
