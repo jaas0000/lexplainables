@@ -4,6 +4,12 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #27 — llm_calls verhuizen naar eigen feature-map
+
+- **`docs/architectuur/c4-model.md` niet bijgewerkt**: nieuwe feature-map `api/app/features/llm_calls/` wordt niet genoemd in de L3-`api`-sectie. Bijwerken samen met de al openstaande c4-punten van eerdere PRs in een volgende architectuurslag.
+
+---
+
 ## PR #22 — Werkplek annotatie-UI (story 023)
 
 - **`docs/architectuur/c4-model.md` niet bijgewerkt**: L3-sectie `frontend` bevat geen `werkplek`-pagina's (`app/werkplek/`, `app/werkplek/[slug]/`) en de nieuwe `components/annotatie/`-map (ElementenKolom, AuditlogTabblad, NieuwDocumentFormulier). Bijwerken samen met de al openstaande c4-punten van eerdere PRs in een volgende architectuurslag.
@@ -32,9 +38,6 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 ## Architectuur-audit — 2026-08-19 (ronde 2)
 
 Audit gedraaid op stand na PRs #21 (annotatie-backend) en #22 (annotatie-UI). Focus: `api/app/features/`, `api/app/shared/`, `api/app/engine/`, `db.py`, `main.py`. Vier bevindingen — geen ervan is een projectbrede keuze die een ADR verdient (engine als derde mapniveau staat al in `stack-profiel.md` §Feature-eenheid; geen wijziging in dat beeld). Alles staat hieronder als vervolgpunt; niets is deze ronde direct gerefactord omdat elke aanpassing meerdere features raakt.
-
-**Grenzen — `SqlAlchemyLlmCallsStore` woont in `projecten/store.py` maar wordt door de engine geïmporteerd (`orchestrator.py:90`):**
-`projecten/store.py:211-259` bevat twee stores in één bestand (`SqlAlchemyAnalyseStore` én `SqlAlchemyLlmCallsStore`), en de `llm_calls`-tabel staat in `projecten/models.py:61-76`. De engine is de enige capture-schrijver; de projecten-router leest alleen. Zolang alleen `engine/` + `projecten/` de tabel raken is de huidige plaatsing verdedigbaar (eigenaar-export-route via `projecten`), maar zodra de annotatie- of een toekomstige agent-feature ook capture wil, komt de derde consument voorbij en hoort `llm_calls` naar een eigen plek. Vervolgpunt: bij de eerste derde consument evalueren — dan is de trigger van regel 4 helder.
 
 **Stabiel bevonden:**
 `db.py` (30 r) en `main.py` (58 r) blijven strak dun. Feature-structuur (`models.py`/`store.py`/`router.py`/`tests/`) is consistent voor alle negen domeinen. Elke feature heeft een eigen `MetaData()`-instantie — bewuste isolatie, geen probleem (Alembic beheert het schema, niet `metadata.create_all()`). `shared/tijd.py`, `shared/crypto.py`, `shared/validation.py`, `shared/wettenbank.py`, `shared/llm/` zitten op de juiste plek en hebben elk ≥2 consumenten. De engine-module is nog steeds gedocumenteerd in `stack-profiel.md` §Feature-eenheid; geen tweede LLM-orkestratie-consument in zicht, dus verplaatsingsvraag nog niet actief. `engine/steps.py` (237 r) en `engine/prompts.py` (224 r) zijn de grootste modules in `engine/`, maar elk één natuurlijk concern — cohesie nog gezond.

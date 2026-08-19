@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from ..features.llm_calls.store import SqlAlchemyLlmCallsStore
 from ..features.llm_profielen.store import SqlAlchemyLlmProfielenStore
 from ..features.runtime_config.store import RuntimeConfigStore
 from ..shared.crypto import decrypt
@@ -87,8 +88,6 @@ async def _run(analyse_id: str, store, engine) -> None:
         capture_aan = False
 
     # llm_calls store (altijd aanmaken; stores zijn goedkoop)
-    from ..features.projecten.store import SqlAlchemyLlmCallsStore
-
     llm_calls_store = SqlAlchemyLlmCallsStore(engine)
 
     # ── 3. Act 2: per bron ophalen + analyseren ───────────────────────────────
