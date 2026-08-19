@@ -46,9 +46,7 @@ def upgrade() -> None:
         sa.Column("tijdstip", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "ix_annotatie_audit_document_slug", "annotatie_audit", ["document_slug"]
-    )
+    op.create_index("ix_annotatie_audit_document_slug", "annotatie_audit", ["document_slug"])
 
 
 def downgrade() -> None:
