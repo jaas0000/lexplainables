@@ -1,6 +1,15 @@
 {
   "components": {
     "schemas": {
+      "Aandacht": {
+        "enum": [
+          "groen",
+          "geel",
+          "rood"
+        ],
+        "title": "Aandacht",
+        "type": "string"
+      },
       "AangemaaktAcceptatie": {
         "description": "Directe bevestiging na aanmaken \u2014 202 Accepted, analyse loopt asynchroon.",
         "properties": {
@@ -46,6 +55,29 @@
           "totaal"
         ],
         "title": "AdminBerichtenPaginaOut",
+        "type": "object"
+      },
+      "Alternatief": {
+        "properties": {
+          "klasse": {
+            "title": "Klasse",
+            "type": "string"
+          },
+          "tekst": {
+            "title": "Tekst",
+            "type": "string"
+          },
+          "toelichting": {
+            "title": "Toelichting",
+            "type": "string"
+          }
+        },
+        "required": [
+          "klasse",
+          "tekst",
+          "toelichting"
+        ],
+        "title": "Alternatief",
         "type": "object"
       },
       "AnalyseAanmaken": {
@@ -313,6 +345,164 @@
         "title": "AnalyseOverzicht",
         "type": "object"
       },
+      "AnnotatieDocument": {
+        "properties": {
+          "aangemaakt": {
+            "title": "Aangemaakt",
+            "type": "string"
+          },
+          "artikel": {
+            "title": "Artikel",
+            "type": "string"
+          },
+          "bijgewerkt": {
+            "title": "Bijgewerkt",
+            "type": "string"
+          },
+          "bwb_id": {
+            "title": "Bwb Id",
+            "type": "string"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "string"
+          },
+          "elementen": {
+            "items": {
+              "$ref": "#/components/schemas/AnnotatieElement"
+            },
+            "title": "Elementen",
+            "type": "array"
+          },
+          "lid": {
+            "default": "",
+            "title": "Lid",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DocumentStatus",
+            "default": "voorgesteld"
+          },
+          "werkgebied": {
+            "title": "Werkgebied",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "client_id",
+          "werkgebied",
+          "bwb_id",
+          "artikel",
+          "aangemaakt",
+          "bijgewerkt"
+        ],
+        "title": "AnnotatieDocument",
+        "type": "object"
+      },
+      "AnnotatieElement": {
+        "properties": {
+          "aandacht": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Aandacht"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "alternatieven": {
+            "items": {
+              "$ref": "#/components/schemas/Alternatief"
+            },
+            "title": "Alternatieven",
+            "type": "array"
+          },
+          "beslissingen": {
+            "items": {
+              "$ref": "#/components/schemas/Beslissing"
+            },
+            "title": "Beslissingen",
+            "type": "array"
+          },
+          "critic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critic"
+          },
+          "diff": {
+            "additionalProperties": true,
+            "title": "Diff",
+            "type": "object"
+          },
+          "herkomst": {
+            "default": "",
+            "title": "Herkomst",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "klasse": {
+            "title": "Klasse",
+            "type": "string"
+          },
+          "levenscyclus": {
+            "$ref": "#/components/schemas/Levenscyclus",
+            "default": "voorgesteld"
+          },
+          "lid": {
+            "default": "",
+            "title": "Lid",
+            "type": "string"
+          },
+          "span": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span"
+          },
+          "tekst": {
+            "title": "Tekst",
+            "type": "string"
+          },
+          "toelichting": {
+            "default": "",
+            "title": "Toelichting",
+            "type": "string"
+          },
+          "vindplaats": {
+            "default": "",
+            "title": "Vindplaats",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "klasse",
+          "tekst"
+        ],
+        "title": "AnnotatieElement",
+        "type": "object"
+      },
       "ApiTokenAangemaakt": {
         "description": "Eenmalige response bij aanmaken \u2014 bevat het plaintext-token.",
         "properties": {
@@ -493,6 +683,78 @@
         "title": "ArtikelKeuze",
         "type": "object"
       },
+      "AuditRegel": {
+        "properties": {
+          "actie": {
+            "title": "Actie",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "document_slug": {
+            "title": "Document Slug",
+            "type": "string"
+          },
+          "element_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "tijdstip": {
+            "title": "Tijdstip",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document_slug",
+          "client_id",
+          "actor",
+          "actie",
+          "element_id",
+          "detail",
+          "tijdstip"
+        ],
+        "title": "AuditRegel",
+        "type": "object"
+      },
+      "AuditlogOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditRegel"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AuditlogOut",
+        "type": "object"
+      },
       "BegripInvoer": {
         "description": "E\u00e9n begrip uit een eventuele bestaande begrippenlijst.",
         "properties": {
@@ -517,6 +779,17 @@
         ],
         "title": "BegripInvoer",
         "type": "object"
+      },
+      "BeoordelingsReden": {
+        "enum": [
+          "onduidelijk",
+          "fout_klasse",
+          "fout_tekst",
+          "dubbeling",
+          "overig"
+        ],
+        "title": "BeoordelingsReden",
+        "type": "string"
       },
       "BerichtAdminRead": {
         "description": "Wat een beheerder terugkrijgt: ook concepten, met wie het bericht aanmaakte \u2014 maar geen\nper-gebruiker `gelezen`-vlag (de admin-lijst is niet gebonden aan \u00e9\u00e9n gebruiker).",
@@ -770,6 +1043,107 @@
         "title": "BerichtenPaginaOut",
         "type": "object"
       },
+      "Beslissing": {
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "opmerking": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opmerking"
+          },
+          "reden": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BeoordelingsReden"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tijd": {
+            "title": "Tijd",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/BeslissingType"
+          },
+          "wijziging": {
+            "additionalProperties": true,
+            "title": "Wijziging",
+            "type": "object"
+          }
+        },
+        "required": [
+          "type",
+          "actor",
+          "tijd"
+        ],
+        "title": "Beslissing",
+        "type": "object"
+      },
+      "BeslissingInvoer": {
+        "properties": {
+          "opmerking": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opmerking"
+          },
+          "reden": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BeoordelingsReden"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/BeslissingType"
+          },
+          "wijziging": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WijzigingInvoer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "BeslissingInvoer",
+        "type": "object"
+      },
+      "BeslissingType": {
+        "enum": [
+          "goedkeuren",
+          "bewerken",
+          "afwijzen",
+          "opmerking"
+        ],
+        "title": "BeslissingType",
+        "type": "string"
+      },
       "BronKeuze": {
         "description": "\u00c9\u00e9n bronartikel: wet-id, artikelnummer en optioneel lidnummer.",
         "properties": {
@@ -798,6 +1172,222 @@
           "artikel"
         ],
         "title": "BronKeuze",
+        "type": "object"
+      },
+      "DocumentAanmaken": {
+        "properties": {
+          "artikel": {
+            "minLength": 1,
+            "title": "Artikel",
+            "type": "string"
+          },
+          "bwb_id": {
+            "minLength": 1,
+            "title": "Bwb Id",
+            "type": "string"
+          },
+          "lid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lid"
+          },
+          "werkgebied": {
+            "minLength": 1,
+            "title": "Werkgebied",
+            "type": "string"
+          }
+        },
+        "required": [
+          "werkgebied",
+          "bwb_id",
+          "artikel"
+        ],
+        "title": "DocumentAanmaken",
+        "type": "object"
+      },
+      "DocumentSamenvatting": {
+        "properties": {
+          "aantal_elementen": {
+            "title": "Aantal Elementen",
+            "type": "integer"
+          },
+          "artikel": {
+            "title": "Artikel",
+            "type": "string"
+          },
+          "bijgewerkt": {
+            "title": "Bijgewerkt",
+            "type": "string"
+          },
+          "bwb_id": {
+            "title": "Bwb Id",
+            "type": "string"
+          },
+          "lid": {
+            "title": "Lid",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DocumentStatus"
+          },
+          "werkgebied": {
+            "title": "Werkgebied",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "bwb_id",
+          "artikel",
+          "lid",
+          "werkgebied",
+          "status",
+          "aantal_elementen",
+          "bijgewerkt"
+        ],
+        "title": "DocumentSamenvatting",
+        "type": "object"
+      },
+      "DocumentStatus": {
+        "enum": [
+          "voorgesteld",
+          "gedeeltelijk_gereviewd",
+          "klaar"
+        ],
+        "title": "DocumentStatus",
+        "type": "string"
+      },
+      "DocumentenLijstOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentSamenvatting"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DocumentenLijstOut",
+        "type": "object"
+      },
+      "ElementInvoer": {
+        "properties": {
+          "aandacht": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Aandacht"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "alternatieven": {
+            "items": {
+              "$ref": "#/components/schemas/Alternatief"
+            },
+            "title": "Alternatieven",
+            "type": "array"
+          },
+          "critic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critic"
+          },
+          "klasse": {
+            "title": "Klasse",
+            "type": "string"
+          },
+          "lid": {
+            "default": "",
+            "title": "Lid",
+            "type": "string"
+          },
+          "span": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span"
+          },
+          "tekst": {
+            "title": "Tekst",
+            "type": "string"
+          },
+          "toelichting": {
+            "default": "",
+            "title": "Toelichting",
+            "type": "string"
+          },
+          "vindplaats": {
+            "default": "",
+            "title": "Vindplaats",
+            "type": "string"
+          }
+        },
+        "required": [
+          "klasse",
+          "tekst"
+        ],
+        "title": "ElementInvoer",
+        "type": "object"
+      },
+      "ElementenInvoer": {
+        "properties": {
+          "elementen": {
+            "items": {
+              "$ref": "#/components/schemas/ElementInvoer"
+            },
+            "title": "Elementen",
+            "type": "array"
+          }
+        },
+        "required": [
+          "elementen"
+        ],
+        "title": "ElementenInvoer",
+        "type": "object"
+      },
+      "ElementenZettenOut": {
+        "properties": {
+          "aanvaard": {
+            "title": "Aanvaard",
+            "type": "integer"
+          },
+          "verworpen": {
+            "title": "Verworpen",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "aanvaard",
+          "verworpen"
+        ],
+        "title": "ElementenZettenOut",
         "type": "object"
       },
       "FeedbackBevestigd": {
@@ -1050,6 +1640,17 @@
         },
         "title": "HTTPValidationError",
         "type": "object"
+      },
+      "Levenscyclus": {
+        "enum": [
+          "voorgesteld",
+          "critic_gecheckt",
+          "human_goedgekeurd",
+          "bewerkt",
+          "afgewezen"
+        ],
+        "title": "Levenscyclus",
+        "type": "string"
       },
       "LlmCallRead": {
         "description": "Vastgelegde LLM-aanroep, leesbaar via GET /v1/projecten/{id}/llm-calls.",
@@ -1652,6 +2253,56 @@
           "artikelen"
         ],
         "title": "WetStructuur",
+        "type": "object"
+      },
+      "WijzigingInvoer": {
+        "properties": {
+          "klasse": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Klasse"
+          },
+          "lid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lid"
+          },
+          "tekst": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tekst"
+          },
+          "toelichting": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toelichting"
+          }
+        },
+        "title": "WijzigingInvoer",
         "type": "object"
       }
     }
@@ -3646,6 +4297,398 @@
         ]
       }
     },
+    "/v1/annotatie/documenten": {
+      "get": {
+        "operationId": "lijst_documenten_v1_annotatie_documenten_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentenLijstOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lijst Documenten",
+        "tags": [
+          "annotatie"
+        ]
+      },
+      "post": {
+        "operationId": "maak_document_v1_annotatie_documenten_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentAanmaken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotatieDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Maak Document",
+        "tags": [
+          "annotatie"
+        ]
+      }
+    },
+    "/v1/annotatie/documenten/{slug}": {
+      "delete": {
+        "operationId": "verwijder_document_v1_annotatie_documenten__slug__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verwijder Document",
+        "tags": [
+          "annotatie"
+        ]
+      },
+      "get": {
+        "operationId": "get_document_v1_annotatie_documenten__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotatieDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Document",
+        "tags": [
+          "annotatie"
+        ]
+      }
+    },
+    "/v1/annotatie/documenten/{slug}/audit": {
+      "get": {
+        "operationId": "get_audit_v1_annotatie_documenten__slug__audit_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditlogOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Audit",
+        "tags": [
+          "annotatie"
+        ]
+      }
+    },
+    "/v1/annotatie/documenten/{slug}/elementen": {
+      "put": {
+        "description": "Vervangt de elementenlijst volledig.\n\nOngeldige JAS-klasse of lege tekst \u2192 element overgeslagen.",
+        "operationId": "zet_elementen_v1_annotatie_documenten__slug__elementen_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ElementenInvoer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElementenZettenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zet Elementen",
+        "tags": [
+          "annotatie"
+        ]
+      }
+    },
+    "/v1/annotatie/documenten/{slug}/elementen/{element_id}/beslissing": {
+      "post": {
+        "description": "Registreert een human-beslissing op \u00e9\u00e9n element. Valideert type-specifieke vereisten\n(afgedwongen door `BeslissingInvoer` validator \u2192 422 bij ontbrekende velden).",
+        "operationId": "registreer_beslissing_v1_annotatie_documenten__slug__elementen__element_id__beslissing_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "element_id",
+            "required": true,
+            "schema": {
+              "title": "Element Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BeslissingInvoer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotatieDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Registreer Beslissing",
+        "tags": [
+          "annotatie"
+        ]
+      }
+    },
     "/v1/auth/me": {
       "get": {
         "description": "Geeft de eigen accountgegevens terug van de ingelogde gebruiker.",
@@ -4722,6 +5765,156 @@
           }
         },
         "summary": "Lijst Llm Calls",
+        "tags": [
+          "projecten"
+        ]
+      }
+    },
+    "/v1/projecten/{analyse_id}/rapport": {
+      "get": {
+        "description": "Geef het rapport als JSON terug.\n\n404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.",
+        "operationId": "haal_rapport_v1_projecten__analyse_id__rapport_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analyse_id",
+            "required": true,
+            "schema": {
+              "title": "Analyse Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Haal Rapport V1 Projecten  Analyse Id  Rapport Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Haal Rapport",
+        "tags": [
+          "projecten"
+        ]
+      }
+    },
+    "/v1/projecten/{analyse_id}/rapport.md": {
+      "get": {
+        "description": "Geef het rapport als Markdown-download.\n\n404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.\nContent-Disposition: attachment; filename=\"rapport-{analyse_id}.md\"",
+        "operationId": "haal_rapport_md_v1_projecten__analyse_id__rapport_md_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analyse_id",
+            "required": true,
+            "schema": {
+              "title": "Analyse Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Haal Rapport Md",
         "tags": [
           "projecten"
         ]

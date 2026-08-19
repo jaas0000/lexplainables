@@ -7,30 +7,17 @@ Twee soorten:
     gecombineerde leden-tekst (na NFKC-normalisatie). Nooit stil doorgaan bij een mismatch.
 
 De 13 JAS-klassen zijn de enige toegestane klassen (jas-klassen-referentie.md).
+`GELDIGE_JAS_KLASSEN` staat in `shared/validation.py` (feature-bouwen regel 8: twee onafhankelijke
+gebruikers — engine én annotatie); hier alleen een herexport voor backwards-compatibility.
 """
 
 from __future__ import annotations
 
 import unicodedata
 
-# De 13 JAS-klassen uit jas-klassen-referentie.md (enige toegestane waarden).
-GELDIGE_JAS_KLASSEN: frozenset[str] = frozenset(
-    {
-        "Rechtssubject",
-        "Rechtsobject",
-        "Rechtsbetrekking",
-        "Rechtsfeit",
-        "Voorwaarde",
-        "Afleidingsregel",
-        "Variabele en variabelewaarde",
-        "Parameter en parameterwaarde",
-        "Operator",
-        "Tijdsaanduiding",
-        "Plaatsaanduiding",
-        "Delegatiebevoegdheid en delegatie-invulling",
-        "Brondefinitie",
-    }
-)
+from ..shared.validation import GELDIGE_JAS_KLASSEN  # noqa: F401 — re-export voor bestaande code
+
+__all__ = ["GELDIGE_JAS_KLASSEN"]
 
 
 def _normaliseer(tekst: str) -> str:
