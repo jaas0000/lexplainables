@@ -4,26 +4,13 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
-## PR #27 — llm_calls verhuizen naar eigen feature-map
-
-- **`docs/architectuur/c4-model.md` niet bijgewerkt**: nieuwe feature-map `api/app/features/llm_calls/` wordt niet genoemd in de L3-`api`-sectie. Bijwerken samen met de al openstaande c4-punten van eerdere PRs in een volgende architectuurslag.
-
----
-
 ## PR #22 — Werkplek annotatie-UI (story 023)
 
-- **`docs/architectuur/c4-model.md` niet bijgewerkt**: L3-sectie `frontend` bevat geen `werkplek`-pagina's (`app/werkplek/`, `app/werkplek/[slug]/`) en de nieuwe `components/annotatie/`-map (ElementenKolom, AuditlogTabblad, NieuwDocumentFormulier). Bijwerken samen met de al openstaande c4-punten van eerdere PRs in een volgende architectuurslag.
 - **`projecten/page.tsx` — dubbele `formatDatum`**: `lib/datum.ts` is aangemaakt en `werkplek/page.tsx` importeert correct uit die lib, maar `frontend/app/projecten/page.tsx` heeft nog zijn eigen lokale kopie (regel 21). Vervang de lokale definitie door `import { formatDatum } from "@/lib/datum"`.
 - **Story 023 staat nog op "Gebouwd: nee"**: `docs/stories/023-werkplek-annotatie-ui.md` bijwerken naar `Gebouwd: ja`.
 - **Wetsartikeltekst is een placeholder**: de linkerkolom toont "De volledige wetsartikeltekst is beschikbaar via de Wettenbank-koppeling (nog niet ingebouwd)". Koppeling met Wettenbank-MCP (`GET /v1/wetten/{bwb_id}/structuur`) vereist een apart BFF-endpoint en een client-component; aparte story of vervolgspurt.
 - **`use(params)` voor slug-resolutie**: `app/werkplek/[slug]/page.tsx` lost `params` op via een `useEffect` + `useState`-combinatie (Next.js 16). React 19 biedt `use(params)` als éénregelige vervanging — consistent toepassen samen met `projecten/[id]/page.tsx` zodra de codebase naar React 19 gaat.
 - **Design-tokens voor aandacht-kleuren ontbreken in `globals.css`**: `ElementenKolom.tsx` gebruikt hardcoded hex-waarden (`#fef2f2`, `#fca5a5`, `#dc2626` etc.). Verplaatsen naar CSS-variabelen in `globals.css` zodra dark-mode wordt toegevoegd.
-
----
-
-## PR #21 — Annotatie-backend (story 022)
-
-- **`docs/architectuur/c4-model.md` niet bijgewerkt**: L3-sectie `api` bevat geen `annotatie`-component; L2-tekst vermeldt "annotatie ... nog niet" terwijl de feature nu gebouwd is. Bijwerken samen met de al openstaande c4-punten van PRs #9–#18 in een volgende architectuurslag.
 
 ---
 
@@ -102,22 +89,14 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ---
 
-## PR #9 — wetcatalogus (story 010)
-
-- **C4-model bijwerken**: `docs/architectuur/c4-model.md` is niet bijgewerkt voor de nieuwe wetcatalogus-feature. Toe te voegen: L3 Component `api` — wetcatalogus (`features/wetcatalogus/`); L3 Component `frontend` — wetcatalogus-pagina (`app/wetcatalogus/`), `WetSelector` (`components/WetSelector.tsx`) en BFF-routes (`app/api/wetten/`); L2 Container — beschrijving van `api` bijwerken (wetcatalogus staat er nog als "nog niet gebouwd").
-
----
-
 ## PR #10 — llm-profielen (story 011)
 
-- **C4-model bijwerken**: `docs/architectuur/c4-model.md` is niet bijgewerkt voor de nieuwe llm_profielen-feature. Toe te voegen: L3 Component `api` — `llm_profielen` (`features/llm_profielen/`), `shared/crypto` (`shared/crypto.py`); L3 Component `frontend` — `LlmProfielenPagina` (`app/beheer/llm-profielen/page.tsx`) en BFF-routes (`app/api/admin/profielen/`). Ook de api- en frontend-beschrijving in L2 Container bijwerken.
 - **Story 011 "Gebouwd: nee"**: `docs/stories/011-llm-profielen.md` heeft onderaan nog `**Gebouwd:** nee` staan. Bijwerken naar `ja` bij de eerste volgende commit op die story.
 
 ---
 
 ## PR #11 — analyse aanmaken & volgen (story 012)
 
-- **C4-model bijwerken**: `docs/architectuur/c4-model.md` is niet bijgewerkt voor de nieuwe `projecten`-feature. Toe te voegen: L3 Component `api` — `projecten` (`features/projecten/`); L3 Component `frontend` — analyselijst/detail/nieuw (`app/projecten/`), BFF-routes (`app/api/projecten/`), `StatusPill`/`VerwijderKnop` (`components/projecten/`). Ook de api- en frontend-beschrijving in L2 Container bijwerken.
 - **Story 012 "Gebouwd: nee"**: `docs/stories/012-analyse-aanmaken.md` heeft onderaan nog `**Gebouwd:** nee` staan. Bijwerken naar `ja`.
 
 ---
@@ -189,14 +168,12 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 - **Act3b schema-validatie is een no-op**: `schema_check_act3b` in `api/app/engine/steps.py` retourneert altijd een lege lijst (`lambda d: []`). Invullen zodra een formeel JAS-schema voor afleidingsregels beschikbaar is.
 - **`httpx.AsyncClient` per aanroep**: `haal_artikel_op` in `api/app/shared/wettenbank.py` maakt elke keer een nieuwe `AsyncClient` aan (nieuwe TCP-verbinding per Wettenbank-call). Maak één lifespan-scoped client via FastAPI `lifespan` — zelfde patroon als bevinding bij PR #15.
-- **C4-model bijwerken**: `docs/architectuur/c4-model.md` is niet bijgewerkt voor de nieuwe modules `api/app/engine/` (orchestrator, steps, prompts, retry), `api/app/shared/llm/` (LiteLLMClient), `api/app/shared/wettenbank.py`, `api/app/shared/validation.py`, en de nieuwe endpoints `/akkoord`+`/afwijzen`. Bijwerken in een volgende architectuurslag.
 - **Human-in-the-loop poll zonder backoff**: `orchestrator.py` pollt elke 2 seconden met een vaste `asyncio.sleep(2)` voor maximaal 24 uur. Bij een toekomstige PostgreSQL-backend overwegen om een LISTEN/NOTIFY-notificatiemechanisme te gebruiken i.p.v. polling, voor lagere DB-load en kortere latentie.
 
 ---
 
 ## PR #18 — API-tokens (story 018)
 
-- **C4-model niet bijgewerkt**: `api/app/features/api_tokens/` is een nieuwe feature-map; de L3-component-sectie in `docs/architectuur/c4-model.md` vermeldt `api_tokens` nog niet. Ook `shared/auth.py` is uitgebreid met DB-tokenverificatie, maar de beschrijving in het model (`"API_TOKEN-gate (constant-time vergelijking)"`) dekt de nieuwe laag niet meer volledig. De frontend-component voor `/beheer/api-tokens` ontbreekt eveneens. Bijwerken in een volgende architectuurslag.
 - **`ApiTokenAanmakenVerzoek.label` mist Pydantic `max_length`-validator**: het story-schema specificeert max 128 tekens. De store trunceert op 128 (`[:128]`), maar de Pydantic-request-body heeft geen `max_length=128`. Een client die 1000 tekens instuurt krijgt nu een 201 met een stilzwijgend afgeknipte waarde; correctere API-opmaak zou een 422 geven. Functioneel niet-blocking, verfijning voor een volgende ronde (`api/app/features/api_tokens/models.py`).
 
 ---
