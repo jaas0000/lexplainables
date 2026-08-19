@@ -33,9 +33,6 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 Audit gedraaid op stand na PRs #21 (annotatie-backend) en #22 (annotatie-UI). Focus: `api/app/features/`, `api/app/shared/`, `api/app/engine/`, `db.py`, `main.py`. Vier bevindingen — geen ervan is een projectbrede keuze die een ADR verdient (engine als derde mapniveau staat al in `stack-profiel.md` §Feature-eenheid; geen wijziging in dat beeld). Alles staat hieronder als vervolgpunt; niets is deze ronde direct gerefactord omdat elke aanpassing meerdere features raakt.
 
-**Duplicatie — dialect-aware upsert (`pg_insert if is_pg else sqlite_insert`):**
-Herhaald in `berichten/store.py:137-138` en `runtime_config/store.py:46-48`. Nog een derde bijna-gebruik in `wetcatalogus/store.py:79-104` (upsert met check-then-insert i.p.v. `ON CONFLICT`, PR #15-vervolgpunt). Al genoteerd als PR #16-LAAG maar niet uitgevoerd — de tweede voorkomen is er nu (regel 8-drempel gehaald). Aanpak: `api/app/shared/db.py` toevoegen met `dialect_insert_fn(engine)` (of een dunne `upsert(table, values, index_elements)`-helper), beide stores + wetcatalogus laten aansluiten. Aparte story of meeliften met de MCP-consolidatie.
-
 **Grenzen — `shared/auth.py` doet een lazy-import uit `features/api_tokens/store` (r60-64):**
 `shared/` importeert uit `features/` — dat is precies wat `feature-bouwen` regel 2 wil vermijden (shared kent geen feature-specifieke code). De lazy-import staat in de docstring als "om circulaire imports bij module-load te vermijden", maar in de praktijk is er geen cycle: `features/api_tokens/store.py` importeert alleen uit `shared/tijd.py`. De lazy-import is dus onnodig én maskeert dat auth conceptueel de `api_tokens`-store gebruikt. Twee acceptabele richtingen: (a) laat 'm zo maar promoveer naar top-level import en documenteer dat auth de eigenaar-export van `api_tokens` gebruikt (regel 8's owner-export-route — dit is precies dat patroon); (b) verplaats de token-verificatie naar `api_tokens.store` als publieke functie en laat `shared/auth.py` alleen die functie aanroepen. Route (a) is de kleinste stap.
 
@@ -142,7 +139,6 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 ## PR #15 — wettenbank-beheer (story 020)
 
 - **MEDIUM** — Crash in BewerkenFormulier na verwijder-terwijl-bewerkt: `wetten.find(...)!` geeft `undefined` als een rij verwijderd wordt terwijl het bewerkformulier al open staat. `setBewerkt(null)` toevoegen in de `verwijder`-functie (`frontend/app/beheer/wetten/page.tsx:279`).
-- **MEDIUM** — TOCTOU race in upsert: SELECT + INSERT/UPDATE is niet atomair op PostgreSQL; twee gelijktijdige PUT-requests op hetzelfde nieuwe `bwb_id` kunnen beiden de INSERT uitvoeren → onafgevangen IntegrityError. Fix: `insert(...).on_conflict_do_update(index_elements=["bwb_id"])` (`api/app/features/wetcatalogus/store.py:83-104`).
 - **MEDIUM** — Geen index op `naam`-kolom: alle lijstqueries sorteren op naam, maar de migratie maakt geen index aan. Voeg `ix_wet_catalogus_naam` toe in een volgende migratie (`api/alembic/versions/0007_wet_catalogus_tabel.py`).
 - **MEDIUM** — Nieuwe `httpx.AsyncClient` per resolve-aanroep: maakt elke keer een nieuwe TCP-verbinding. Maak één lifespan-scoped client aan via FastAPI `lifespan` (`api/app/features/wetcatalogus/router.py:126`).
 - **MEDIUM** — `structuur()` geeft lege artikelenlijst zonder fout als `bwb_id` wel in de DB staat maar niet in `_STRUCTUUR`. Expliciete `WetNietGevonden` gooien of het gedrag documenteren (`api/app/features/wetcatalogus/store.py:117-128`).
@@ -187,8 +183,6 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 - **LAAG** — `api/app/features/runtime_config/store.py` r78-87: per-sleutel upsert in loop — nu 1 query, bij méér instellingen N sequentiële queries binnen één transactie.
 - **LAAG** — `frontend/app/beheer/instellingen/page.tsx` r18-29: `useEffect` zonder `AbortController` — geen lek in React 18, maar netwerk-request loopt onnodig door na unmount.
 - **LAAG** — `frontend/app/beheer/instellingen/page.tsx`: 197 regels inline styles voor één kaart — kaart-layout en status-badge herhalen patronen die extraction verdienen (zie `SectieHeader` als precedent).
-- **LAAG** — `api/app/features/runtime_config/store.py` + `api/app/features/berichten/store.py`: dialect-check `conn.engine.url.get_backend_name()` staat nu in twee stores; extraheer naar `api/app/shared/db.py` als `dialect_insert_fn(engine)`.
-
 ---
 
 ## PR #17 — analyse-engine (story 024)
