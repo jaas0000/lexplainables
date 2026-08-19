@@ -144,6 +144,13 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ---
 
+## PR #18 — API-tokens (story 018)
+
+- **C4-model niet bijgewerkt**: `api/app/features/api_tokens/` is een nieuwe feature-map; de L3-component-sectie in `docs/architectuur/c4-model.md` vermeldt `api_tokens` nog niet. Ook `shared/auth.py` is uitgebreid met DB-tokenverificatie, maar de beschrijving in het model (`"API_TOKEN-gate (constant-time vergelijking)"`) dekt de nieuwe laag niet meer volledig. De frontend-component voor `/beheer/api-tokens` ontbreekt eveneens. Bijwerken in een volgende architectuurslag.
+- **`ApiTokenAanmakenVerzoek.label` mist Pydantic `max_length`-validator**: het story-schema specificeert max 128 tekens. De store trunceert op 128 (`[:128]`), maar de Pydantic-request-body heeft geen `max_length=128`. Een client die 1000 tekens instuurt krijgt nu een 201 met een stilzwijgend afgeknipte waarde; correctere API-opmaak zou een 422 geven. Functioneel niet-blocking, verfijning voor een volgende ronde (`api/app/features/api_tokens/models.py`).
+
+---
+
 ## Frontend — berichten fase 2
 
 - **BFF-rolautorisatie**: `app/api/admin/berichten/` controleert `session.user.rol` niet — momenteel alleen beheerders actief, maar de BFF hoort rolautorisatie te dragen zodra analisten bestaan.
