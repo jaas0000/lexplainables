@@ -29,7 +29,28 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
-## Architectuur-audit — 2026-08-19
+## Architectuur-audit — 2026-08-19 (ronde 2)
+
+Audit gedraaid op stand na PRs #21 (annotatie-backend) en #22 (annotatie-UI). Focus: `api/app/features/`, `api/app/shared/`, `api/app/engine/`, `db.py`, `main.py`. Vier bevindingen — geen ervan is een projectbrede keuze die een ADR verdient (engine als derde mapniveau staat al in `stack-profiel.md` §Feature-eenheid; geen wijziging in dat beeld). Alles staat hieronder als vervolgpunt; niets is deze ronde direct gerefactord omdat elke aanpassing meerdere features raakt.
+
+**Duplicatie — Wettenbank-MCP JSON-RPC boilerplate (persistent open sinds 2026-08-14):**
+`shared/wettenbank.py:haal_artikel_op` (r26-87, tool `wettenbank_artikel`) en `wetcatalogus/router.py:_roep_wettenbank_mcp_aan` (r110-185, tool `wettenbank_structuur`) delen letterlijk dezelfde `httpx` JSON-RPC-POST + content-blok-parse-boilerplate. Al drie audit-rondes een openstaand vervolgpunt — de trigger van `feature-bouwen` regel 8 (tweede onafhankelijke implementatie zonder eigenaar-feature) is duidelijk aanwezig. Aanpak: `shared/wettenbank.py` uitbreiden met `haal_wet_structuur(bwb_id) -> dict` (en een gedeelde `_post_mcp(tool, args)`-helper), `wetcatalogus/router.py` laten importeren. Gelijktijdig meenemen: de bekende `httpx.AsyncClient`-per-aanroep-bevinding (PR #15/#17) door één lifespan-scoped client te injecteren. Aparte story.
+
+**Duplicatie — dialect-aware upsert (`pg_insert if is_pg else sqlite_insert`):**
+Herhaald in `berichten/store.py:137-138` en `runtime_config/store.py:46-48`. Nog een derde bijna-gebruik in `wetcatalogus/store.py:79-104` (upsert met check-then-insert i.p.v. `ON CONFLICT`, PR #15-vervolgpunt). Al genoteerd als PR #16-LAAG maar niet uitgevoerd — de tweede voorkomen is er nu (regel 8-drempel gehaald). Aanpak: `api/app/shared/db.py` toevoegen met `dialect_insert_fn(engine)` (of een dunne `upsert(table, values, index_elements)`-helper), beide stores + wetcatalogus laten aansluiten. Aparte story of meeliften met de MCP-consolidatie.
+
+**Grenzen — `shared/auth.py` doet een lazy-import uit `features/api_tokens/store` (r60-64):**
+`shared/` importeert uit `features/` — dat is precies wat `feature-bouwen` regel 2 wil vermijden (shared kent geen feature-specifieke code). De lazy-import staat in de docstring als "om circulaire imports bij module-load te vermijden", maar in de praktijk is er geen cycle: `features/api_tokens/store.py` importeert alleen uit `shared/tijd.py`. De lazy-import is dus onnodig én maskeert dat auth conceptueel de `api_tokens`-store gebruikt. Twee acceptabele richtingen: (a) laat 'm zo maar promoveer naar top-level import en documenteer dat auth de eigenaar-export van `api_tokens` gebruikt (regel 8's owner-export-route — dit is precies dat patroon); (b) verplaats de token-verificatie naar `api_tokens.store` als publieke functie en laat `shared/auth.py` alleen die functie aanroepen. Route (a) is de kleinste stap.
+
+**Grenzen — `SqlAlchemyLlmCallsStore` woont in `projecten/store.py` maar wordt door de engine geïmporteerd (`orchestrator.py:90`):**
+`projecten/store.py:211-259` bevat twee stores in één bestand (`SqlAlchemyAnalyseStore` én `SqlAlchemyLlmCallsStore`), en de `llm_calls`-tabel staat in `projecten/models.py:61-76`. De engine is de enige capture-schrijver; de projecten-router leest alleen. Zolang alleen `engine/` + `projecten/` de tabel raken is de huidige plaatsing verdedigbaar (eigenaar-export-route via `projecten`), maar zodra de annotatie- of een toekomstige agent-feature ook capture wil, komt de derde consument voorbij en hoort `llm_calls` naar een eigen plek. Vervolgpunt: bij de eerste derde consument evalueren — dan is de trigger van regel 4 helder.
+
+**Stabiel bevonden:**
+`db.py` (30 r) en `main.py` (58 r) blijven strak dun. Feature-structuur (`models.py`/`store.py`/`router.py`/`tests/`) is consistent voor alle negen domeinen. Elke feature heeft een eigen `MetaData()`-instantie — bewuste isolatie, geen probleem (Alembic beheert het schema, niet `metadata.create_all()`). `shared/tijd.py`, `shared/crypto.py`, `shared/validation.py`, `shared/wettenbank.py`, `shared/llm/` zitten op de juiste plek en hebben elk ≥2 consumenten. De engine-module is nog steeds gedocumenteerd in `stack-profiel.md` §Feature-eenheid; geen tweede LLM-orkestratie-consument in zicht, dus verplaatsingsvraag nog niet actief. `engine/steps.py` (237 r) en `engine/prompts.py` (224 r) zijn de grootste modules in `engine/`, maar elk één natuurlijk concern — cohesie nog gezond.
+
+---
+
+## Architectuur-audit — 2026-08-19 (ronde 1)
 
 Audit gedraaid op stand na PRs #17 (analyse-engine), #18 (api-tokens, open), #19 (rapport, open), #20 (llm-calls log, open). Drie bevindingen — twee direct opgelost, één als vervolgpunt:
 
