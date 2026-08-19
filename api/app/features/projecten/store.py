@@ -34,6 +34,10 @@ class AnalyseNietGevonden(LookupError):
     """Analyse-id onbekend, of de aanvragende gebruiker heeft geen toegang."""
 
 
+class RapportNietBeschikbaar(LookupError):
+    """Rapport is nog niet beschikbaar (status ≠ klaar, of rapport-veld is nog leeg)."""
+
+
 class AnalyseStore(Protocol):
     async def maak(
         self,
@@ -68,6 +72,10 @@ class AnalyseStore(Protocol):
     async def haal_rij_op_id(self, analyse_id: str): ...
 
     async def sla_rapport_op(self, analyse_id: str, rapport: dict) -> None: ...
+
+    async def haal_rapport(
+        self, analyse_id: str, gebruiker_id: str, is_beheerder: bool
+    ) -> dict: ...
 
 
 class SqlAlchemyAnalyseStore:
@@ -184,6 +192,20 @@ class SqlAlchemyAnalyseStore:
                 .where(analyses.c.id == analyse_id)
                 .values(rapport=rapport, bijgewerkt=nu())
             )
+
+    async def haal_rapport(self, analyse_id: str, gebruiker_id: str, is_beheerder: bool) -> dict:
+        """Haal het rapport op; controleert eigenaarschap, status en aanwezigheid.
+
+        Gooit AnalyseNietGevonden als de analyse onbekend is of de gebruiker geen toegang heeft.
+        Gooit RapportNietBeschikbaar als de status ≠ 'klaar' of het rapport-veld leeg is.
+        """
+        analyse = await self.detail(analyse_id, gebruiker_id, is_beheerder)
+        if analyse.status != "klaar" or analyse.rapport is None:
+            raise RapportNietBeschikbaar(
+                f"Rapport voor analyse {analyse_id} is nog niet beschikbaar "
+                f"(status: {analyse.status})."
+            )
+        return analyse.rapport
 
 
 class SqlAlchemyLlmCallsStore:

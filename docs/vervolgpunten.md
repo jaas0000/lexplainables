@@ -175,6 +175,12 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ---
 
+## PR #19 — rapport bekijken (story 013)
+
+- **Story-doc URL drift**: `docs/stories/013-rapport-bekijken.md` vermeldt de teruglink als `/analyse/{id}`, maar de implementatie gebruikt correct `/projecten/{id}`. Story-doc bijwerken zodat de URL klopt.
+
+---
+
 ## Frontend — berichten fase 2
 
 - **BFF-rolautorisatie**: `app/api/admin/berichten/` controleert `session.user.rol` niet — momenteel alleen beheerders actief, maar de BFF hoort rolautorisatie te dragen zodra analisten bestaan.
