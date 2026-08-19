@@ -20,6 +20,8 @@ export async function apiProxy(
   pad: string,
   gebruikersnaam: string,
   init: RequestInit = {},
+  /** Extra upstream response-headers om door te sturen naar de client (bijv. Content-Disposition). */
+  forwardHeaders: string[] = [],
 ): Promise<Response> {
   const upstream = await fetch(`${API_BASE_URL}${pad}`, {
     ...init,
@@ -31,13 +33,15 @@ export async function apiProxy(
   });
 
   const body = upstream.status === 204 ? null : await upstream.text();
-  return new Response(body, {
-    status: upstream.status,
-    headers: {
-      "Content-Type":
-        upstream.headers.get("Content-Type") ?? "application/json",
-    },
-  });
+  const headers: Record<string, string> = {
+    "Content-Type":
+      upstream.headers.get("Content-Type") ?? "application/json",
+  };
+  for (const naam of forwardHeaders) {
+    const waarde = upstream.headers.get(naam);
+    if (waarde) headers[naam] = waarde;
+  }
+  return new Response(body, { status: upstream.status, headers });
 }
 
 /**

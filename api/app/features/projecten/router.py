@@ -18,7 +18,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 
 from ...db import get_engine
 from ...engine.orchestrator import voer_analyse_uit
@@ -31,9 +31,11 @@ from .models import (
     AnalyseOverzicht,
     LlmCallRead,
 )
+from .rapport_md import naar_markdown
 from .store import (
     AnalyseNietGevonden,
     AnalyseStore,
+    RapportNietBeschikbaar,
     SqlAlchemyAnalyseStore,
     SqlAlchemyLlmCallsStore,
 )
@@ -111,6 +113,52 @@ async def verwijder_analyse(
         await store.verwijder(analyse_id, ctx.gebruikersnaam, ctx.rol == "beheerder")
     except AnalyseNietGevonden as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@router.get("/{analyse_id}/rapport", response_model=dict)
+async def haal_rapport(
+    analyse_id: str,
+    ctx: GebruikerContext = Depends(huidige_beheerder),
+    store: AnalyseStore = Depends(get_store),
+) -> dict:
+    """Geef het rapport als JSON terug.
+
+    404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.
+    """
+    try:
+        return await store.haal_rapport(analyse_id, ctx.gebruikersnaam, ctx.rol == "beheerder")
+    except AnalyseNietGevonden as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    except RapportNietBeschikbaar as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+
+
+@router.get("/{analyse_id}/rapport.md")
+async def haal_rapport_md(
+    analyse_id: str,
+    ctx: GebruikerContext = Depends(huidige_beheerder),
+    store: AnalyseStore = Depends(get_store),
+) -> PlainTextResponse:
+    """Geef het rapport als Markdown-download.
+
+    404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.
+    Content-Disposition: attachment; filename="rapport-{analyse_id}.md"
+    """
+    try:
+        rapport = await store.haal_rapport(analyse_id, ctx.gebruikersnaam, ctx.rol == "beheerder")
+    except AnalyseNietGevonden as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    except RapportNietBeschikbaar as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+
+    md = naar_markdown(rapport, analyse_id)
+    return PlainTextResponse(
+        content=md,
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="rapport-{analyse_id}.md"',
+        },
+    )
 
 
 @router.get("/{analyse_id}/events")
