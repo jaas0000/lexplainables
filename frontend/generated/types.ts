@@ -622,6 +622,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projecten/{analyse_id}/llm-calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lijst Llm Calls
+         * @description Geef alle vastgelegde LLM-calls voor een analyse terug (alleen beheerders).
+         *
+         *     Lege lijst als capture uitgeschakeld was of de analyse onbekend is — geen 404.
+         */
+        get: operations["lijst_llm_calls_v1_projecten__analyse_id__llm_calls_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/wetten": {
         parameters: {
             query?: never;
@@ -1087,6 +1109,37 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * LlmCallRead
+         * @description Vastgelegde LLM-aanroep, leesbaar via GET /v1/projecten/{id}/llm-calls.
+         */
+        LlmCallRead: {
+            /**
+             * Aangemaakt
+             * Format: date-time
+             */
+            aangemaakt: string;
+            /** Activiteit */
+            activiteit: string;
+            /** Analyse Id */
+            analyse_id: string;
+            /** Bron Id */
+            bron_id: string | null;
+            /** Id */
+            id: number;
+            /** Model */
+            model: string;
+            /** Ruwe Respons */
+            ruwe_respons: string;
+            /** System Prompt */
+            system_prompt: string;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+            /** User Prompt */
+            user_prompt: string;
         };
         /**
          * LlmProfielCreate
@@ -2770,6 +2823,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lijst_llm_calls_v1_projecten__analyse_id__llm_calls_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmCallRead"][];
                 };
             };
             /** @description Validation Error */

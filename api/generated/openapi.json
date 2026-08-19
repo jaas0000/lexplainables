@@ -1051,6 +1051,78 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "LlmCallRead": {
+        "description": "Vastgelegde LLM-aanroep, leesbaar via GET /v1/projecten/{id}/llm-calls.",
+        "properties": {
+          "aangemaakt": {
+            "format": "date-time",
+            "title": "Aangemaakt",
+            "type": "string"
+          },
+          "activiteit": {
+            "title": "Activiteit",
+            "type": "string"
+          },
+          "analyse_id": {
+            "title": "Analyse Id",
+            "type": "string"
+          },
+          "bron_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bron Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "ruwe_respons": {
+            "title": "Ruwe Respons",
+            "type": "string"
+          },
+          "system_prompt": {
+            "title": "System Prompt",
+            "type": "string"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          },
+          "user_prompt": {
+            "title": "User Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "analyse_id",
+          "activiteit",
+          "bron_id",
+          "system_prompt",
+          "user_prompt",
+          "ruwe_respons",
+          "model",
+          "tokens_in",
+          "tokens_out",
+          "aangemaakt"
+        ],
+        "title": "LlmCallRead",
+        "type": "object"
+      },
       "LlmProfielCreate": {
         "description": "Wat een beheerder meestuurt bij het aanmaken van een profiel.",
         "properties": {
@@ -4571,6 +4643,85 @@
           }
         },
         "summary": "Analyse Events",
+        "tags": [
+          "projecten"
+        ]
+      }
+    },
+    "/v1/projecten/{analyse_id}/llm-calls": {
+      "get": {
+        "description": "Geef alle vastgelegde LLM-calls voor een analyse terug (alleen beheerders).\n\nLege lijst als capture uitgeschakeld was of de analyse onbekend is \u2014 geen 404.",
+        "operationId": "lijst_llm_calls_v1_projecten__analyse_id__llm_calls_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analyse_id",
+            "required": true,
+            "schema": {
+              "title": "Analyse Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LlmCallRead"
+                  },
+                  "title": "Response Lijst Llm Calls V1 Projecten  Analyse Id  Llm Calls Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lijst Llm Calls",
         "tags": [
           "projecten"
         ]

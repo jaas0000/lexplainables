@@ -751,6 +751,36 @@ export default function BeheerPagina() {
         </div>
       </section>
 
+      {/* ---- Sectie: LLM-calls ---- */}
+      <section>
+        <SectieHeader
+          titel="LLM-calls"
+          subtitel="Vastgelegde LLM-aanroepen per analyse (vereist capture ingeschakeld)."
+        />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "1rem",
+            background: "rgb(var(--surface))",
+            border: "1px solid rgb(var(--line))",
+            borderRadius: "6px",
+          }}
+        >
+          <span style={{ fontSize: "0.875rem", color: "rgb(var(--ink))" }}>
+            Bekijk prompts, modellen en token-verbruik per analyse
+          </span>
+          <Link
+            href="/beheer/llm-calls"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.8125rem" }}
+          >
+            LLM-calls →
+          </Link>
+        </div>
+      </section>
+
       {/* ---- Sectie: API-tokens ---- */}
       <section>
         <SectieHeader titel="API-tokens" />

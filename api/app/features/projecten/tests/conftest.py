@@ -19,8 +19,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.features.projecten.models import metadata
-from app.features.projecten.router import get_store
-from app.features.projecten.store import SqlAlchemyAnalyseStore
+from app.features.projecten.router import get_llm_calls_store, get_store
+from app.features.projecten.store import SqlAlchemyAnalyseStore, SqlAlchemyLlmCallsStore
 from app.main import app
 from app.shared.auth import huidige_beheerder
 from conftest import TEST_BEHEERDER
@@ -47,11 +47,14 @@ def client(tmp_path) -> Iterator[TestClient]:
 
     async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
     store = SqlAlchemyAnalyseStore(async_engine)
+    llm_store = SqlAlchemyLlmCallsStore(async_engine)
     app.dependency_overrides[get_store] = lambda: store
+    app.dependency_overrides[get_llm_calls_store] = lambda: llm_store
     app.dependency_overrides[huidige_beheerder] = lambda: TEST_BEHEERDER
 
     with TestClient(app) as test_client:
         yield test_client
 
     app.dependency_overrides.pop(get_store, None)
+    app.dependency_overrides.pop(get_llm_calls_store, None)
     app.dependency_overrides.pop(huidige_beheerder, None)
