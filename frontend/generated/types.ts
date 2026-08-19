@@ -512,6 +512,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projecten/{analyse_id}/afwijzen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Afwijzen Analyse
+         * @description Human-in-the-loop: wijs de analyse af na act2-review.
+         *
+         *     Zet de status op 'fout' zodat de background-job stopt.
+         *     Geeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.
+         */
+        post: operations["afwijzen_analyse_v1_projecten__analyse_id__afwijzen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projecten/{analyse_id}/akkoord": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Akkoord Analyse
+         * @description Human-in-the-loop: geef akkoord na act2-review.
+         *
+         *     Zet de status terug op 'actief' zodat de background-job doorgaat naar act3.
+         *     Geeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.
+         */
+        post: operations["akkoord_analyse_v1_projecten__analyse_id__akkoord_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projecten/{analyse_id}/events": {
         parameters: {
             query?: never;
@@ -524,6 +570,28 @@ export interface paths {
          * @description SSE-stroom: stuurt status-updates tot de analyse terminaal is (klaar/fout).
          */
         get: operations["analyse_events_v1_projecten__analyse_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projecten/{analyse_id}/llm-calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lijst Llm Calls
+         * @description Geef alle vastgelegde LLM-calls voor een analyse terug (alleen beheerders).
+         *
+         *     Lege lijst als capture uitgeschakeld was of de analyse onbekend is — geen 404.
+         */
+        get: operations["lijst_llm_calls_v1_projecten__analyse_id__llm_calls_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -649,6 +717,10 @@ export interface components {
             naam: string;
             /** Omschrijving */
             omschrijving: string | null;
+            /** Rapport */
+            rapport: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Status
              * @enum {string}
@@ -936,6 +1008,37 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * LlmCallRead
+         * @description Vastgelegde LLM-aanroep, leesbaar via GET /v1/projecten/{id}/llm-calls.
+         */
+        LlmCallRead: {
+            /**
+             * Aangemaakt
+             * Format: date-time
+             */
+            aangemaakt: string;
+            /** Activiteit */
+            activiteit: string;
+            /** Analyse Id */
+            analyse_id: string;
+            /** Bron Id */
+            bron_id: string | null;
+            /** Id */
+            id: number;
+            /** Model */
+            model: string;
+            /** Ruwe Respons */
+            ruwe_respons: string;
+            /** System Prompt */
+            system_prompt: string;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+            /** User Prompt */
+            user_prompt: string;
         };
         /**
          * LlmProfielCreate
@@ -2434,6 +2537,70 @@ export interface operations {
             };
         };
     };
+    afwijzen_analyse_v1_projecten__analyse_id__afwijzen_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    akkoord_analyse_v1_projecten__analyse_id__akkoord_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     analyse_events_v1_projecten__analyse_id__events_get: {
         parameters: {
             query?: never;
@@ -2455,6 +2622,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lijst_llm_calls_v1_projecten__analyse_id__llm_calls_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmCallRead"][];
                 };
             };
             /** @description Validation Error */

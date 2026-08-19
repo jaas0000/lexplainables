@@ -22,6 +22,7 @@ from .models import (
     AnalyseOverzicht,
     BegripInvoer,
     BronKeuze,
+    LlmCallRead,
     analyse_detail_uit_rij,
     analyse_overzicht_uit_rij,
     analyses,
@@ -220,3 +221,17 @@ class SqlAlchemyLlmCallsStore:
                     aangemaakt=nu(),
                 )
             )
+
+    async def lijst_calls(self, analyse_id: str) -> list[LlmCallRead]:
+        """Geeft alle LLM-calls voor een analyse gesorteerd op aangemaakt asc.
+
+        Lege lijst als analyse_id onbekend of nog geen calls zijn vastgelegd.
+        """
+        stmt = (
+            select(llm_calls)
+            .where(llm_calls.c.analyse_id == analyse_id)
+            .order_by(llm_calls.c.aangemaakt)
+        )
+        async with self._engine.connect() as conn:
+            rijen = (await conn.execute(stmt)).all()
+        return [LlmCallRead(**rij._mapping) for rij in rijen]

@@ -138,6 +138,22 @@ class AnalyseDetail(AnalyseOverzicht):
     rapport: dict | None  # eindrapport (gevuld na status 'klaar')
 
 
+class LlmCallRead(BaseModel):
+    """Vastgelegde LLM-aanroep, leesbaar via GET /v1/projecten/{id}/llm-calls."""
+
+    id: int
+    analyse_id: str
+    activiteit: str
+    bron_id: str | None
+    system_prompt: str
+    user_prompt: str
+    ruwe_respons: str
+    model: str
+    tokens_in: int
+    tokens_out: int
+    aangemaakt: datetime
+
+
 # ─── Mapping-functies (werkwijze-ADR-0011) ────────────────────────────────────
 
 

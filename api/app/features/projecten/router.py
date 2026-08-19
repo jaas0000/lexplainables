@@ -29,13 +29,24 @@ from .models import (
     AnalyseAanmaken,
     AnalyseDetail,
     AnalyseOverzicht,
+    LlmCallRead,
 )
-from .store import AnalyseNietGevonden, AnalyseStore, SqlAlchemyAnalyseStore
+from .store import (
+    AnalyseNietGevonden,
+    AnalyseStore,
+    SqlAlchemyAnalyseStore,
+    SqlAlchemyLlmCallsStore,
+)
 
 
 def get_store() -> AnalyseStore:
     """FastAPI-dependency die de router aan een concrete store koppelt (werkwijze-ADR-0007)."""
     return SqlAlchemyAnalyseStore(get_engine())
+
+
+def get_llm_calls_store() -> SqlAlchemyLlmCallsStore:
+    """FastAPI-dependency voor de LLM-calls store (werkwijze-ADR-0007)."""
+    return SqlAlchemyLlmCallsStore(get_engine())
 
 
 router = APIRouter(prefix="/projecten", tags=["projecten"])
@@ -180,6 +191,19 @@ async def afwijzen_analyse(
     """
     await _vereist_review_status(store, analyse_id, ctx)
     await store.zet_status(analyse_id, "fout", foutmelding="Analyse afgewezen door gebruiker.")
+
+
+@router.get("/{analyse_id}/llm-calls", response_model=list[LlmCallRead])
+async def lijst_llm_calls(
+    analyse_id: str,
+    ctx: GebruikerContext = Depends(huidige_beheerder),
+    llm_store: SqlAlchemyLlmCallsStore = Depends(get_llm_calls_store),
+) -> list[LlmCallRead]:
+    """Geef alle vastgelegde LLM-calls voor een analyse terug (alleen beheerders).
+
+    Lege lijst als capture uitgeschakeld was of de analyse onbekend is — geen 404.
+    """
+    return await llm_store.lijst_calls(analyse_id)
 
 
 async def _voer_analyse_uit(analyse_id: str, store: AnalyseStore) -> None:
