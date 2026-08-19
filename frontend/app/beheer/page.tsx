@@ -40,6 +40,7 @@ export default function BeheerPagina() {
   );
   const [aantalProfielen, setAantalProfielen] = useState<number | null>(null);
   const [aantalWetten, setAantalWetten] = useState<number | null>(null);
+  const [aantalApiTokens, setAantalApiTokens] = useState<number | null>(null);
 
   const laadBerichten = useCallback(async () => {
     setLaden(true);
@@ -83,6 +84,15 @@ export default function BeheerPagina() {
       .then((data: unknown) => {
         const wetten = data as { bwb_id: string }[];
         setAantalWetten(wetten.length);
+      })
+      .catch(() => {
+        /* niet-kritiek */
+      });
+
+    beheerFetch("/api/admin/api-tokens")
+      .then((data: unknown) => {
+        const tokens = data as { id: string }[];
+        setAantalApiTokens(tokens.length);
       })
       .catch(() => {
         /* niet-kritiek */
@@ -737,6 +747,48 @@ export default function BeheerPagina() {
             style={{ fontSize: "0.8125rem" }}
           >
             Beheer instellingen →
+          </Link>
+        </div>
+      </section>
+
+      {/* ---- Sectie: API-tokens ---- */}
+      <section>
+        <SectieHeader titel="API-tokens" />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "1rem",
+            background: "rgb(var(--surface))",
+            border: "1px solid rgb(var(--line))",
+            borderRadius: "6px",
+          }}
+        >
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}
+          >
+            <span style={{ fontSize: "0.875rem", color: "rgb(var(--ink))" }}>
+              Programmatische toegangstokens
+            </span>
+            {aantalApiTokens !== null && (
+              <span
+                style={{
+                  fontSize: "0.6875rem",
+                  fontFamily: "monospace",
+                  color: "rgb(var(--faint))",
+                }}
+              >
+                {aantalApiTokens}
+              </span>
+            )}
+          </div>
+          <Link
+            href="/beheer/api-tokens"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.8125rem" }}
+          >
+            API-tokens →
           </Link>
         </div>
       </section>
