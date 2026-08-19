@@ -20,7 +20,6 @@ from sqlalchemy import (
     Column,
     DateTime,
     Index,
-    Integer,
     MetaData,
     String,
     Table,
@@ -56,25 +55,6 @@ analyses = Table(
     Index("ix_analyses_gebruiker_id", "gebruiker_id"),
     Index("ix_analyses_bijgewerkt", "bijgewerkt"),
 )
-
-# llm_calls-tabel: vastgelegde LLM-verkeer (capture-toggle, migratie 0009).
-llm_calls = Table(
-    "llm_calls",
-    metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("analyse_id", String(36), nullable=False),
-    Column("activiteit", String(32), nullable=False),
-    Column("bron_id", String(32), nullable=True),
-    Column("system_prompt", Text, nullable=False),
-    Column("user_prompt", Text, nullable=False),
-    Column("ruwe_respons", Text, nullable=False),
-    Column("model", String(128), nullable=False),
-    Column("tokens_in", Integer, nullable=False),
-    Column("tokens_out", Integer, nullable=False),
-    Column("aangemaakt", DateTime(timezone=True), nullable=False),
-    Index("ix_llm_calls_analyse_id", "analyse_id"),
-)
-
 
 # ─── Pydantic-modellen (contract) ────────────────────────────────────────────
 
@@ -134,22 +114,6 @@ class AnalyseDetail(AnalyseOverzicht):
     huidige_fase: str | None
     foutmelding: str | None
     rapport: dict | None  # eindrapport (gevuld na status 'klaar')
-
-
-class LlmCallRead(BaseModel):
-    """Vastgelegde LLM-aanroep, leesbaar via GET /v1/projecten/{id}/llm-calls."""
-
-    id: int
-    analyse_id: str
-    activiteit: str
-    bron_id: str | None
-    system_prompt: str
-    user_prompt: str
-    ruwe_respons: str
-    model: str
-    tokens_in: int
-    tokens_out: int
-    aangemaakt: datetime
 
 
 # ─── Mapping-functies (werkwijze-ADR-0011) ────────────────────────────────────

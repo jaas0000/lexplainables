@@ -20,9 +20,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, insert
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.features.projecten.models import llm_calls, metadata
-from app.features.projecten.router import get_llm_calls_store, get_store
-from app.features.projecten.store import SqlAlchemyAnalyseStore, SqlAlchemyLlmCallsStore
+from app.features.llm_calls.dependencies import get_llm_calls_store
+from app.features.llm_calls.models import llm_calls
+from app.features.llm_calls.models import metadata as llm_calls_metadata
+from app.features.llm_calls.store import SqlAlchemyLlmCallsStore
+from app.features.projecten.models import metadata as projecten_metadata
+from app.features.projecten.router import get_store
+from app.features.projecten.store import SqlAlchemyAnalyseStore
 from app.main import app
 from app.shared.auth import huidige_beheerder
 from conftest import TEST_BEHEERDER
@@ -50,7 +54,8 @@ def _llm_call_rij(analyse_id: str, activiteit: str = "act2", **overrides) -> dic
 def _maak_engines(db_pad):
     """Geeft (sync_engine, store, llm_store) na aanmaken van het schema."""
     sync_engine = create_engine(f"sqlite:///{db_pad}")
-    metadata.create_all(sync_engine)
+    projecten_metadata.create_all(sync_engine)
+    llm_calls_metadata.create_all(sync_engine)
 
     async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
     return sync_engine, SqlAlchemyAnalyseStore(async_engine), SqlAlchemyLlmCallsStore(async_engine)

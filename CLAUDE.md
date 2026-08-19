@@ -13,6 +13,7 @@ methodologie, skills en achtergrond staan in
 - `api/app/features/wetcatalogus/` — database-backed (tabel `wet_catalogus`, migratie 0007), admin CRUD + resolve via Wettenbank-MCP (PR #9 story 010, PR #15 story 020)
 - `api/app/features/llm_profielen/` — CRUD + Fernet-encryptie van API-sleutels (PR #10, story 011)
 - `api/app/features/projecten/` — analyses aanmaken/volgen, SSE voortgang, echte LLM-orkestratie act2/act3 (PR #11, #17, stories 012/024); rapport-endpoint + Markdown-download (PR #19, story 013); LLM-calls log (PR #20, story 021)
+- `api/app/features/llm_calls/` — capture-tabel + store, endpoint blijft in projecten
 - `api/app/features/annotatie/` — documenten, elementen, beslissingen, auditlog (PR #21, story 022)
 - `api/app/features/api_tokens/` — aanmaken, intrekken, DB-verificatielaag (PR #18, story 018)
 - `api/app/features/runtime_config/` — `app_instellingen`-tabel (migratie 0008), toggle `capture_llm_calls`, TTL-cache (PR #16, story 019)

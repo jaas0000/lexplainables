@@ -18,9 +18,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from app.features.llm_calls.dependencies import get_llm_calls_store
+from app.features.llm_calls.store import SqlAlchemyLlmCallsStore
 from app.features.projecten.models import metadata
-from app.features.projecten.router import get_llm_calls_store, get_store
-from app.features.projecten.store import SqlAlchemyAnalyseStore, SqlAlchemyLlmCallsStore
+from app.features.projecten.router import get_store
+from app.features.projecten.store import SqlAlchemyAnalyseStore
 from app.main import app
 from app.shared.auth import huidige_beheerder
 from conftest import TEST_BEHEERDER

@@ -23,13 +23,15 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from ...db import get_engine
 from ...engine.orchestrator import voer_analyse_uit
 from ...shared.auth import GebruikerContext, huidige_beheerder
+from ..llm_calls.dependencies import get_llm_calls_store
+from ..llm_calls.models import LlmCallRead
+from ..llm_calls.store import SqlAlchemyLlmCallsStore
 from .models import (
     TERMINAL_STATUSSEN,
     AangemaaktAcceptatie,
     AnalyseAanmaken,
     AnalyseDetail,
     AnalyseOverzicht,
-    LlmCallRead,
 )
 from .rapport_md import naar_markdown
 from .store import (
@@ -37,18 +39,12 @@ from .store import (
     AnalyseStore,
     RapportNietBeschikbaar,
     SqlAlchemyAnalyseStore,
-    SqlAlchemyLlmCallsStore,
 )
 
 
 def get_store() -> AnalyseStore:
     """FastAPI-dependency die de router aan een concrete store koppelt (werkwijze-ADR-0007)."""
     return SqlAlchemyAnalyseStore(get_engine())
-
-
-def get_llm_calls_store() -> SqlAlchemyLlmCallsStore:
-    """FastAPI-dependency voor de LLM-calls store (werkwijze-ADR-0007)."""
-    return SqlAlchemyLlmCallsStore(get_engine())
 
 
 router = APIRouter(prefix="/projecten", tags=["projecten"])
