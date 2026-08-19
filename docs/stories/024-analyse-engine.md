@@ -1,6 +1,6 @@
 # Story 024 — Analyse-engine (echte LLM-orkestratie)
 
-**Status:** in ontwikkeling  
+**Status:** gebouwd (PR #17)  
 **Epic:** lexplainables core — analyse  
 **Branch:** story-024-analyse-engine
 
