@@ -18,13 +18,12 @@ export function NavigatieHeader() {
 
   return (
     <nav className="nav">
-      <button
-        className="nav-link nav-link--placeholder"
-        disabled
-        title="Nog niet beschikbaar"
+      <Link
+        href="/projecten"
+        className={`nav-link${pathname.startsWith("/projecten") ? " nav-link--active" : ""}`}
       >
         Projecten
-      </button>
+      </Link>
       <Link
         href="/werkplek"
         className={`nav-link${isWerkplek ? " nav-link--active" : ""}`}
@@ -51,14 +50,13 @@ export function NavigatieHeader() {
         Beheer
       </Link>
 
-      <button
+      <Link
+        href="/projecten/nieuw"
         className="btn btn-primary"
-        disabled
-        title="Nog niet beschikbaar"
-        style={{ marginLeft: "0.25rem", opacity: 0.45, cursor: "not-allowed" }}
+        style={{ marginLeft: "0.25rem" }}
       >
         Nieuwe analyse
-      </button>
+      </Link>
 
       <BerichtenPopover />
 
