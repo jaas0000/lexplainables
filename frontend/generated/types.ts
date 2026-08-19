@@ -4,6 +4,50 @@
  */
 
 export interface paths {
+    "/v1/admin/api-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lijst Tokens
+         * @description Lijst alle actieve API-tokens. Bevat nooit het plaintext-token.
+         */
+        get: operations["lijst_tokens_v1_admin_api_tokens_get"];
+        put?: never;
+        /**
+         * Maak Token
+         * @description Maak een nieuw API-token. Het plaintext-token is eenmalig zichtbaar in de response.
+         */
+        post: operations["maak_token_v1_admin_api_tokens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/api-tokens/{token_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Trek Token In
+         * @description Trek een token in. 404 als het token onbekend is of al ingetrokken was.
+         */
+        delete: operations["trek_token_in_v1_admin_api_tokens__token_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/berichten": {
         parameters: {
             query?: never;
@@ -512,6 +556,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projecten/{analyse_id}/afwijzen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Afwijzen Analyse
+         * @description Human-in-the-loop: wijs de analyse af na act2-review.
+         *
+         *     Zet de status op 'fout' zodat de background-job stopt.
+         *     Geeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.
+         */
+        post: operations["afwijzen_analyse_v1_projecten__analyse_id__afwijzen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projecten/{analyse_id}/akkoord": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Akkoord Analyse
+         * @description Human-in-the-loop: geef akkoord na act2-review.
+         *
+         *     Zet de status terug op 'actief' zodat de background-job doorgaat naar act3.
+         *     Geeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.
+         */
+        post: operations["akkoord_analyse_v1_projecten__analyse_id__akkoord_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projecten/{analyse_id}/events": {
         parameters: {
             query?: never;
@@ -649,6 +739,10 @@ export interface components {
             naam: string;
             /** Omschrijving */
             omschrijving: string | null;
+            /** Rapport */
+            rapport: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Status
              * @enum {string}
@@ -676,6 +770,63 @@ export interface components {
              * @enum {string}
              */
             status: "wachtrij" | "actief" | "review" | "klaar" | "fout";
+        };
+        /**
+         * ApiTokenAangemaakt
+         * @description Eenmalige response bij aanmaken — bevat het plaintext-token.
+         */
+        ApiTokenAangemaakt: {
+            /** Aangemaakt Door */
+            aangemaakt_door: string;
+            /**
+             * Aangemaakt Op
+             * Format: date-time
+             */
+            aangemaakt_op: string;
+            /** Actief */
+            actief: boolean;
+            /** Id */
+            id: string;
+            /** Laatste Gebruik */
+            laatste_gebruik: string | null;
+            /** Label */
+            label: string;
+            /** Scope */
+            scope: string;
+            /** Token */
+            token: string;
+            /** Token Prefix */
+            token_prefix: string;
+        };
+        /** ApiTokenAanmakenVerzoek */
+        ApiTokenAanmakenVerzoek: {
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+        };
+        /** ApiTokenRead */
+        ApiTokenRead: {
+            /** Aangemaakt Door */
+            aangemaakt_door: string;
+            /**
+             * Aangemaakt Op
+             * Format: date-time
+             */
+            aangemaakt_op: string;
+            /** Actief */
+            actief: boolean;
+            /** Id */
+            id: string;
+            /** Laatste Gebruik */
+            laatste_gebruik: string | null;
+            /** Label */
+            label: string;
+            /** Scope */
+            scope: string;
+            /** Token Prefix */
+            token_prefix: string;
         };
         /**
          * AppInstellingen
@@ -1177,6 +1328,106 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    lijst_tokens_v1_admin_api_tokens_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    maak_token_v1_admin_api_tokens_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiTokenAanmakenVerzoek"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenAangemaakt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trek_token_in_v1_admin_api_tokens__token_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     lijst_alle_berichten_v1_admin_berichten_get: {
         parameters: {
             query?: {
@@ -2403,6 +2654,70 @@ export interface operations {
         };
     };
     verwijder_analyse_v1_projecten__analyse_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    afwijzen_analyse_v1_projecten__analyse_id__afwijzen_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                analyse_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    akkoord_analyse_v1_projecten__analyse_id__akkoord_post: {
         parameters: {
             query?: never;
             header?: {
