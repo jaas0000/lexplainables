@@ -6,6 +6,10 @@ vanuit de BFF). De rolfilter (analist vs. beheerder) staat in `store.py`, niet h
 
 SSE (`GET /v1/projecten/{id}/events`): stuurt `data: <json>\\n\\n`-events met de huidige
 status en fase. De stroom sluit zodra een terminale status (klaar/fout) bereikt is.
+
+Human-in-the-loop:
+  - `POST /v1/projecten/{id}/akkoord` — zet status terug op 'actief' (background-job gaat door).
+  - `POST /v1/projecten/{id}/afwijzen` — zet status op 'fout' (background-job stopt).
 """
 
 from __future__ import annotations
@@ -17,6 +21,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from ...db import get_engine
+from ...engine.orchestrator import voer_analyse_uit
 from ...shared.auth import GebruikerContext, huidige_beheerder
 from .models import (
     TERMINAL_STATUSSEN,
@@ -58,7 +63,7 @@ async def maak_analyse(
         model_profiel=body.model_profiel,
         human_in_the_loop=body.human_in_the_loop,
     )
-    taken.add_task(_voer_analyse_uit, analyse.id, body.human_in_the_loop, store)
+    taken.add_task(_voer_analyse_uit, analyse.id, store)
     return AangemaaktAcceptatie(id=analyse.id, status=analyse.status)
 
 
@@ -132,25 +137,55 @@ async def analyse_events(
     )
 
 
-async def _voer_analyse_uit(analyse_id: str, human_in_the_loop: bool, store: AnalyseStore) -> None:
-    """PoC-placeholder-job: simuleert een analyse met statusovergangen.
-
-    Echte analyselogica (MCP-aanroepen, LLM-orchestratie) komt in story 013+. Deze
-    implementatie simuleert de tijdvertraging en statusovergangen zodat de SSE-stroom
-    en de frontend al te testen zijn.
-
-    `store` wordt meegegeven vanuit de router (`taken.add_task`) zodat tests de
-    dependency-override (test-engine) doorvoeren in de achtergrond-job.
-    """
+async def _vereist_review_status(
+    store: AnalyseStore, analyse_id: str, ctx: GebruikerContext
+) -> None:
+    """Guard: raise 404 als analyse niet bestaat, 409 als status != 'review'."""
     try:
-        await asyncio.sleep(2)
-        await store.zet_status(analyse_id, "actief", "Bronnen ophalen")
-        await asyncio.sleep(3)
-        if human_in_the_loop:
-            await store.zet_status(analyse_id, "review", "Wacht op goedkeuring")
-        else:
-            await store.zet_status(analyse_id, "actief", "Rapport samenstellen")
-            await asyncio.sleep(2)
-            await store.zet_status(analyse_id, "klaar")
-    except Exception as exc:  # noqa: BLE001
-        await store.zet_status(analyse_id, "fout", foutmelding=str(exc))
+        detail = await store.detail(analyse_id, ctx.gebruikersnaam, ctx.rol == "beheerder")
+    except AnalyseNietGevonden as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    if detail.status != "review":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Analyse staat niet in review-status (huidige status: {detail.status}).",
+        )
+
+
+@router.post("/{analyse_id}/akkoord", status_code=status.HTTP_204_NO_CONTENT)
+async def akkoord_analyse(
+    analyse_id: str,
+    ctx: GebruikerContext = Depends(huidige_beheerder),
+    store: AnalyseStore = Depends(get_store),
+) -> None:
+    """Human-in-the-loop: geef akkoord na act2-review.
+
+    Zet de status terug op 'actief' zodat de background-job doorgaat naar act3.
+    Geeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.
+    """
+    await _vereist_review_status(store, analyse_id, ctx)
+    await store.zet_status(analyse_id, "actief", "Review akkoord — verdergaan met act 3")
+
+
+@router.post("/{analyse_id}/afwijzen", status_code=status.HTTP_204_NO_CONTENT)
+async def afwijzen_analyse(
+    analyse_id: str,
+    ctx: GebruikerContext = Depends(huidige_beheerder),
+    store: AnalyseStore = Depends(get_store),
+) -> None:
+    """Human-in-the-loop: wijs de analyse af na act2-review.
+
+    Zet de status op 'fout' zodat de background-job stopt.
+    Geeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.
+    """
+    await _vereist_review_status(store, analyse_id, ctx)
+    await store.zet_status(analyse_id, "fout", foutmelding="Analyse afgewezen door gebruiker.")
+
+
+async def _voer_analyse_uit(analyse_id: str, store: AnalyseStore) -> None:
+    """Achtergrond-job: voert de echte LLM-orkestratie uit (story 024).
+
+    Delegeert naar engine.orchestrator.voer_analyse_uit met de engine uit get_engine().
+    De store wordt meegegeven zodat tests de dependency-override doorgeven.
+    """
+    await voer_analyse_uit(analyse_id, store, get_engine())

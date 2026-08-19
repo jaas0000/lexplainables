@@ -135,6 +135,15 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ---
 
+## PR #17 — analyse-engine (story 024)
+
+- **Act3b schema-validatie is een no-op**: `schema_check_act3b` in `api/app/engine/steps.py` retourneert altijd een lege lijst (`lambda d: []`). Invullen zodra een formeel JAS-schema voor afleidingsregels beschikbaar is.
+- **`httpx.AsyncClient` per aanroep**: `haal_artikel_op` in `api/app/shared/wettenbank.py` maakt elke keer een nieuwe `AsyncClient` aan (nieuwe TCP-verbinding per Wettenbank-call). Maak één lifespan-scoped client via FastAPI `lifespan` — zelfde patroon als bevinding bij PR #15.
+- **C4-model bijwerken**: `docs/architectuur/c4-model.md` is niet bijgewerkt voor de nieuwe modules `api/app/engine/` (orchestrator, steps, prompts, retry), `api/app/shared/llm/` (LiteLLMClient), `api/app/shared/wettenbank.py`, `api/app/shared/validation.py`, en de nieuwe endpoints `/akkoord`+`/afwijzen`. Bijwerken in een volgende architectuurslag.
+- **Human-in-the-loop poll zonder backoff**: `orchestrator.py` pollt elke 2 seconden met een vaste `asyncio.sleep(2)` voor maximaal 24 uur. Bij een toekomstige PostgreSQL-backend overwegen om een LISTEN/NOTIFY-notificatiemechanisme te gebruiken i.p.v. polling, voor lagere DB-load en kortere latentie.
+
+---
+
 ## Frontend — berichten fase 2
 
 - **BFF-rolautorisatie**: `app/api/admin/berichten/` controleert `session.user.rol` niet — momenteel alleen beheerders actief, maar de BFF hoort rolautorisatie te dragen zodra analisten bestaan.

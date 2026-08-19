@@ -25,6 +25,7 @@ from .models import (
     analyse_detail_uit_rij,
     analyse_overzicht_uit_rij,
     analyses,
+    llm_calls,
 )
 
 
@@ -60,6 +61,12 @@ class AnalyseStore(Protocol):
         huidige_fase: str | None = None,
         foutmelding: str | None = None,
     ) -> None: ...
+
+    async def haal_status(self, analyse_id: str) -> str | None: ...
+
+    async def haal_rij_op_id(self, analyse_id: str): ...
+
+    async def sla_rapport_op(self, analyse_id: str, rapport: dict) -> None: ...
 
 
 class SqlAlchemyAnalyseStore:
@@ -152,5 +159,64 @@ class SqlAlchemyAnalyseStore:
                     huidige_fase=huidige_fase,
                     foutmelding=foutmelding,
                     bijgewerkt=nu(),
+                )
+            )
+
+    async def haal_status(self, analyse_id: str) -> str | None:
+        """Lees alleen de huidige status op (poll-endpoint voor de background-job)."""
+        async with self._engine.connect() as conn:
+            rij = await conn.execute(select(analyses.c.status).where(analyses.c.id == analyse_id))
+            result = rij.first()
+        return result.status if result else None
+
+    async def haal_rij_op_id(self, analyse_id: str):
+        """Geef de volledige rij terug voor de background-job (inclusief alle config-velden)."""
+        async with self._engine.connect() as conn:
+            rij = await conn.execute(select(analyses).where(analyses.c.id == analyse_id))
+            return rij.first()
+
+    async def sla_rapport_op(self, analyse_id: str, rapport: dict) -> None:
+        """Sla het eindrapport op in analyses.rapport (migratie 0009)."""
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                update(analyses)
+                .where(analyses.c.id == analyse_id)
+                .values(rapport=rapport, bijgewerkt=nu())
+            )
+
+
+class SqlAlchemyLlmCallsStore:
+    """Store voor het opslaan van LLM-calls (capture-toggle, migratie 0009)."""
+
+    def __init__(self, engine) -> None:
+        self._engine = engine
+
+    async def sla_op(
+        self,
+        *,
+        analyse_id: str,
+        activiteit: str,
+        bron_id: str | None,
+        system_prompt: str,
+        user_prompt: str,
+        ruwe_respons: str,
+        model: str,
+        tokens_in: int,
+        tokens_out: int,
+    ) -> None:
+        """Sla één LLM-call op. Best-effort: gooit geen exception als de tabel ontbreekt."""
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                insert(llm_calls).values(
+                    analyse_id=analyse_id,
+                    activiteit=activiteit,
+                    bron_id=bron_id,
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    ruwe_respons=ruwe_respons,
+                    model=model,
+                    tokens_in=tokens_in,
+                    tokens_out=tokens_out,
+                    aangemaakt=nu(),
                 )
             )

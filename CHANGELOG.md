@@ -2,6 +2,7 @@
 
 ## Niet uitgebracht
 
+- Analyses voeren nu echte juridische analyse uit via een taalmodel — het systeem haalt de wettekst op, genereert JAS-markeringen per bron (activiteit 2) en begrippen + afleidingsregels (activiteit 3), en slaat het rapport op. Human-in-the-loop: na activiteit 2 wacht de analyse op akkoord van de analist voordat activiteit 3 start. (PR #17)
 - Beheerders kunnen via het beheerscherm de instelling "LLM-calls vastleggen" aan- en uitzetten; wijzigingen zijn binnen 10 seconden actief. (PR #16)
 - Beheerders kunnen nu via het beheerscherm gebruikersaccounts aanmaken, rollen en actief-status wijzigen, wachtwoorden resetten (tijdelijk wachtwoord eenmalig zichtbaar) en accounts verwijderen; de laatste actieve beheerder kan niet worden gedeactiveerd of verwijderd. (PR #14)
 - Beheerders kunnen nu via het Beheer-scherm wetten toevoegen, hernoemen en verwijderen, waarbij de citeertitel automatisch opgehaald kan worden via de Wettenbank. (PR #15)

@@ -189,6 +189,27 @@ class SqlAlchemyLlmProfielenStore:
             if result.first() is None:
                 raise ProfielNietGevonden(f"Profiel '{naam}' bestaat niet.")
 
+    async def haal_rij_op_naam(self, naam: str):
+        """Geef de ruwe databaserij terug voor een profiel op naam (inclusief api_sleutel_enc).
+
+        Geeft None terug als het profiel niet bestaat. Gebruikt door de orchestrator om het
+        LLM-profiel op te halen (inclusief de versleutelde API-sleutel — feature-bouwen regel 8).
+        """
+        async with self._engine.connect() as conn:
+            rij = await conn.execute(select(llm_profielen).where(llm_profielen.c.naam == naam))
+            return rij.first()
+
+    async def haal_standaard_rij(self):
+        """Geef de ruwe databaserij voor het standaard-profiel terug (inclusief api_sleutel_enc).
+
+        Geeft None terug als er geen standaard-profiel is.
+        """
+        async with self._engine.connect() as conn:
+            rij = await conn.execute(
+                select(llm_profielen).where(llm_profielen.c.is_standaard.is_(True))
+            )
+            return rij.first()
+
 
 def _encrypt_optioneel(sleutel: str | None) -> str | None:
     """Versleutel de API-sleutel als die aanwezig is; geeft None terug als `sleutel` leeg is.
