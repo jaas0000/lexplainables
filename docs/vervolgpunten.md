@@ -4,6 +4,17 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #22 — Werkplek annotatie-UI (story 023)
+
+- **`docs/architectuur/c4-model.md` niet bijgewerkt**: L3-sectie `frontend` bevat geen `werkplek`-pagina's (`app/werkplek/`, `app/werkplek/[slug]/`) en de nieuwe `components/annotatie/`-map (ElementenKolom, AuditlogTabblad, NieuwDocumentFormulier). Bijwerken samen met de al openstaande c4-punten van eerdere PRs in een volgende architectuurslag.
+- **`projecten/page.tsx` — dubbele `formatDatum`**: `lib/datum.ts` is aangemaakt en `werkplek/page.tsx` importeert correct uit die lib, maar `frontend/app/projecten/page.tsx` heeft nog zijn eigen lokale kopie (regel 21). Vervang de lokale definitie door `import { formatDatum } from "@/lib/datum"`.
+- **Story 023 staat nog op "Gebouwd: nee"**: `docs/stories/023-werkplek-annotatie-ui.md` bijwerken naar `Gebouwd: ja`.
+- **Wetsartikeltekst is een placeholder**: de linkerkolom toont "De volledige wetsartikeltekst is beschikbaar via de Wettenbank-koppeling (nog niet ingebouwd)". Koppeling met Wettenbank-MCP (`GET /v1/wetten/{bwb_id}/structuur`) vereist een apart BFF-endpoint en een client-component; aparte story of vervolgspurt.
+- **`use(params)` voor slug-resolutie**: `app/werkplek/[slug]/page.tsx` lost `params` op via een `useEffect` + `useState`-combinatie (Next.js 16). React 19 biedt `use(params)` als éénregelige vervanging — consistent toepassen samen met `projecten/[id]/page.tsx` zodra de codebase naar React 19 gaat.
+- **Design-tokens voor aandacht-kleuren ontbreken in `globals.css`**: `ElementenKolom.tsx` gebruikt hardcoded hex-waarden (`#fef2f2`, `#fca5a5`, `#dc2626` etc.). Verplaatsen naar CSS-variabelen in `globals.css` zodra dark-mode wordt toegevoegd.
+
+---
+
 ## PR #21 — Annotatie-backend (story 022)
 
 - **`docs/architectuur/c4-model.md` niet bijgewerkt**: L3-sectie `api` bevat geen `annotatie`-component; L2-tekst vermeldt "annotatie ... nog niet" terwijl de feature nu gebouwd is. Bijwerken samen met de al openstaande c4-punten van PRs #9–#18 in een volgende architectuurslag.
