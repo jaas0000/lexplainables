@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ..shared.validation import GELDIGE_JAS_KLASSEN
+from .validation import GELDIGE_JAS_KLASSEN
 
 _REFERENCES = Path(__file__).resolve().parents[2] / "references"
 

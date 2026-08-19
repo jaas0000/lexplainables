@@ -4,6 +4,22 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## Architectuur-audit — 2026-08-19
+
+Audit gedraaid op stand na PRs #17 (analyse-engine), #18 (api-tokens, open), #19 (rapport, open), #20 (llm-calls log, open). Drie bevindingen — twee direct opgelost, één als vervolgpunt:
+
+**Direct opgelost (commit in deze ronde):**
+- **`llm_calls_metadata` → `metadata`** ✓: `projecten/models.py` gebruikte een aparte `MetaData()`-instantie voor de `llm_calls`-tabel, los van de `metadata`-instantie voor `analyses`. Nu beide tabellen onder dezelfde `metadata`, zodat `metadata.create_all()` volledig is. Imports in `test_orchestrator.py` bijgewerkt.
+- **`shared/validation.py` → `engine/validation.py`** ✓: `validation.py` stond in `shared/` maar had uitsluitend gebruikers in `engine/` (steps.py, prompts.py, tests/test_validation.py). Verplaatst naar `engine/validation.py`; imports in alle drie bijgewerkt. Per werkwijze-regel: `shared/` is voor ≥2 gebruikers.
+
+**Vervolgpunt — semantische duplicatie: `wetcatalogus/router.py` vs `shared/wettenbank.py`:**
+`shared/wettenbank.py` is aangemaakt als gedeelde Wettenbank-MCP-client (`wettenbank_artikel`). Tegelijk heeft `wetcatalogus/router.py` nog zijn eigen `_roep_wettenbank_mcp_aan` voor `wettenbank_structuur` — dezelfde JSON-RPC-boilerplate (httpx POST, content-blokken parsen, foutafhandeling). De consolidatierichting is duidelijk: `_roep_wettenbank_mcp_aan` als `haal_wet_structuur(bwb_id)` exporteren vanuit `shared/wettenbank.py`, en `wetcatalogus/router.py` laten importeren. Daarna ook de `httpx.AsyncClient`-per-aanroep-bevinding (PR #15 + #17) in één keer aanpakken met een lifespan-scoped client. Aanpak: aparte story of volgende architectuurslag.
+
+**Stabiel bevonden:**
+`main.py` en `db.py` zijn correct dun; feature-structuur (models/store/router/tests) is consistent voor alle domeinen; `shared/auth.py`, `shared/crypto.py`, `shared/tijd.py`, `shared/llm/` en `shared/wettenbank.py` staan op de juiste plek; `engine/` is gedocumenteerd als derde mapniveau in `stack-profiel.md` §Feature-eenheid.
+
+---
+
 ## Werkwijze
 
 - **"Ingelogd blijven"-checkbox functioneel maken**: de checkbox staat visueel op de loginpagina maar doet nog niets. Zodra de sessieduur-logica gebouwd wordt (story nog aan te maken), hier de `remember`-vlag doorgeven aan de Auth.js Credentials-provider (zoals wetsanalyse dat doet met `rememberMe` in de JWT-callback).

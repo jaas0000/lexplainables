@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 
 from ..shared.llm.base import LLMClient, LLMError
-from ..shared.validation import brongetrouwheid_check, schema_check_act2, schema_check_act3
+from .validation import brongetrouwheid_check, schema_check_act2, schema_check_act3
 from . import prompts
 
 logger = logging.getLogger(__name__)
