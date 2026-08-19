@@ -3,8 +3,8 @@
 Dekt de acceptatiecriteria uit story 010 (analist-routes) en story 020 (admin-CRUD + resolve).
 Alle tests gaan via de echte HTTP-laag (router + store + SQLite).
 
-Resolve-tests: de `_roep_wettenbank_mcp_aan`-functie wordt via monkeypatch gemockt
-zodat er geen echte MCP-server nodig is.
+Resolve-tests: `shared.wettenbank.haal_citeertitel_op` (geïmporteerd in de router-module)
+wordt via monkeypatch gemockt zodat er geen echte MCP-server nodig is.
 """
 
 from __future__ import annotations
@@ -152,35 +152,33 @@ def test_resolve_succesvol(client, monkeypatch):
     async def _mock_mcp(bwb_id: str) -> str:
         return "Wet werk en bijstand"
 
-    monkeypatch.setattr(router_mod, "_roep_wettenbank_mcp_aan", _mock_mcp)
+    monkeypatch.setattr(router_mod, "haal_citeertitel_op", _mock_mcp)
     resp = client.post("/v1/admin/wetten/BWBR0011823/resolve")
     assert resp.status_code == 200
     assert resp.json()["naam"] == "Wet werk en bijstand"
 
 
 def test_resolve_mcp_niet_bereikbaar_geeft_502(client, monkeypatch):
-    from fastapi import HTTPException, status
-
     import app.features.wetcatalogus.router as router_mod
+    from app.shared.wettenbank import WettenbankNietBereikbaar
 
     async def _mock_mcp(bwb_id: str) -> str:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Wettenbank tijdelijk niet bereikbaar.")
+        raise WettenbankNietBereikbaar("Wettenbank niet bereikbaar voor test")
 
-    monkeypatch.setattr(router_mod, "_roep_wettenbank_mcp_aan", _mock_mcp)
+    monkeypatch.setattr(router_mod, "haal_citeertitel_op", _mock_mcp)
     resp = client.post("/v1/admin/wetten/BWBR0011823/resolve")
     assert resp.status_code == 502
     assert "niet bereikbaar" in resp.json()["detail"]
 
 
 def test_resolve_wet_onbekend_bij_mcp_geeft_404(client, monkeypatch):
-    from fastapi import HTTPException, status
-
     import app.features.wetcatalogus.router as router_mod
+    from app.shared.wettenbank import WettenbankNietGevonden
 
     async def _mock_mcp(bwb_id: str) -> str:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Wet niet gevonden in de Wettenbank.")
+        raise WettenbankNietGevonden("Wet niet gevonden in de Wettenbank.")
 
-    monkeypatch.setattr(router_mod, "_roep_wettenbank_mcp_aan", _mock_mcp)
+    monkeypatch.setattr(router_mod, "haal_citeertitel_op", _mock_mcp)
     resp = client.post("/v1/admin/wetten/BWBR9999999/resolve")
     assert resp.status_code == 404
     assert "Wettenbank" in resp.json()["detail"]

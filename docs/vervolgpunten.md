@@ -33,9 +33,6 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 Audit gedraaid op stand na PRs #21 (annotatie-backend) en #22 (annotatie-UI). Focus: `api/app/features/`, `api/app/shared/`, `api/app/engine/`, `db.py`, `main.py`. Vier bevindingen — geen ervan is een projectbrede keuze die een ADR verdient (engine als derde mapniveau staat al in `stack-profiel.md` §Feature-eenheid; geen wijziging in dat beeld). Alles staat hieronder als vervolgpunt; niets is deze ronde direct gerefactord omdat elke aanpassing meerdere features raakt.
 
-**Duplicatie — Wettenbank-MCP JSON-RPC boilerplate (persistent open sinds 2026-08-14):**
-`shared/wettenbank.py:haal_artikel_op` (r26-87, tool `wettenbank_artikel`) en `wetcatalogus/router.py:_roep_wettenbank_mcp_aan` (r110-185, tool `wettenbank_structuur`) delen letterlijk dezelfde `httpx` JSON-RPC-POST + content-blok-parse-boilerplate. Al drie audit-rondes een openstaand vervolgpunt — de trigger van `feature-bouwen` regel 8 (tweede onafhankelijke implementatie zonder eigenaar-feature) is duidelijk aanwezig. Aanpak: `shared/wettenbank.py` uitbreiden met `haal_wet_structuur(bwb_id) -> dict` (en een gedeelde `_post_mcp(tool, args)`-helper), `wetcatalogus/router.py` laten importeren. Gelijktijdig meenemen: de bekende `httpx.AsyncClient`-per-aanroep-bevinding (PR #15/#17) door één lifespan-scoped client te injecteren. Aparte story.
-
 **Duplicatie — dialect-aware upsert (`pg_insert if is_pg else sqlite_insert`):**
 Herhaald in `berichten/store.py:137-138` en `runtime_config/store.py:46-48`. Nog een derde bijna-gebruik in `wetcatalogus/store.py:79-104` (upsert met check-then-insert i.p.v. `ON CONFLICT`, PR #15-vervolgpunt). Al genoteerd als PR #16-LAAG maar niet uitgevoerd — de tweede voorkomen is er nu (regel 8-drempel gehaald). Aanpak: `api/app/shared/db.py` toevoegen met `dialect_insert_fn(engine)` (of een dunne `upsert(table, values, index_elements)`-helper), beide stores + wetcatalogus laten aansluiten. Aparte story of meeliften met de MCP-consolidatie.
 
@@ -57,9 +54,6 @@ Audit gedraaid op stand na PRs #17 (analyse-engine), #18 (api-tokens, open), #19
 **Direct opgelost (commit in deze ronde):**
 - **`llm_calls_metadata` → `metadata`** ✓: `projecten/models.py` gebruikte een aparte `MetaData()`-instantie voor de `llm_calls`-tabel, los van de `metadata`-instantie voor `analyses`. Nu beide tabellen onder dezelfde `metadata`, zodat `metadata.create_all()` volledig is. Imports in `test_orchestrator.py` bijgewerkt.
 - **`shared/validation.py` → `engine/validation.py`** ✓: `validation.py` stond in `shared/` maar had uitsluitend gebruikers in `engine/` (steps.py, prompts.py, tests/test_validation.py). Verplaatst naar `engine/validation.py`; imports in alle drie bijgewerkt. Per werkwijze-regel: `shared/` is voor ≥2 gebruikers.
-
-**Vervolgpunt — semantische duplicatie: `wetcatalogus/router.py` vs `shared/wettenbank.py`:**
-`shared/wettenbank.py` is aangemaakt als gedeelde Wettenbank-MCP-client (`wettenbank_artikel`). Tegelijk heeft `wetcatalogus/router.py` nog zijn eigen `_roep_wettenbank_mcp_aan` voor `wettenbank_structuur` — dezelfde JSON-RPC-boilerplate (httpx POST, content-blokken parsen, foutafhandeling). De consolidatierichting is duidelijk: `_roep_wettenbank_mcp_aan` als `haal_wet_structuur(bwb_id)` exporteren vanuit `shared/wettenbank.py`, en `wetcatalogus/router.py` laten importeren. Daarna ook de `httpx.AsyncClient`-per-aanroep-bevinding (PR #15 + #17) in één keer aanpakken met een lifespan-scoped client. Aanpak: aparte story of volgende architectuurslag.
 
 **Stabiel bevonden:**
 `main.py` en `db.py` zijn correct dun; feature-structuur (models/store/router/tests) is consistent voor alle domeinen; `shared/auth.py`, `shared/crypto.py`, `shared/tijd.py`, `shared/llm/` en `shared/wettenbank.py` staan op de juiste plek; `engine/` is gedocumenteerd als derde mapniveau in `stack-profiel.md` §Feature-eenheid.
