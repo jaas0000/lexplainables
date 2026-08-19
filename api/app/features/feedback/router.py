@@ -9,6 +9,7 @@ regel 8: verplaatst hierheen zodra `berichten` hetzelfde patroon onafhankelijk n
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -103,6 +104,5 @@ async def lijst_feedback(
     _admin_userid: GebruikerContext = Depends(huidige_beheerder),
     store: FeedbackStore = Depends(get_store),
 ) -> FeedbackPaginaOut:
-    items = await store.lijst(offset, limit)
-    totaal = await store.totaal()
+    items, totaal = await asyncio.gather(store.lijst(offset, limit), store.totaal())
     return FeedbackPaginaOut(items=items, totaal=totaal)
