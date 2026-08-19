@@ -58,6 +58,22 @@ runtime-config, annotatie, berichten, feedback) worden elk zo'n feature-map — 
 concrete invulling van de interne herindeling die ADR-0001 §Consequenties als "de echte winst"
 aanwijst.
 
+### Orkestratie-module: `api/app/engine/`
+
+Naast `features/` en `shared/` bestaat er binnen `api` één derde mapniveau: `api/app/engine/`.
+Dit is de LLM-orkestratie voor analyses — geen feature (heeft geen eigen tabel of router), maar
+ook niet `shared/` (wordt uitsluitend aangeroepen vanuit `features/projecten/router.py`).
+
+Kenmerken die hem van beide onderscheiden:
+- **Geen `shared/`**: wordt door precies één feature gebruikt (`projecten`); de werkwijze-regel
+  is "laat staan tot er een tweede gebruiker is" (feature-bouwen regel 8).
+- **Geen `features/<naam>/`**: importeert cross-feature (`llm_profielen`, `runtime_config`,
+  `projecten`) — hij kan geen eigendom zijn van één feature.
+- **Eigen tests** onder `engine/tests/` — los van de feature-tests.
+
+Wanneer een tweede feature LLM-orkestratie nodig heeft, wordt beoordeeld of `engine/` dan
+naar `shared/engine/` verplaatst of als aparte feature-eigenaar gemodelleerd wordt.
+
 ## Dunne verzamelaars
 
 Binnen `api`: het routes-samenvoegpunt (huidige `admin.py`/hoofdrouter) en de

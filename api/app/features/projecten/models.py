@@ -58,11 +58,9 @@ analyses = Table(
 )
 
 # llm_calls-tabel: vastgelegde LLM-verkeer (capture-toggle, migratie 0009).
-llm_calls_metadata = MetaData()
-
 llm_calls = Table(
     "llm_calls",
-    llm_calls_metadata,
+    metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("analyse_id", String(36), nullable=False),
     Column("activiteit", String(32), nullable=False),

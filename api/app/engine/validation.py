@@ -1,4 +1,4 @@
-"""Validatie voor de analyse-engine (story 024).
+"""Validatie voor de analyse-engine.
 
 Twee soorten:
   - SCHEMA: structuur-/volledigheidscheck op LLM-output (markeringen, begrippen, regels).
@@ -7,9 +7,6 @@ Twee soorten:
     gecombineerde leden-tekst (na NFKC-normalisatie). Nooit stil doorgaan bij een mismatch.
 
 De 13 JAS-klassen zijn de enige toegestane klassen (jas-klassen-referentie.md).
-
-Gedeelde module (feature-bouwen regel 8): heeft geen eigenaar-feature — validatie is
-infrastructureel en wordt zowel door steps.py als tests gebruikt.
 """
 
 from __future__ import annotations

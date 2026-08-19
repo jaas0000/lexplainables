@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.features.projecten.models import llm_calls_metadata, metadata
+from app.features.projecten.models import metadata
 from app.features.projecten.router import get_llm_calls_store, get_store
 from app.features.projecten.store import SqlAlchemyAnalyseStore, SqlAlchemyLlmCallsStore
 from app.main import app
@@ -43,7 +43,6 @@ def client(tmp_path) -> Iterator[TestClient]:
 
     sync_engine = create_engine(f"sqlite:///{db_pad}")
     metadata.create_all(sync_engine)
-    llm_calls_metadata.create_all(sync_engine)
     sync_engine.dispose()
 
     async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")

@@ -5,7 +5,7 @@ Dekt schema_check_act2, schema_check_act3, brongetrouwheid_check.
 
 from __future__ import annotations
 
-from app.shared.validation import (
+from app.engine.validation import (
     GELDIGE_JAS_KLASSEN,
     brongetrouwheid_check,
     schema_check_act2,
