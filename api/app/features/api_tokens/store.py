@@ -132,3 +132,19 @@ class SqlAlchemyApiTokenStore:
                 )
         except Exception:  # noqa: BLE001
             pass
+
+
+async def verifieer_db_token(engine: AsyncEngine, token: str) -> bool:
+    """Verifieer een plaintext-token tegen `api_tokens` en werk laatste_gebruik bij.
+
+    Owner-export voor `shared/auth.py`: kapselt het volledige DB-verify-pad in zodat
+    `shared/` niets uit `features/` hoeft te importeren buiten deze functie. Faalt nooit
+    hard — bij een DB-hapering of onbekend token geeft de functie `False` terug, waarna
+    de aanroeper mag doorschakelen naar een 401.
+    """
+    store = SqlAlchemyApiTokenStore(engine)
+    token_id = await store.verifieer(token)
+    if token_id is None:
+        return False
+    await store.update_laatste_gebruik(token_id)
+    return True

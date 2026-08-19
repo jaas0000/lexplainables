@@ -21,6 +21,9 @@ import os
 from fastapi import Header, HTTPException, status
 from pydantic import BaseModel
 
+from ..db import get_engine
+from ..features.api_tokens.store import verifieer_db_token
+
 API_TOKEN = os.environ.get("API_TOKEN", "")
 
 
@@ -56,18 +59,9 @@ async def vereist_api_token(
     if API_TOKEN and hmac.compare_digest(token.encode(), API_TOKEN.encode()):
         return
 
-    # 2. DB-tokens — lazy import om circulaire imports bij module-load te vermijden.
-    try:
-        from ..db import get_engine
-        from ..features.api_tokens.store import SqlAlchemyApiTokenStore
-
-        store = SqlAlchemyApiTokenStore(get_engine())
-        token_id = await store.verifieer(token)
-        if token_id:
-            await store.update_laatste_gebruik(token_id)
-            return
-    except Exception:  # noqa: BLE001 — DB niet beschikbaar mag geen 500 geven; val door naar 401
-        pass
+    # 2. DB-tokens — owner-export uit api_tokens.store, DB-fouten worden daar afgevangen.
+    if await verifieer_db_token(get_engine(), token):
+        return
 
     raise _niet_geautoriseerd()
 
