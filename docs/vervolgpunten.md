@@ -4,6 +4,14 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #20 — LLM-calls log (story 021)
+
+- **Frontend CI structureel kapot op push-events**: `frontend-ci.yml` faalt bij elke push met "workflow file issue" (0s, geen job output). Hierdoor draaien `check-generated-types`, `check-ts-style` en `test-frontend-e2e` niet op PRs. Los op als apart vervolgpunt (raakt alle frontend-PRs, niet specifiek deze).
+- **Ontbrekende kolommen t.o.v. originele spec**: De originele story 021-spec had `ronde`, `poging`, `fase`, `provider`, `ok`, `fout` als kolommen — story 024 vereenvoudigde het schema. Als die velden later toch nodig zijn, vereist dat een nieuwe Alembic-migratie.
+- **`SqlAlchemyLlmCallsStore` zonder Protocol-abstractie**: De router bindt direct aan de concrete klasse (`SqlAlchemyLlmCallsStore`), terwijl `SqlAlchemyAnalyseStore` het `AnalyseStore`-Protocol implementeert. Voeg een `LlmCallsStore`-Protocol toe zodra er een tweede implementatie of gebruiker bijkomt.
+
+---
+
 ## Architectuur-audit — 2026-08-19
 
 Audit gedraaid op stand na PRs #17 (analyse-engine), #18 (api-tokens, open), #19 (rapport, open), #20 (llm-calls log, open). Drie bevindingen — twee direct opgelost, één als vervolgpunt:
