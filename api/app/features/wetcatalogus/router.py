@@ -4,24 +4,23 @@ Story 010: analist-endpoints (GET /v1/wetten, GET /v1/wetten/{bwb_id}/structuur)
 Story 020: admin-endpoints (GET/PUT/DELETE /v1/admin/wetten,
 POST /v1/admin/wetten/{bwb_id}/resolve).
 
-Resolve-endpoint: roept de Wettenbank-MCP aan via HTTP (WETTENBANK_MCP_URL env-var).
-Geeft 502 als de MCP niet bereikbaar is, 404 als het bwb-id onbekend is bij de MCP.
+Resolve-endpoint: delegeert de MCP-aanroep aan `shared/wettenbank.haal_citeertitel_op` en
+vertaalt `WettenbankNietBereikbaar` → 502, `WettenbankNietGevonden` → 404.
 """
 
 from __future__ import annotations
 
-import json
-import os
-
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...db import get_engine
 from ...shared.auth import GebruikerContext, huidige_beheerder, huidige_gebruiker
+from ...shared.wettenbank import (
+    WettenbankNietBereikbaar,
+    WettenbankNietGevonden,
+    haal_citeertitel_op,
+)
 from .models import ResolveResultaat, WetCreate, WetKeuze, WetRead, WetStructuur
 from .store import DatabaseWetcatalogusStore, WetcatalogusStore, WetNietGevonden
-
-WETTENBANK_MCP_URL = os.getenv("WETTENBANK_MCP_URL", "http://localhost:8000")
 
 router = APIRouter(prefix="/wetten", tags=["wetcatalogus"])
 admin_router = APIRouter(prefix="/admin/wetten", tags=["wetcatalogus-admin"])
@@ -103,83 +102,16 @@ async def admin_resolve_wet(
     Geeft 502 als de MCP tijdelijk niet bereikbaar is.
     Geeft 404 als het bwb-id onbekend is bij de Wettenbank.
     """
-    naam = await _roep_wettenbank_mcp_aan(bwb_id)
-    return ResolveResultaat(naam=naam)
-
-
-async def _roep_wettenbank_mcp_aan(bwb_id: str) -> str:
-    """HTTP-aanroep naar de Wettenbank-MCP voor de citeertitel van een wet.
-
-    De MCP-server wordt aangesproken via een JSON-RPC POST naar WETTENBANK_MCP_URL.
-    Mockbaar via monkeypatch in tests.
-    """
-    payload = {
-        "jsonrpc": "2.0",
-        "method": "tools/call",
-        "params": {
-            "name": "wettenbank_structuur",
-            "arguments": {"bwbId": bwb_id},
-        },
-        "id": 1,
-    }
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                f"{WETTENBANK_MCP_URL}/",
-                json=payload,
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
-            )
-    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as exc:
+        naam = await haal_citeertitel_op(bwb_id)
+    except WettenbankNietBereikbaar as exc:
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,
             "Wettenbank tijdelijk niet bereikbaar.",
         ) from exc
-
-    if not resp.is_success:
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY,
-            "Wettenbank tijdelijk niet bereikbaar.",
-        )
-
-    data = resp.json()
-
-    # JSON-RPC fout → wet niet gevonden of andere fout.
-    if "error" in data:
+    except WettenbankNietGevonden as exc:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
             "Wet niet gevonden in de Wettenbank.",
-        )
-
-    # Parseer de MCP-tool-result: content-blokken met type=text bevatten JSON.
-    result = data.get("result", {})
-    content = result.get("content", []) if isinstance(result, dict) else []
-    for blok in content:
-        if not isinstance(blok, dict):
-            continue
-        if blok.get("type") != "text":
-            continue
-        try:
-            payload_data = json.loads(blok["text"])
-        except (json.JSONDecodeError, KeyError):
-            continue
-        if isinstance(payload_data, dict) and payload_data.get("is_error"):
-            raise HTTPException(
-                status.HTTP_404_NOT_FOUND,
-                "Wet niet gevonden in de Wettenbank.",
-            )
-        citeertitel = (
-            (
-                payload_data.get("citeertitel")
-                or payload_data.get("titel")
-                or payload_data.get("naam")
-            )
-            if isinstance(payload_data, dict)
-            else None
-        )
-        if citeertitel:
-            return str(citeertitel)
-
-    raise HTTPException(
-        status.HTTP_404_NOT_FOUND,
-        "Wet niet gevonden in de Wettenbank.",
-    )
+        ) from exc
+    return ResolveResultaat(naam=naam)
