@@ -86,10 +86,21 @@ Als beheerder wil ik de LLM-aanroepen van een analyse kunnen inzien — inclusie
 
 Logica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/llm/capture.py` (decorator-patroon: `CapturingLLMClient` omhult elke LLM-aanroep) en `wetsanalyse-ai/api/app/routers/admin.py` (endpoint `lijst_llm_calls`). De call-context (analyse-slug, activiteit, ronde) is beschikbaar in de engine via een contextvar of via parameters. Schrijf de feature als `api/app/features/llm_log/` met een eigen `store.py` en `router.py`.
 
+## Afwijkingen t.o.v. spec (PR #20)
+
+Bij de bouw is het schema van story 024 (analyse-engine) gevolgd i.p.v. de spec hierboven:
+
+- **Tabel**: `llm_calls` zit in `projecten/models.py` (niet in een aparte `llm_log/`-feature), migratie 0009 (niet 0009_*).
+- **Kolommen gebouwd**: `id`, `analyse_id` (UUID, was: `analyse_slug`), `activiteit`, `bron_id`, `system_prompt`, `user_prompt`, `ruwe_respons`, `model`, `tokens_in`, `tokens_out`, `aangemaakt`. Kolommen `ronde`, `poging`, `fase`, `provider`, `ok`, `fout` zijn niet aangemaakt — vereenvoudigd per story 024 §Vereenvoudigingen.
+- **Endpoint gebouwd**: `GET /v1/projecten/{analyse_id}/llm-calls` (was: `/v1/admin/analyses/{slug}/llm-calls`).
+- **Store**: `SqlAlchemyLlmCallsStore.lijst_calls()` in `projecten/store.py`; schrijven via `capture_factory` in `engine/steps.py`.
+- **BFF-route**: `frontend/app/api/projecten/[id]/llm-calls/route.ts`.
+- **Frontend**: `/beheer/llm-calls` — losse beheerpagina met analyse-id invoerveld (niet uitklapbare sectie op rapport-pagina).
+
 ## UI
 
 - **Uitklapbare sectie op de rapport-pagina** (`/analyse/{id}/rapport`): alleen zichtbaar voor beheerders; toont een tabel met kolommen activiteit, ronde, model, tokens_in, tokens_out, tijdstip; elke rij uitklapbaar voor de prompt en respons-inhoud.
 - Alternatief: aparte pagina `/beheer/llm-log/` met een analyse-selector; minder ingrijpend voor de rapport-pagina.
 - Mockup-varianten: geen capture (lege sectie met melding "LLM-calls vastleggen is uitgeschakeld"), capture aan met data.
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #20)
