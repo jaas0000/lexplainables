@@ -6,17 +6,11 @@ import type { components } from "@/generated/types";
 import { TypeBadge } from "@/components/berichten/TypeBadge";
 import { SectieHeader } from "@/components/beheer/SectieHeader";
 import { beheerFetch } from "@/lib/beheer-fetch";
+import { BERICHT_TYPES, type BerichtType } from "@/lib/bericht-types";
 
 type BerichtAdminRead = components["schemas"]["BerichtAdminRead"];
 type BerichtCreate = components["schemas"]["BerichtCreate"];
-type BerichtType = BerichtCreate["type"];
 
-const BERICHT_TYPES: BerichtType[] = [
-  "info",
-  "update",
-  "waarschuwing",
-  "kritiek",
-];
 const LEEG = {
   titel: "",
   inhoud: "",
@@ -102,7 +96,8 @@ export default function BeheerPagina() {
   function toggleUitgeklapt(id: number) {
     setUitgeklapt((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -111,7 +106,7 @@ export default function BeheerPagina() {
     setFormulier({
       titel: b.titel,
       inhoud: b.inhoud,
-      type: b.type as BerichtType,
+      type: b.type,
       versie: b.versie ?? null,
     });
     setEditState(b.id);
@@ -412,7 +407,6 @@ export default function BeheerPagina() {
             )}
             {berichten?.map((b) => {
               const open = uitgeklapt.has(b.id);
-              const type = b.type as BerichtType;
               const datum = new Date(
                 b.gepubliceerd_op ?? b.created,
               ).toLocaleDateString("nl-NL", {
@@ -452,7 +446,7 @@ export default function BeheerPagina() {
                           flexWrap: "wrap",
                         }}
                       >
-                        <TypeBadge type={type} />
+                        <TypeBadge type={b.type} />
                         {b.versie && (
                           <span
                             style={{
