@@ -64,7 +64,13 @@ function MockupBadge() {
   );
 }
 
-function FoutMelding({ bericht, onSluit }: { bericht: string; onSluit: () => void }) {
+function FoutMelding({
+  bericht,
+  onSluit,
+}: {
+  bericht: string;
+  onSluit: () => void;
+}) {
   return (
     <div
       role="alert"
@@ -137,9 +143,15 @@ function ResolvePaneel({
     // Simuleer een asynchrone MCP-aanroep (mockup)
     setTimeout(() => {
       if (bwb_id === "BWBR0099999") {
-        setStatus({ fase: "fout", bericht: "Wet niet gevonden in de Wettenbank." });
+        setStatus({
+          fase: "fout",
+          bericht: "Wet niet gevonden in de Wettenbank.",
+        });
       } else if (bwb_id === "BWBR0000000") {
-        setStatus({ fase: "fout", bericht: "Wettenbank tijdelijk niet bereikbaar." });
+        setStatus({
+          fase: "fout",
+          bericht: "Wettenbank tijdelijk niet bereikbaar.",
+        });
       } else {
         const resolvedNaam =
           bwb_id === "BWBR0005290"
@@ -161,15 +173,28 @@ function ResolvePaneel({
         background: "rgb(var(--surface))",
       }}
     >
-      <p style={{ fontSize: "0.8125rem", color: "rgb(var(--muted))", marginBottom: "0.75rem" }}>
+      <p
+        style={{
+          fontSize: "0.8125rem",
+          color: "rgb(var(--muted))",
+          marginBottom: "0.75rem",
+        }}
+      >
         Haal de officiële citeertitel op voor{" "}
-        <span style={{ fontFamily: "monospace", fontWeight: 600, color: "rgb(var(--ink))" }}>
+        <span
+          style={{
+            fontFamily: "monospace",
+            fontWeight: 600,
+            color: "rgb(var(--ink))",
+          }}
+        >
           {bwb_id}
         </span>{" "}
         via de Wettenbank-MCP.
         {huidigenaam && (
           <>
-            {" "}Huidige naam:{" "}
+            {" "}
+            Huidige naam:{" "}
             <em style={{ color: "rgb(var(--ink))" }}>{huidigenaam}</em>.
           </>
         )}
@@ -186,11 +211,15 @@ function ResolvePaneel({
       )}
 
       {status.fase === "bezig" && (
-        <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>Resolving…</p>
+        <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
+          Resolving…
+        </p>
       )}
 
       {status.fase === "fout" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+        >
           <p
             style={{
               fontSize: "0.875rem",
@@ -214,7 +243,9 @@ function ResolvePaneel({
       )}
 
       {status.fase === "resultaat" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
           <div
             style={{
               padding: "0.625rem 0.875rem",
@@ -224,11 +255,21 @@ function ResolvePaneel({
             }}
           >
             <p
-              style={{ fontSize: "0.75rem", color: "rgb(var(--succes))", marginBottom: "0.25rem" }}
+              style={{
+                fontSize: "0.75rem",
+                color: "rgb(var(--succes))",
+                marginBottom: "0.25rem",
+              }}
             >
               Citeertitel gevonden
             </p>
-            <p style={{ fontSize: "0.9375rem", fontWeight: 600, color: "rgb(var(--ink))" }}>
+            <p
+              style={{
+                fontSize: "0.9375rem",
+                fontWeight: 600,
+                color: "rgb(var(--ink))",
+              }}
+            >
               {status.naam}
             </p>
           </div>
@@ -292,7 +333,9 @@ function WetFormulier({
     const n = naam.trim();
     if (!id || !n) return;
     if (nieuw && bestaandeBwbIds.includes(id)) {
-      setFout(`Conflict (409): wet met bwb-id "${id}" bestaat al in de catalogus.`);
+      setFout(
+        `Conflict (409): wet met bwb-id "${id}" bestaat al in de catalogus.`,
+      );
       return;
     }
     onOpslaan(id, n);
@@ -307,7 +350,10 @@ function WetFormulier({
         padding: "1.5rem",
       }}
     >
-      <form onSubmit={verzenden} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      <form
+        onSubmit={verzenden}
+        style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
+      >
         <h3
           style={{
             fontSize: "1.125rem",
@@ -342,7 +388,13 @@ function WetFormulier({
               htmlFor="bwb-id"
             >
               BWB-ID
-              <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "rgb(var(--faint))" }}>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 400,
+                  color: "rgb(var(--faint))",
+                }}
+              >
                 {nieuw ? "bv. BWBR0005290" : "vast"}
               </span>
             </label>
@@ -374,12 +426,22 @@ function WetFormulier({
               htmlFor="wet-naam"
             >
               Naam
-              <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "rgb(var(--faint))" }}>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 400,
+                  color: "rgb(var(--faint))",
+                }}
+              >
                 leesbaar label
               </span>
             </label>
             <div
-              style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem",
+              }}
               className="sm:flex-row"
             >
               <input
@@ -419,7 +481,11 @@ function WetFormulier({
         )}
 
         <div style={{ display: "flex", gap: "0.5rem", paddingTop: "0.5rem" }}>
-          <button type="button" className="btn btn-secondary" onClick={onAnnuleren}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onAnnuleren}
+          >
             Annuleren
           </button>
           <button type="submit" className="btn btn-primary">
@@ -572,11 +638,17 @@ function BevestigVerwijderen({
         >
           Wet verwijderen?
         </h3>
-        <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))", marginBottom: "1.25rem" }}>
+        <p
+          style={{
+            fontSize: "0.875rem",
+            color: "rgb(var(--muted))",
+            marginBottom: "1.25rem",
+          }}
+        >
           Weet je zeker dat je{" "}
           <strong style={{ color: "rgb(var(--ink))" }}>{wet.naam}</strong> (
-          <span style={{ fontFamily: "monospace" }}>{wet.bwb_id}</span>) wilt verwijderen uit de
-          catalogus? Bestaande analyses worden niet geraakt.
+          <span style={{ fontFamily: "monospace" }}>{wet.bwb_id}</span>) wilt
+          verwijderen uit de catalogus? Bestaande analyses worden niet geraakt.
         </p>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button className="btn btn-danger" onClick={onBevestigen}>
@@ -627,7 +699,12 @@ export default function WettenbankBeheerMockup() {
     setWetten((prev) =>
       prev.map((w) =>
         w.bwb_id === bwb_id
-          ? { ...w, naam, bijgewerkt_door: "beheerder", bijgewerkt: new Date().toISOString() }
+          ? {
+              ...w,
+              naam,
+              bijgewerkt_door: "beheerder",
+              bijgewerkt: new Date().toISOString(),
+            }
           : w,
       ),
     );
@@ -666,22 +743,41 @@ export default function WettenbankBeheerMockup() {
       case "resolve":
         setWetten(NEPPE_WETTEN);
         setBewerkId("BWBR0005290");
-        toonSucces("Klik op 'Naam ophalen' in het bewerkformulier om het resolve-paneel te openen.");
+        toonSucces(
+          "Klik op 'Naam ophalen' in het bewerkformulier om het resolve-paneel te openen.",
+        );
         break;
     }
   }
 
-  const bewerkWet = bewerkId ? (wetten.find((w) => w.bwb_id === bewerkId) ?? null) : null;
+  const bewerkWet = bewerkId
+    ? (wetten.find((w) => w.bwb_id === bewerkId) ?? null)
+    : null;
   const formulierOpen = toonToevoegen || bewerkId !== null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
       {/* Paginaheader */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: "1.875rem", fontWeight: 600 }}>Wettenbank-beheer</h1>
-          <p style={{ marginTop: "0.25rem", fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
-            Wetten toevoegen, bijwerken, resolven en verwijderen uit de catalogus.
+          <h1 style={{ fontSize: "1.875rem", fontWeight: 600 }}>
+            Wettenbank-beheer
+          </h1>
+          <p
+            style={{
+              marginTop: "0.25rem",
+              fontSize: "0.875rem",
+              color: "rgb(var(--muted))",
+            }}
+          >
+            Wetten toevoegen, bijwerken, resolven en verwijderen uit de
+            catalogus.
           </p>
         </div>
         <MockupBadge />
@@ -735,7 +831,12 @@ export default function WettenbankBeheerMockup() {
 
       {/* Feedback-balken */}
       {succesmelding && <SuccesMelding bericht={succesmelding} />}
-      {foutmelding && <FoutMelding bericht={foutmelding} onSluit={() => setFoutmelding(null)} />}
+      {foutmelding && (
+        <FoutMelding
+          bericht={foutmelding}
+          onSluit={() => setFoutmelding(null)}
+        />
+      )}
 
       {/* Wetten-sectie */}
       <section>

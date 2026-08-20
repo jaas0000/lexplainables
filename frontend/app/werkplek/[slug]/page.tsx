@@ -116,9 +116,7 @@ export default function WerkplekDetailPagina({
 
   if (laden) {
     return (
-      <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
-        Laden…
-      </p>
+      <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>Laden…</p>
     );
   }
 
@@ -199,8 +197,7 @@ export default function WerkplekDetailPagina({
               padding: "0.5rem 1rem",
               fontSize: "0.875rem",
               fontWeight: tabblad === t ? 600 : 400,
-              color:
-                tabblad === t ? "rgb(var(--lint))" : "rgb(var(--muted))",
+              color: tabblad === t ? "rgb(var(--lint))" : "rgb(var(--muted))",
               background: "none",
               border: "none",
               borderBottom:

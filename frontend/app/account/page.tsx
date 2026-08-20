@@ -81,7 +81,8 @@ export default function AccountPagina() {
       if (res.status === 400) {
         const data = await res.json().catch(() => ({}));
         setHuidigFout(
-          (data as { detail?: string }).detail ?? "Huidig wachtwoord klopt niet.",
+          (data as { detail?: string }).detail ??
+            "Huidig wachtwoord klopt niet.",
         );
         return;
       }
@@ -282,11 +283,7 @@ export default function AccountPagina() {
           </div>
 
           <div>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={bezig}
-            >
+            <button type="submit" className="btn btn-primary" disabled={bezig}>
               {bezig ? "Bezig…" : "Wachtwoord opslaan"}
             </button>
           </div>

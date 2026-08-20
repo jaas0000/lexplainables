@@ -24,7 +24,9 @@ test("rapport-pagina toont melding als analyse nog niet klaar is (409)", async (
   // Maak een nieuwe analyse aan (status wordt 'wachtrij').
   await page.goto("/projecten/nieuw");
   await page.getByPlaceholder("BWBR0011823").fill("BWBR0011823");
-  await page.getByRole("combobox").fill("9");
+  // Twee "combobox"-elementen op de pagina (artikel-input met role=combobox én een
+  // rapport-<select>) — scope op de placeholder "9" om exact de artikel-input te raken.
+  await page.getByPlaceholder("9").fill("9");
   await page.getByRole("button", { name: "Analyse starten" }).click();
   await page.waitForURL(/\/projecten\/[0-9a-f-]{36}/);
 
@@ -33,10 +35,11 @@ test("rapport-pagina toont melding als analyse nog niet klaar is (409)", async (
   const analyseId = analyseUrl.split("/projecten/")[1];
   await page.goto(`/projecten/${analyseId}/rapport`);
 
-  // Rapport is nog niet beschikbaar → melding zichtbaar.
+  // Rapport is nog niet beschikbaar → melding zichtbaar. Filter op tekst omdat Next's
+  // eigen `__next-route-announcer__` ook `role="alert"` heeft (strict-mode-conflict).
   await expect(
-    page.getByRole("alert"),
-  ).toContainText("Rapport nog niet beschikbaar");
+    page.getByRole("alert").filter({ hasText: "Rapport nog niet beschikbaar" }),
+  ).toBeVisible();
 
   // Teruglink naar de analyse-detailpagina aanwezig.
   await expect(

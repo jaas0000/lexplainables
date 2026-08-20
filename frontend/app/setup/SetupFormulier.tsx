@@ -100,11 +100,7 @@ export default function SetupFormulier() {
       style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
     >
       {formulierFout && (
-        <p
-          role="alert"
-          className="melding melding-info"
-          style={{ margin: 0 }}
-        >
+        <p role="alert" className="melding melding-info" style={{ margin: 0 }}>
           {formulierFout}
         </p>
       )}

@@ -11,8 +11,5 @@ export async function GET(
   ]);
   if (!gebruikersnaam)
     return Response.json({ detail: "Niet geautoriseerd." }, { status: 401 });
-  return apiProxy(
-    `/v1/annotatie/documenten/${slug}/audit`,
-    gebruikersnaam,
-  );
+  return apiProxy(`/v1/annotatie/documenten/${slug}/audit`, gebruikersnaam);
 }

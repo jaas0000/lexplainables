@@ -30,8 +30,7 @@ async function proxy(
 
   const body = upstream.status === 204 ? null : await upstream.text();
   const respHeaders: Record<string, string> = {
-    "Content-Type":
-      upstream.headers.get("Content-Type") ?? "application/json",
+    "Content-Type": upstream.headers.get("Content-Type") ?? "application/json",
   };
   for (const naam of forwardHeaders) {
     const waarde = upstream.headers.get(naam);

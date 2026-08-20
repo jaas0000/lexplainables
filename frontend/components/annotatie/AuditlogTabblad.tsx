@@ -21,9 +21,7 @@ interface Props {
 export function AuditlogTabblad({ audit }: Props) {
   if (audit === null) {
     return (
-      <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
-        Laden…
-      </p>
+      <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>Laden…</p>
     );
   }
 
@@ -92,7 +90,10 @@ export function AuditlogTabblad({ audit }: Props) {
                 margin: 0,
               }}
             >
-              door <strong style={{ color: "rgb(var(--ink))" }}>{regel.actor}</strong>
+              door{" "}
+              <strong style={{ color: "rgb(var(--ink))" }}>
+                {regel.actor}
+              </strong>
               {regel.element_id && (
                 <span>
                   {" "}

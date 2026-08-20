@@ -48,7 +48,9 @@ export default function DisclaimerMockup() {
           fontSize: "0.875rem",
         }}
       >
-        <span style={{ color: "rgb(var(--muted))", fontWeight: 500 }}>Variant:</span>
+        <span style={{ color: "rgb(var(--muted))", fontWeight: 500 }}>
+          Variant:
+        </span>
         <button
           className={`btn ${!geaccepteerd ? "btn-primary" : "btn-secondary"}`}
           onClick={() => setGeaccepteerd(false)}
@@ -66,30 +68,47 @@ export default function DisclaimerMockup() {
       {/* /voorwaarden pagina-inhoud — gecentreerd (max-w-2xl mx-auto) */}
       <div style={{ maxWidth: "42rem", margin: "0 auto" }}>
         <div style={{ marginBottom: "1.5rem" }}>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 600, marginBottom: "0.25rem" }}>
+          <h1
+            style={{
+              fontSize: "1.75rem",
+              fontWeight: 600,
+              marginBottom: "0.25rem",
+            }}
+          >
             Voordat je begint
           </h1>
           <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
-            Lees dit even door. Het gaat over wat deze omgeving wel en niet is, en wat dat
-            betekent voor het werk dat je hier doet.
+            Lees dit even door. Het gaat over wat deze omgeving wel en niet is,
+            en wat dat betekent voor het werk dat je hier doet.
           </p>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.5rem" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            marginBottom: "1.5rem",
+          }}
+        >
           <MeldingWaarschuwing titel="Testomgeving, geen productie">
-            Deze omgeving is een <strong>proof of concept</strong>. Er wordt actief aan
-            ontwikkeld; beschikbaarheid en stabiliteit zijn niet gegarandeerd.
+            Deze omgeving is een <strong>proof of concept</strong>. Er wordt
+            actief aan ontwikkeld; beschikbaarheid en stabiliteit zijn niet
+            gegarandeerd.
           </MeldingWaarschuwing>
 
           <MeldingWaarschuwing titel="Geen garantie op behoud van analyses">
             Analyses kunnen{" "}
-            <strong>zonder waarschuwing vooraf verwijderd worden of verloren gaan</strong>.
-            Bewaar een lokale kopie van elk rapport dat je wilt behouden.
+            <strong>
+              zonder waarschuwing vooraf verwijderd worden of verloren gaan
+            </strong>
+            . Bewaar een lokale kopie van elk rapport dat je wilt behouden.
           </MeldingWaarschuwing>
 
           <MeldingWaarschuwing titel="Geen garantie op een eindproduct">
-            Wat je hier ziet is een tussenstand. De uiteindelijke toepassing kan er{" "}
-            <strong>heel anders uitzien</strong> — of er komt nooit een eindproduct.
+            Wat je hier ziet is een tussenstand. De uiteindelijke toepassing kan
+            er <strong>heel anders uitzien</strong> — of er komt nooit een
+            eindproduct.
           </MeldingWaarschuwing>
         </div>
 
@@ -98,7 +117,10 @@ export default function DisclaimerMockup() {
             Terug naar de startpagina
           </Link>
         ) : (
-          <button className="btn btn-primary" onClick={() => setGeaccepteerd(true)}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setGeaccepteerd(true)}
+          >
             Begrepen — doorgaan
           </button>
         )}

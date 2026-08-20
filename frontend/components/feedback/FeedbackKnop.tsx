@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { CATEGORIE_META, CATEGORIEN, type Categorie } from "@/lib/feedback-types";
+import {
+  CATEGORIE_META,
+  CATEGORIEN,
+  type Categorie,
+} from "@/lib/feedback-types";
 
 export function FeedbackKnop() {
   const pathname = usePathname();
@@ -50,7 +54,10 @@ export function FeedbackKnop() {
         return;
       }
       if (!res.ok) {
-        const detail = await res.json().then((d: { detail?: string }) => d.detail).catch(() => null);
+        const detail = await res
+          .json()
+          .then((d: { detail?: string }) => d.detail)
+          .catch(() => null);
         setFout(detail ?? `${res.status} ${res.statusText}`);
         return;
       }
@@ -97,7 +104,9 @@ export function FeedbackKnop() {
               background: "rgb(var(--surface))",
             }}
           >
-            <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>Geef feedback</span>
+            <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+              Geef feedback
+            </span>
             <button
               onClick={() => setPanelOpen(false)}
               aria-label="Sluiten"
@@ -128,17 +137,34 @@ export function FeedbackKnop() {
                 gap: "0.5rem",
               }}
             >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden
+              >
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.59L5.41 12l1.42-1.42L10 13.17l7.17-7.17 1.42 1.42L10 16.59z" />
               </svg>
               Bedankt voor uw feedback!
             </div>
           ) : (
-            <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div
+              style={{
+                padding: "1rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
               {fout && (
                 <p
                   role="alert"
-                  style={{ fontSize: "0.8125rem", color: "rgb(var(--fout))", margin: 0 }}
+                  style={{
+                    fontSize: "0.8125rem",
+                    color: "rgb(var(--fout))",
+                    margin: 0,
+                  }}
                 >
                   {fout}
                 </p>
@@ -245,7 +271,13 @@ export function FeedbackKnop() {
           zIndex: 1000,
         }}
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden
+        >
           <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
         </svg>
         Feedback

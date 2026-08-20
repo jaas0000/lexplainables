@@ -71,7 +71,13 @@ function NieuwTokenModal({
         className="card"
         style={{ maxWidth: "36rem", width: "100%", padding: "1.5rem" }}
       >
-        <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "0.5rem" }}>
+        <h2
+          style={{
+            fontSize: "1.125rem",
+            fontWeight: 600,
+            marginBottom: "0.5rem",
+          }}
+        >
           Nieuw API-token aangemaakt
         </h2>
         <p
@@ -314,24 +320,29 @@ export default function ApiTokensPagina() {
                     textAlign: "left",
                   }}
                 >
-                  {["Label", "Prefix", "Aangemaakt door", "Aangemaakt op", "Laatste gebruik", ""].map(
-                    (kop) => (
-                      <th
-                        key={kop}
-                        style={{
-                          padding: "0.5rem 0.75rem",
-                          fontWeight: 600,
-                          color: "rgb(var(--muted))",
-                          fontSize: "0.75rem",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.04em",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {kop}
-                      </th>
-                    ),
-                  )}
+                  {[
+                    "Label",
+                    "Prefix",
+                    "Aangemaakt door",
+                    "Aangemaakt op",
+                    "Laatste gebruik",
+                    "",
+                  ].map((kop) => (
+                    <th
+                      key={kop}
+                      style={{
+                        padding: "0.5rem 0.75rem",
+                        fontWeight: 600,
+                        color: "rgb(var(--muted))",
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {kop}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -385,7 +396,12 @@ export default function ApiTokensPagina() {
                     >
                       {datumLabel(t.laatste_gebruik)}
                     </td>
-                    <td style={{ padding: "0.625rem 0.75rem", textAlign: "right" }}>
+                    <td
+                      style={{
+                        padding: "0.625rem 0.75rem",
+                        textAlign: "right",
+                      }}
+                    >
                       <button
                         type="button"
                         className="btn btn-danger"

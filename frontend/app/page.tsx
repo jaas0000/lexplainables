@@ -37,8 +37,9 @@ export default function StartPagina() {
             maxWidth: "48ch",
           }}
         >
-          Brongetrouwe analyse van wetgeving — per artikel, lid en bronreferentie — volgens het
-          Juridisch Analyseschema van Ausems, Bulles &amp; Lokin.
+          Brongetrouwe analyse van wetgeving — per artikel, lid en
+          bronreferentie — volgens het Juridisch Analyseschema van Ausems,
+          Bulles &amp; Lokin.
         </p>
       </div>
     </div>

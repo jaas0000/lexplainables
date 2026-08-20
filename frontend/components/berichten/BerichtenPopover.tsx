@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { TypeBadge } from "@/components/berichten/TypeBadge";
 import { TYPE_META, type BerichtType } from "@/lib/bericht-types";
@@ -17,10 +17,13 @@ interface Bericht {
 
 function BerichtItem({ bericht }: { bericht: Bericht }) {
   const { kleurVar } = TYPE_META[bericht.type];
-  const datum = new Date(bericht.gepubliceerd_op ?? bericht.created).toLocaleDateString(
-    "nl-NL",
-    { day: "numeric", month: "long", year: "numeric" },
-  );
+  const datum = new Date(
+    bericht.gepubliceerd_op ?? bericht.created,
+  ).toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div
@@ -28,7 +31,9 @@ function BerichtItem({ bericht }: { bericht: Bericht }) {
         position: "relative",
         padding: "0.75rem 1rem 0.75rem 1.25rem",
         borderBottom: "1px solid rgb(var(--line))",
-        background: bericht.gelezen ? "rgb(var(--paper))" : "rgb(var(--surface))",
+        background: bericht.gelezen
+          ? "rgb(var(--paper))"
+          : "rgb(var(--surface))",
       }}
     >
       {!bericht.gelezen && (
@@ -45,7 +50,14 @@ function BerichtItem({ bericht }: { bericht: Bericht }) {
           }}
         />
       )}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.375rem",
+          flexWrap: "wrap",
+        }}
+      >
         <TypeBadge type={bericht.type} />
         {bericht.versie && (
           <span
@@ -73,7 +85,13 @@ function BerichtItem({ bericht }: { bericht: Bericht }) {
       >
         {bericht.titel}
       </p>
-      <p style={{ marginTop: "0.2rem", fontSize: "0.75rem", color: "rgb(var(--faint))" }}>
+      <p
+        style={{
+          marginTop: "0.2rem",
+          fontSize: "0.75rem",
+          color: "rgb(var(--faint))",
+        }}
+      >
         {datum}
       </p>
     </div>
@@ -88,23 +106,22 @@ export function BerichtenPopover() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const laadAantal = useCallback(async () => {
-    try {
-      const res = await fetch("/api/berichten/ongelezen-aantal");
-      if (res.ok) {
-        const data = (await res.json()) as { aantal: number };
-        setOngelezen(data.aantal);
-      }
-    } catch {
-      // Stil negeren bij netwerk-hapering.
-    }
-  }, []);
-
   useEffect(() => {
+    async function laadAantal() {
+      try {
+        const res = await fetch("/api/berichten/ongelezen-aantal");
+        if (res.ok) {
+          const data = (await res.json()) as { aantal: number };
+          setOngelezen(data.aantal);
+        }
+      } catch {
+        // Stil negeren bij netwerk-hapering.
+      }
+    }
     void laadAantal();
     const id = setInterval(() => void laadAantal(), 60_000);
     return () => clearInterval(id);
-  }, [laadAantal]);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -232,7 +249,13 @@ export function BerichtenPopover() {
               borderBottom: "1px solid rgb(var(--line))",
             }}
           >
-            <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "rgb(var(--ink))" }}>
+            <p
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                color: "rgb(var(--ink))",
+              }}
+            >
               Berichten
             </p>
           </div>

@@ -63,7 +63,9 @@ export function NieuwDocumentFormulier({ onAangemaakt, onAnnuleren }: Props) {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+        <label
+          style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
+        >
           <span style={{ fontSize: "0.8125rem", fontWeight: 500 }}>
             Werkgebied <span style={{ color: "rgb(var(--gevaar))" }}>*</span>
           </span>
@@ -77,7 +79,9 @@ export function NieuwDocumentFormulier({ onAangemaakt, onAnnuleren }: Props) {
           />
         </label>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+        <label
+          style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
+        >
           <span style={{ fontSize: "0.8125rem", fontWeight: 500 }}>
             BWB-id <span style={{ color: "rgb(var(--gevaar))" }}>*</span>
           </span>
@@ -91,7 +95,9 @@ export function NieuwDocumentFormulier({ onAangemaakt, onAnnuleren }: Props) {
           />
         </label>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+        <label
+          style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
+        >
           <span style={{ fontSize: "0.8125rem", fontWeight: 500 }}>
             Artikel <span style={{ color: "rgb(var(--gevaar))" }}>*</span>
           </span>
@@ -105,7 +111,9 @@ export function NieuwDocumentFormulier({ onAangemaakt, onAnnuleren }: Props) {
           />
         </label>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+        <label
+          style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
+        >
           <span style={{ fontSize: "0.8125rem", fontWeight: 500 }}>
             Lid{" "}
             <span style={{ fontSize: "0.75rem", color: "rgb(var(--muted))" }}>
@@ -125,7 +133,9 @@ export function NieuwDocumentFormulier({ onAangemaakt, onAnnuleren }: Props) {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={bezig || !werkgebied.trim() || !bwbId.trim() || !artikel.trim()}
+            disabled={
+              bezig || !werkgebied.trim() || !bwbId.trim() || !artikel.trim()
+            }
           >
             {bezig ? "Aanmaken…" : "Document aanmaken"}
           </button>

@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import type { components } from "@/generated/types";
-import { SectieHeader, LeegePlaceholder } from "@/components/beheer/SectieHeader";
-import { CATEGORIE_META, CATEGORIEN, type Categorie } from "@/lib/feedback-types";
+import {
+  SectieHeader,
+  LeegePlaceholder,
+} from "@/components/beheer/SectieHeader";
+import {
+  CATEGORIE_META,
+  CATEGORIEN,
+  type Categorie,
+} from "@/lib/feedback-types";
 import { CategorieBadge } from "@/components/feedback/CategorieBadge";
 import { FeedbackItem } from "@/components/feedback/FeedbackItem";
 
@@ -50,17 +57,23 @@ type Variant =
   | "feedbackpagina-leeg";
 
 const VARIANTEN: { id: Variant; label: string }[] = [
-  { id: "knop-gesloten",        label: "Knop — gesloten" },
-  { id: "knop-open",            label: "Knop — formulier open" },
-  { id: "knop-verzonden",       label: "Knop — verzonden" },
+  { id: "knop-gesloten", label: "Knop — gesloten" },
+  { id: "knop-open", label: "Knop — formulier open" },
+  { id: "knop-verzonden", label: "Knop — verzonden" },
   { id: "beheer-navigatieknop", label: "Beheer — navigatieknop" },
   { id: "feedbackpagina-gevuld", label: "Feedbackpagina — met items" },
-  { id: "feedbackpagina-leeg",   label: "Feedbackpagina — leeg" },
+  { id: "feedbackpagina-leeg", label: "Feedbackpagina — leeg" },
 ];
 
 function IcoonChat() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
       <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
     </svg>
   );
@@ -93,7 +106,9 @@ function FeedbackPanel({ verzonden }: { verzonden: boolean }) {
           background: "rgb(var(--surface))",
         }}
       >
-        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>Geef feedback</span>
+        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+          Geef feedback
+        </span>
         <button
           aria-label="Sluiten"
           style={{
@@ -123,13 +138,26 @@ function FeedbackPanel({ verzonden }: { verzonden: boolean }) {
             gap: "0.5rem",
           }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden
+          >
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.59L5.41 12l1.42-1.42L10 13.17l7.17-7.17 1.42 1.42L10 16.59z" />
           </svg>
           Bedankt voor uw feedback!
         </div>
       ) : (
-        <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div
+          style={{
+            padding: "1rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem",
+          }}
+        >
           <div>
             <label
               style={{
@@ -229,7 +257,9 @@ function KnopDemo({ variant }: { variant: "gesloten" | "open" | "verzonden" }) {
         de gebruiker bezoekt.
       </div>
 
-      {variant !== "gesloten" && <FeedbackPanel verzonden={variant === "verzonden"} />}
+      {variant !== "gesloten" && (
+        <FeedbackPanel verzonden={variant === "verzonden"} />
+      )}
 
       <button
         className="btn btn-primary"
@@ -335,13 +365,26 @@ export default function FeedbackMockup() {
         Mockup — Feedback (story 009)
       </div>
 
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 600, marginBottom: "1.5rem" }}>Feedback</h1>
+      <h1
+        style={{ fontSize: "1.5rem", fontWeight: 600, marginBottom: "1.5rem" }}
+      >
+        Feedback
+      </h1>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "2rem" }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+          marginBottom: "2rem",
+        }}
+      >
         {VARIANTEN.map((v) => (
           <button
             key={v.id}
-            className={variant === v.id ? "btn btn-primary" : "btn btn-secondary"}
+            className={
+              variant === v.id ? "btn btn-primary" : "btn btn-secondary"
+            }
             onClick={() => setVariant(v.id)}
           >
             {v.label}
@@ -349,12 +392,14 @@ export default function FeedbackMockup() {
         ))}
       </div>
 
-      {variant === "knop-gesloten"        && <KnopDemo variant="gesloten" />}
-      {variant === "knop-open"            && <KnopDemo variant="open" />}
-      {variant === "knop-verzonden"       && <KnopDemo variant="verzonden" />}
+      {variant === "knop-gesloten" && <KnopDemo variant="gesloten" />}
+      {variant === "knop-open" && <KnopDemo variant="open" />}
+      {variant === "knop-verzonden" && <KnopDemo variant="verzonden" />}
       {variant === "beheer-navigatieknop" && <BeheerNavigatieKnop />}
-      {variant === "feedbackpagina-gevuld" && <FeedbackPaginaDemo items={NEP_FEEDBACK} />}
-      {variant === "feedbackpagina-leeg"   && <FeedbackPaginaDemo items={[]} />}
+      {variant === "feedbackpagina-gevuld" && (
+        <FeedbackPaginaDemo items={NEP_FEEDBACK} />
+      )}
+      {variant === "feedbackpagina-leeg" && <FeedbackPaginaDemo items={[]} />}
     </div>
   );
 }

@@ -58,7 +58,12 @@ export function FeedbackItem({
       </div>
       <button
         className="btn btn-secondary"
-        style={{ fontSize: "0.8125rem", minHeight: "1.875rem", padding: "0.25rem 0.625rem", flexShrink: 0 }}
+        style={{
+          fontSize: "0.8125rem",
+          minHeight: "1.875rem",
+          padding: "0.25rem 0.625rem",
+          flexShrink: 0,
+        }}
         onClick={() => onVerwijderen(item.id)}
       >
         Verwijderen

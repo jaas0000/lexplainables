@@ -66,7 +66,9 @@ export default function GebruikersbeheerPagina() {
       .catch((err: unknown) => {
         if (actief)
           setFout(
-            err instanceof Error ? err.message : "Fout bij het ophalen van gebruikers.",
+            err instanceof Error
+              ? err.message
+              : "Fout bij het ophalen van gebruikers.",
           );
       })
       .finally(() => {
@@ -120,13 +122,17 @@ export default function GebruikersbeheerPagina() {
         `/api/admin/gebruikers/${gebruikersnaam}`,
         { method: "PATCH", body: JSON.stringify(patch) },
       )) as GebruikerRead;
-      setGebruikers((prev) =>
-        prev?.map((g) => (g.gebruikersnaam === gebruikersnaam ? bijgewerkt : g)) ??
-        null,
+      setGebruikers(
+        (prev) =>
+          prev?.map((g) =>
+            g.gebruikersnaam === gebruikersnaam ? bijgewerkt : g,
+          ) ?? null,
       );
     } catch (err) {
       if (err instanceof BeheerFetchFout && err.status === 409) {
-        setFout("Kan de laatste actieve beheerder niet deactiveren of degraderen.");
+        setFout(
+          "Kan de laatste actieve beheerder niet deactiveren of degraderen.",
+        );
       } else if (err instanceof BeheerFetchFout && err.status === 404) {
         setFout("Gebruiker niet gevonden — herlaad de pagina.");
         herlaad();
@@ -149,7 +155,9 @@ export default function GebruikersbeheerPagina() {
         wachtwoord: result.tijdelijk_wachtwoord,
       });
     } catch (err) {
-      setFout(err instanceof Error ? err.message : "Fout bij wachtwoord-reset.");
+      setFout(
+        err instanceof Error ? err.message : "Fout bij wachtwoord-reset.",
+      );
     }
   }
 
@@ -160,8 +168,9 @@ export default function GebruikersbeheerPagina() {
       await beheerFetch(`/api/admin/gebruikers/${gebruikersnaam}`, {
         method: "DELETE",
       });
-      setGebruikers((prev) =>
-        prev?.filter((g) => g.gebruikersnaam !== gebruikersnaam) ?? null,
+      setGebruikers(
+        (prev) =>
+          prev?.filter((g) => g.gebruikersnaam !== gebruikersnaam) ?? null,
       );
     } catch (err) {
       if (err instanceof BeheerFetchFout && err.status === 409) {
@@ -181,7 +190,9 @@ export default function GebruikersbeheerPagina() {
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
       {/* ---- Paginaheader ---- */}
       <div>
-        <h1 style={{ fontSize: "1.875rem", fontWeight: 600 }}>Gebruikersbeheer</h1>
+        <h1 style={{ fontSize: "1.875rem", fontWeight: 600 }}>
+          Gebruikersbeheer
+        </h1>
         <p
           style={{
             marginTop: "0.25rem",
@@ -230,8 +241,8 @@ export default function GebruikersbeheerPagina() {
             Tijdelijk wachtwoord — noteer dit nu
           </strong>
           <p style={{ fontSize: "0.875rem" }}>
-            Voor <span style={{ fontWeight: 500 }}>{tijdelijk.gebruikersnaam}</span>
-            :{" "}
+            Voor{" "}
+            <span style={{ fontWeight: 500 }}>{tijdelijk.gebruikersnaam}</span>:{" "}
             <code
               style={{
                 borderRadius: "3px",
@@ -251,8 +262,8 @@ export default function GebruikersbeheerPagina() {
               color: "rgb(var(--muted))",
             }}
           >
-            Dit wachtwoord wordt niet opnieuw getoond. Deel het veilig; de gebruiker
-            logt er meteen mee in.
+            Dit wachtwoord wordt niet opnieuw getoond. Deel het veilig; de
+            gebruiker logt er meteen mee in.
           </p>
           <div style={{ marginTop: "0.25rem" }}>
             <button
@@ -335,7 +346,11 @@ export default function GebruikersbeheerPagina() {
               <option value="beheerder">beheerder</option>
             </select>
           </div>
-          <button type="submit" className="btn btn-primary" disabled={nieuwLaden}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={nieuwLaden}
+          >
             {nieuwLaden ? "Bezig…" : "Gebruiker toevoegen"}
           </button>
         </form>
@@ -360,7 +375,11 @@ export default function GebruikersbeheerPagina() {
             }}
           >
             {gebruikers.map((g) => (
-              <div key={g.gebruikersnaam} className="card" style={{ padding: "1rem" }}>
+              <div
+                key={g.gebruikersnaam}
+                className="card"
+                style={{ padding: "1rem" }}
+              >
                 {/* Info-rij */}
                 <div
                   style={{
@@ -416,7 +435,9 @@ export default function GebruikersbeheerPagina() {
                     type="button"
                     className="btn btn-secondary"
                     style={{ fontSize: "0.8125rem" }}
-                    onClick={() => void onPatch(g.gebruikersnaam, { actief: !g.actief })}
+                    onClick={() =>
+                      void onPatch(g.gebruikersnaam, { actief: !g.actief })
+                    }
                   >
                     {g.actief ? "Deactiveren" : "Activeren"}
                   </button>

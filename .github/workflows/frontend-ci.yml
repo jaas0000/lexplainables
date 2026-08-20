@@ -106,12 +106,7 @@ jobs:
             cd api
             uv sync
             uv run alembic upgrade head
-            uv run python -c "
-import asyncio
-from app.db import get_engine
-from app.features.identiteit_toegang.store import maak_gebruiker_indien_ontbreekt
-asyncio.run(maak_gebruiker_indien_ontbreekt(get_engine(), 'beheerder', 'beheerder123', 'beheerder'))
-"
+            PYTHONPATH=. uv run python scripts/seed_dev_gebruiker.py
             uv run uvicorn app.main:app --port 8000 > /tmp/api.log 2>&1 &
             for i in $(seq 1 30); do
               curl -sf http://localhost:8000/health > /dev/null && exit 0

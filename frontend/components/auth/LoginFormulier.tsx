@@ -33,7 +33,10 @@ export function LoginFormulier() {
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+    <form
+      onSubmit={onSubmit}
+      style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+    >
       {fout && (
         <p role="alert" className="melding melding-fout" style={{ margin: 0 }}>
           {fout}
@@ -71,7 +74,12 @@ export function LoginFormulier() {
         />
       </div>
 
-      <button type="submit" disabled={bezig} className="btn btn-primary" style={{ width: "100%" }}>
+      <button
+        type="submit"
+        disabled={bezig}
+        className="btn btn-primary"
+        style={{ width: "100%" }}
+      >
         {bezig ? "Bezig met inloggen…" : "Inloggen"}
       </button>
     </form>

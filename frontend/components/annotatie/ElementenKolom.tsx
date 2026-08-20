@@ -212,7 +212,11 @@ function BewerkFormulier({
         <span style={{ fontSize: "0.75rem", fontWeight: 500 }}>Tekst</span>
         <textarea
           className="field-input"
-          style={{ fontSize: "0.8125rem", minHeight: "3rem", resize: "vertical" }}
+          style={{
+            fontSize: "0.8125rem",
+            minHeight: "3rem",
+            resize: "vertical",
+          }}
           value={tekst}
           onChange={(e) => setTekst(e.target.value)}
         />
@@ -260,20 +264,15 @@ function BewerkFormulier({
           style={{ fontSize: "0.8125rem", padding: "0.25rem 0.75rem" }}
           disabled={!kanVerzenden}
           onClick={() =>
-            void onVerzend(
-              "bewerken",
-              reden as BeoordelingsReden,
-              null,
-              {
-                klasse: klasse !== element.klasse ? klasse : null,
-                tekst: tekst !== element.tekst ? tekst : null,
-                toelichting:
-                  toelichting !== (element.toelichting ?? "")
-                    ? toelichting
-                    : null,
-                lid: null,
-              },
-            )
+            void onVerzend("bewerken", reden as BeoordelingsReden, null, {
+              klasse: klasse !== element.klasse ? klasse : null,
+              tekst: tekst !== element.tekst ? tekst : null,
+              toelichting:
+                toelichting !== (element.toelichting ?? "")
+                  ? toelichting
+                  : null,
+              lid: null,
+            })
           }
         >
           {bezig ? "Opslaan…" : "Bewerking opslaan"}
@@ -365,7 +364,11 @@ function AfwijzenFormulier({
         </span>
         <textarea
           className="field-input"
-          style={{ fontSize: "0.8125rem", minHeight: "2.5rem", resize: "vertical" }}
+          style={{
+            fontSize: "0.8125rem",
+            minHeight: "2.5rem",
+            resize: "vertical",
+          }}
           value={opmerking}
           onChange={(e) => setOpmerking(e.target.value)}
           placeholder="Optionele toelichting…"
@@ -629,7 +632,12 @@ interface Props {
   router: { push: (url: string) => void };
 }
 
-export function ElementenKolom({ slug, elementen, onBeslissing, router }: Props) {
+export function ElementenKolom({
+  slug,
+  elementen,
+  onBeslissing,
+  router,
+}: Props) {
   const gesorteerd = useMemo(() => sorteerElementen(elementen), [elementen]);
 
   if (gesorteerd.length === 0) {
@@ -664,9 +672,8 @@ export function ElementenKolom({ slug, elementen, onBeslissing, router }: Props)
           margin: 0,
         }}
       >
-        {gesorteerd.length}{" "}
-        {gesorteerd.length === 1 ? "element" : "elementen"} — gesorteerd op
-        aandacht (rood → geel → groen → geen)
+        {gesorteerd.length} {gesorteerd.length === 1 ? "element" : "elementen"}{" "}
+        — gesorteerd op aandacht (rood → geel → groen → geen)
       </p>
       {gesorteerd.map((el) => (
         <ElementKaart
