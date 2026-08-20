@@ -7,6 +7,7 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 ## Simplify-sweep story 005 — auth-login
 
 - **Onbenutte BFF-route `app/api/auth/setup-status/route.ts`**: mogelijk dead code — de frontend gebruikt alleen `haalSetupStatus` (server-side). Onderzoeken en verwijderen indien nergens meer bereikt. Gevonden tijdens simplify-sweep (story 005, PR #32); buiten simplify-scope want gedragsverandering.
+- **Header-bundel duplicatie in `lib/api-client.ts`**: `publiekApiProxy` bouwt zijn eigen header-object dat 90% overlapt met `buildBackendHeaders` — alleen `X-User-Id` verschilt. Uniticeren via `buildBackendHeaders(gebruikersnaam?: string)` met optionele user. Gevonden tijdens de architecturale review van PR #32; buiten scope van die PR (auth-login-005).
 
 ---
 
