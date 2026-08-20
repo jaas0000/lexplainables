@@ -48,6 +48,15 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 admin_router = APIRouter(prefix="/admin/gebruikers", tags=["gebruikers-admin"])
 
 
+def _valideer_rol(rol: str) -> None:
+    """422 bij een rol buiten GELDIGE_ROLLEN — gedeeld door create en patch."""
+    if rol not in GELDIGE_ROLLEN:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Ongeldige rol '{rol}'. Kies uit: {sorted(GELDIGE_ROLLEN)}.",
+        )
+
+
 @router.get(
     "/setup-status",
     response_model=SetupStatus,
@@ -136,11 +145,7 @@ async def maak_gebruiker_aan(
     _ctx: GebruikerContext = Depends(huidige_beheerder),
     engine=Depends(get_engine),
 ) -> GebruikerRead:
-    if body.rol not in GELDIGE_ROLLEN:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Ongeldige rol '{body.rol}'. Kies uit: {sorted(GELDIGE_ROLLEN)}.",
-        )
+    _valideer_rol(body.rol)
     try:
         return await maak_gebruiker_admin(engine, body.gebruikersnaam, body.wachtwoord, body.rol)
     except GebruikersnaamAlInGebruik as exc:
@@ -157,11 +162,8 @@ async def wijzig_gebruiker_endpoint(
     _ctx: GebruikerContext = Depends(huidige_beheerder),
     engine=Depends(get_engine),
 ) -> GebruikerRead:
-    if body.rol is not None and body.rol not in GELDIGE_ROLLEN:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Ongeldige rol '{body.rol}'. Kies uit: {sorted(GELDIGE_ROLLEN)}.",
-        )
+    if body.rol is not None:
+        _valideer_rol(body.rol)
     try:
         return await wijzig_gebruiker(engine, gebruikersnaam, rol=body.rol, actief=body.actief)
     except GebruikerNietGevonden as exc:
