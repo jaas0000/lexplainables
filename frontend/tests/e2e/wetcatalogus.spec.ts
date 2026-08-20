@@ -30,9 +30,10 @@ test("gelukkig pad: wetten laden, wet kiezen, artikelen zien, artikel selecteren
   // Kies "Wet werk en bijstand".
   await wetDropdown.selectOption({ label: "Wet werk en bijstand" });
 
-  // Artikelen van die wet worden getoond.
-  await expect(page.getByText("art. 1")).toBeVisible();
-  await expect(page.getByText("art. 31")).toBeVisible();
+  // Artikelen van die wet worden getoond. Gebruik `exact: true` om te voorkomen dat
+  // "art. 1" ook "art. 11" of "art. 17" matcht (strict-mode-conflict).
+  await expect(page.getByText("art. 1", { exact: true })).toBeVisible();
+  await expect(page.getByText("art. 31", { exact: true })).toBeVisible();
 
   // Selecteer het eerste artikel via de checkbox.
   await page.getByRole("checkbox").first().check();
