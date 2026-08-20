@@ -62,14 +62,13 @@ export async function apiFetch(method, path, body) {
     }
     return data;
 }
-const S = z.object;
 const BERICHT_TYPE = z.enum(["info", "update", "waarschuwing", "kritiek"]);
 export const TOOLS = [
     {
         name: "list_berichten_admin",
         description: "Lijst alle berichten (ook concepten). Geeft id, titel, type, versie, " +
             "gepubliceerd-status en aanmaakdatum. Handig om bestaande id's op te zoeken.",
-        input: S({}),
+        input: z.object({}),
         run: async () => {
             const resp = (await apiFetch("GET", "/v1/admin/berichten"));
             return resp.items;
@@ -79,7 +78,7 @@ export const TOOLS = [
         name: "maak_bericht",
         description: "Maak een nieuw concept-bericht aan. Type is 'info', 'update', 'waarschuwing' of 'kritiek'. " +
             "Versie is optioneel (bv. 'v1.0.0'). Geeft het aangemaakte bericht (inclusief id) terug.",
-        input: S({
+        input: z.object({
             titel: z.string(),
             inhoud: z.string(),
             type: BERICHT_TYPE,
@@ -97,7 +96,7 @@ export const TOOLS = [
         description: "Overschrijf alle velden van een bestaand bericht (ook als het al gepubliceerd is). " +
             "Roep eerst list_berichten_admin aan om de huidige waarden te zien. " +
             "Geeft het bijgewerkte bericht terug.",
-        input: S({
+        input: z.object({
             id: z.number(),
             titel: z.string(),
             inhoud: z.string(),
@@ -110,7 +109,7 @@ export const TOOLS = [
         name: "publiceer_bericht",
         description: "Publiceer (gepubliceerd=true) of depubliceer (gepubliceerd=false) een bericht op id. " +
             "Geeft de bijgewerkte status terug.",
-        input: S({
+        input: z.object({
             id: z.number(),
             gepubliceerd: z.boolean(),
         }),
@@ -120,24 +119,18 @@ export const TOOLS = [
     },
 ];
 // ── Server ────────────────────────────────────────────────────────────────────
-function alsJsonSchema(schema) {
-    const json = z.toJSONSchema(schema, { io: "input" });
-    delete json["$schema"];
-    return json;
-}
+// Statische MCP-tool-lijst: één keer opgebouwd bij module-init, hergebruikt op elke ListTools.
+const TOOL_LIST = TOOLS.map((t) => {
+    const { $schema: _drop, ...inputSchema } = z.toJSONSchema(t.input, { io: "input" });
+    return { name: t.name, description: t.description, inputSchema };
+});
 async function main() {
     if (!API_URL || !API_TOKEN || !MCP_GEBRUIKERSNAAM) {
         log("error", "Weigering te starten: zet LEXPLAINABLES_API_URL, API_TOKEN en MCP_GEBRUIKERSNAAM.");
         process.exit(1);
     }
     const server = new Server({ name: "lexplainables-admin", version: "0.1.0" }, { capabilities: { tools: {} } });
-    server.setRequestHandler(ListToolsRequestSchema, async () => ({
-        tools: TOOLS.map((t) => ({
-            name: t.name,
-            description: t.description,
-            inputSchema: alsJsonSchema(t.input),
-        })),
-    }));
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOL_LIST }));
     server.setRequestHandler(CallToolRequestSchema, async (req) => {
         const def = TOOLS.find((t) => t.name === req.params.name);
         if (!def)

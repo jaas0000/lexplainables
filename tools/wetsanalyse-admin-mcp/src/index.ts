@@ -93,7 +93,6 @@ interface ToolDef {
   run: (a: Record<string, unknown>) => Promise<unknown>;
 }
 
-const S = z.object;
 const BERICHT_TYPE = z.enum(["info", "update", "waarschuwing", "kritiek"]);
 
 export const TOOLS: ToolDef[] = [
@@ -102,7 +101,7 @@ export const TOOLS: ToolDef[] = [
     description:
       "Lijst alle berichten (ook concepten). Geeft id, titel, type, versie, " +
       "gepubliceerd-status en aanmaakdatum. Handig om bestaande id's op te zoeken.",
-    input: S({}),
+    input: z.object({}),
     run: async () => {
       const resp = (await apiFetch("GET", "/v1/admin/berichten")) as { items: unknown };
       return resp.items;
@@ -113,7 +112,7 @@ export const TOOLS: ToolDef[] = [
     description:
       "Maak een nieuw concept-bericht aan. Type is 'info', 'update', 'waarschuwing' of 'kritiek'. " +
       "Versie is optioneel (bv. 'v1.0.0'). Geeft het aangemaakte bericht (inclusief id) terug.",
-    input: S({
+    input: z.object({
       titel: z.string(),
       inhoud: z.string(),
       type: BERICHT_TYPE,
@@ -133,7 +132,7 @@ export const TOOLS: ToolDef[] = [
       "Overschrijf alle velden van een bestaand bericht (ook als het al gepubliceerd is). " +
       "Roep eerst list_berichten_admin aan om de huidige waarden te zien. " +
       "Geeft het bijgewerkte bericht terug.",
-    input: S({
+    input: z.object({
       id: z.number(),
       titel: z.string(),
       inhoud: z.string(),
@@ -148,7 +147,7 @@ export const TOOLS: ToolDef[] = [
     description:
       "Publiceer (gepubliceerd=true) of depubliceer (gepubliceerd=false) een bericht op id. " +
       "Geeft de bijgewerkte status terug.",
-    input: S({
+    input: z.object({
       id: z.number(),
       gepubliceerd: z.boolean(),
     }),
@@ -161,11 +160,14 @@ export const TOOLS: ToolDef[] = [
 
 // ── Server ────────────────────────────────────────────────────────────────────
 
-function alsJsonSchema(schema: z.ZodType): { type: "object"; [k: string]: unknown } {
-  const json = z.toJSONSchema(schema, { io: "input" }) as Record<string, unknown>;
-  delete json["$schema"];
-  return json as { type: "object"; [k: string]: unknown };
-}
+// Statische MCP-tool-lijst: één keer opgebouwd bij module-init, hergebruikt op elke ListTools.
+const TOOL_LIST = TOOLS.map((t) => {
+  const { $schema: _drop, ...inputSchema } = z.toJSONSchema(t.input, { io: "input" }) as {
+    $schema?: unknown;
+    [k: string]: unknown;
+  };
+  return { name: t.name, description: t.description, inputSchema };
+});
 
 async function main(): Promise<void> {
   if (!API_URL || !API_TOKEN || !MCP_GEBRUIKERSNAAM) {
@@ -181,13 +183,7 @@ async function main(): Promise<void> {
     { capabilities: { tools: {} } },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: TOOLS.map((t) => ({
-      name: t.name,
-      description: t.description,
-      inputSchema: alsJsonSchema(t.input),
-    })),
-  }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOL_LIST }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const def = TOOLS.find((t) => t.name === req.params.name);
