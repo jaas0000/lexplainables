@@ -180,60 +180,11 @@ a {
   text-decoration: underline;
 }
 
-/* ---- Logobalk ---- */
-
-.logobalk {
-  background: rgb(var(--paper));
-  border-bottom: 1px solid rgb(var(--line));
-}
-
-.logobalk-inner {
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-.logobalk-link {
-  position: relative;
-  left: 50%;
-  display: block;
-  width: fit-content;
-  max-width: calc(50% + 1.5625rem);
-  transform: translateX(-1.5625rem);
-}
-
-.logobalk-logo {
-  display: block;
-  height: auto;
-  width: 17.1875rem;
-  max-width: 100%;
-}
-
-/* ---- Navigatiebalk ---- */
-
-.navbalk {
-  background: rgb(var(--paper));
-  border-bottom: 1px solid rgb(var(--line));
-}
-
-.navbalk-inner {
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.navbalk-titel {
-  flex-shrink: 0;
-  padding: 0.75rem 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: rgb(var(--lint));
-  text-decoration: none;
-}
+/* ---- Navigatie ----
+   Logo- en navigatiebalk zelf staan als Tailwind-utilities in `layout.tsx`
+   (Rijkshuisstijl-lint centreren doet zich niet netjes vertalen naar losse
+   componentklassen). De onderstaande `.nav*`-klassen stijlen de nav-items
+   binnen de navigatiebalk (zie `NavigatieHeader.tsx`). */
 
 .nav {
   display: flex;
@@ -487,17 +438,4 @@ a {
   flex-wrap: wrap;
 }
 
-/* ---- Site-footer ---- */
-
-.site-footer {
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 1rem 1.5rem 2.5rem;
-  font-size: 0.75rem;
-  color: rgb(var(--faint));
-}
-
-.site-footer-merk {
-  font-weight: 500;
-  color: rgb(var(--muted));
-}
+/* Site-footer: zie `components/SiteFooter.tsx` — puur Tailwind, geen componentklassen. */

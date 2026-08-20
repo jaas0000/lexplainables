@@ -1,7 +1,5 @@
 import "server-only";
-import { API_BASE_URL } from "./api-client";
-
-const API_TOKEN = process.env.API_TOKEN ?? "";
+import { API_BASE_URL, API_TOKEN } from "./api-client";
 
 /**
  * Vraagt direct de backend of setup nog nodig is.

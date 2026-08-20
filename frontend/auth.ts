@@ -1,9 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "./auth.config";
-
-const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8000";
-const API_TOKEN = process.env.API_TOKEN ?? "";
+import { API_BASE_URL, API_TOKEN } from "./lib/api-client";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
