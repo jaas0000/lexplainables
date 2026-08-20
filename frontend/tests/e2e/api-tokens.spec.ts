@@ -1,21 +1,13 @@
 import { test, expect } from "@playwright/test";
+import { login, resetApiTokens } from "./_helpers";
 
 // Vereist: de Next.js-server én de API draaien al vóórdat deze test start.
+// `resetApiTokens` in beforeEach verwijdert alle bestaande tokens, en elke test gebruikt
+// een uniek label — anders zou `getByText(label)` op strict-mode-conflict lopen door residu.
 
-test.beforeEach(async ({ page, context }) => {
-  await context.addCookies([
-    {
-      name: "disclaimer_geaccepteerd",
-      value: "1",
-      domain: "localhost",
-      path: "/",
-    },
-  ]);
-  await page.goto("/login");
-  await page.getByLabel("Gebruikersnaam").fill("beheerder");
-  await page.getByLabel("Wachtwoord").fill("beheerder123");
-  await page.getByRole("button", { name: "Inloggen" }).click();
-  await page.waitForURL("/");
+test.beforeEach(async ({ page, context, request }) => {
+  await resetApiTokens(request);
+  await login(page, context);
 });
 
 test("api-tokens-pagina laadt met heading en aanmaakformulier", async ({
@@ -29,8 +21,9 @@ test("api-tokens-pagina laadt met heading en aanmaakformulier", async ({
 });
 
 test("nieuw token aanmaken toont eenmalige token-modal", async ({ page }) => {
+  const label = `e2e-test-${Date.now()}`;
   await page.goto("/beheer/api-tokens");
-  await page.getByLabel("Label").fill("e2e-test");
+  await page.getByLabel("Label").fill(label);
   await page.getByRole("button", { name: "Nieuw token aanmaken" }).click();
 
   // Modal moet verschijnen met het eenmalige token.
@@ -47,26 +40,27 @@ test("nieuw token aanmaken toont eenmalige token-modal", async ({ page }) => {
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
 
-  // Nieuw token staat in de lijst.
-  await expect(page.getByText("e2e-test")).toBeVisible();
+  // Nieuw token staat in de lijst — scoped op de unieke label.
+  await expect(page.getByText(label)).toBeVisible();
 });
 
 test("token intrekken verwijdert het uit de lijst", async ({ page }) => {
+  const label = `e2e-intrek-${Date.now()}`;
   await page.goto("/beheer/api-tokens");
 
   // Maak een token aan om in te trekken.
-  await page.getByLabel("Label").fill("e2e-intrek");
+  await page.getByLabel("Label").fill(label);
   await page.getByRole("button", { name: "Nieuw token aanmaken" }).click();
   await page
     .getByRole("button", { name: "Ik heb het token opgeslagen" })
     .click();
 
   // Intrekken.
-  const rij = page.getByRole("row").filter({ hasText: "e2e-intrek" });
+  const rij = page.getByRole("row").filter({ hasText: label });
   await rij.getByRole("button", { name: "Intrekken" }).click();
 
   // Token verdwenen uit de lijst.
-  await expect(page.getByText("e2e-intrek")).not.toBeVisible();
+  await expect(page.getByText(label)).not.toBeVisible();
 });
 
 test("beheer-pagina heeft navigatielink naar api-tokens", async ({ page }) => {
