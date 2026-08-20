@@ -32,8 +32,11 @@ test("gelukkig pad: account-pagina laadt gebruikersnaam en rol", async ({
     page.getByRole("heading", { name: "Mijn gegevens" }),
   ).toBeVisible();
 
-  // Gebruikersnaam zichtbaar in de gegevens-sectie.
-  await expect(page.getByText("beheerder")).toBeVisible();
+  // Gebruikersnaam zichtbaar in de gegevens-sectie — expliciet uit de <dd>, niet
+  // uit de navigatiebalk waar de naam ook staat (strict-mode-conflict).
+  await expect(
+    page.locator("dd", { hasText: "beheerder" }).first(),
+  ).toBeVisible();
 });
 
 test("gelukkig pad: wachtwoord wijzigen en terugzetten", async ({ page }) => {
