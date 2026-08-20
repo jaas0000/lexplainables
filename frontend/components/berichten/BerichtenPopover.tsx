@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { TypeBadge } from "@/components/berichten/TypeBadge";
 import { TYPE_META, type BerichtType } from "@/lib/bericht-types";
@@ -88,23 +88,22 @@ export function BerichtenPopover() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const laadAantal = useCallback(async () => {
-    try {
-      const res = await fetch("/api/berichten/ongelezen-aantal");
-      if (res.ok) {
-        const data = (await res.json()) as { aantal: number };
-        setOngelezen(data.aantal);
-      }
-    } catch {
-      // Stil negeren bij netwerk-hapering.
-    }
-  }, []);
-
   useEffect(() => {
+    async function laadAantal() {
+      try {
+        const res = await fetch("/api/berichten/ongelezen-aantal");
+        if (res.ok) {
+          const data = (await res.json()) as { aantal: number };
+          setOngelezen(data.aantal);
+        }
+      } catch {
+        // Stil negeren bij netwerk-hapering.
+      }
+    }
     void laadAantal();
     const id = setInterval(() => void laadAantal(), 60_000);
     return () => clearInterval(id);
-  }, [laadAantal]);
+  }, []);
 
   useEffect(() => {
     if (!open) return;

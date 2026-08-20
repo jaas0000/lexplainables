@@ -9,9 +9,7 @@ from app.features.identiteit_toegang.store import maak_gebruiker_indien_ontbreek
 
 
 async def _main() -> None:
-    await maak_gebruiker_indien_ontbreekt(
-        get_engine(), "beheerder", "beheerder123", "beheerder"
-    )
+    await maak_gebruiker_indien_ontbreekt(get_engine(), "beheerder", "beheerder123", "beheerder")
 
 
 if __name__ == "__main__":

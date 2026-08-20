@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { components } from "@/generated/types";
 import { SectieHeader, LeegePlaceholder } from "@/components/beheer/SectieHeader";
@@ -15,23 +15,28 @@ export default function FeedbackPagina() {
   const [fout, setFout] = useState<string | null>(null);
   const [verwijderFout, setVerwijderFout] = useState<string | null>(null);
 
-  const laadFeedback = useCallback(async () => {
-    setLaden(true);
-    setFout(null);
-    try {
-      const data = await beheerFetch("/api/admin/feedback") as { items: FeedbackRead[] };
-      setItems(data.items);
-    } catch (err) {
-      setFout(err instanceof Error ? err.message : "Fout bij het ophalen van feedback.");
-    } finally {
-      setLaden(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void laadFeedback();
-    beheerFetch("/api/admin/feedback/markeer-gezien", { method: "POST" }).catch(console.error);
-  }, [laadFeedback]);
+    async function laad() {
+      setLaden(true);
+      setFout(null);
+      try {
+        const data = (await beheerFetch("/api/admin/feedback")) as {
+          items: FeedbackRead[];
+        };
+        setItems(data.items);
+      } catch (err) {
+        setFout(
+          err instanceof Error ? err.message : "Fout bij het ophalen van feedback.",
+        );
+      } finally {
+        setLaden(false);
+      }
+    }
+    void laad();
+    beheerFetch("/api/admin/feedback/markeer-gezien", { method: "POST" }).catch(
+      console.error,
+    );
+  }, []);
 
   async function verwijderen(id: number) {
     setVerwijderFout(null);
@@ -41,7 +46,8 @@ export default function FeedbackPagina() {
     } catch (err) {
       setVerwijderFout(err instanceof Error ? err.message : "Fout bij verwijderen.");
       if (err instanceof BeheerFetchFout && err.status === 404) {
-        void laadFeedback();
+        // Item bestaat server-side al niet meer; ruim de lokale kopie op.
+        setItems((prev) => prev?.filter((item) => item.id !== id) ?? null);
       }
     }
   }
