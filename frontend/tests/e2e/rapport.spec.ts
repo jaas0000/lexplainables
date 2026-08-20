@@ -36,9 +36,7 @@ test("rapport-pagina toont melding als analyse nog niet klaar is (409)", async (
   // Rapport is nog niet beschikbaar → melding zichtbaar. Filter op tekst omdat Next's
   // eigen `__next-route-announcer__` ook `role="alert"` heeft (strict-mode-conflict).
   await expect(
-    page
-      .getByRole("alert")
-      .filter({ hasText: "Rapport nog niet beschikbaar" }),
+    page.getByRole("alert").filter({ hasText: "Rapport nog niet beschikbaar" }),
   ).toBeVisible();
 
   // Teruglink naar de analyse-detailpagina aanwezig.
