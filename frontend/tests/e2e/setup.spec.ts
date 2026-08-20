@@ -1,4 +1,8 @@
 import { test, expect } from "@playwright/test";
+// `node:sqlite` is een Node 22-built-in maar @types/node@20 declareert 'm (nog) niet —
+// ts-ignore op de import zodat `next build` (tsc) niet struikelt. CI en lokaal draaien
+// Node 22, dus runtime-import werkt gewoon.
+// @ts-expect-error node:sqlite bestaat in Node 22 runtime, ontbreekt in @types/node@20
 import { DatabaseSync } from "node:sqlite";
 import { existsSync } from "node:fs";
 import { API_BASE_URL, API_TOKEN } from "./_helpers";
