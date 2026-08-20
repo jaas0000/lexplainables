@@ -72,17 +72,16 @@ export function DisclaimerClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ callbackUrl }),
       });
-      if (!res.ok) {
-        setFout("Er ging iets mis. Probeer het opnieuw.");
-        setBezig(false);
+      if (res.ok) {
+        const data = (await res.json()) as { ok: boolean; redirect: string };
+        window.location.href = data.redirect;
         return;
       }
-      const data = (await res.json()) as { ok: boolean; redirect: string };
-      window.location.href = data.redirect;
     } catch {
-      setFout("Er ging iets mis. Probeer het opnieuw.");
-      setBezig(false);
+      // val door naar de foutmelding hieronder
     }
+    setFout("Er ging iets mis. Probeer het opnieuw.");
+    setBezig(false);
   }
 
   return (
