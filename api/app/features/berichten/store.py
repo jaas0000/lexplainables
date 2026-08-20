@@ -180,22 +180,14 @@ class SqlAlchemyBerichtenStore:
             rij = result.one()
         return bericht_admin_uit_rij(rij)
 
-    async def bewerk(
-        self, bericht_id: int, titel: str, inhoud: str, type: BerichtType, versie: str | None
-    ) -> BerichtAdminRead:
-        """Werk een bericht bij (inhoud/metadata). Leesbewijzen blijven ongemoeid — bewerken
-        is geen nieuwe publicatie."""
+    async def _werk_bij(self, bericht_id: int, **waarden) -> BerichtAdminRead:
+        """Gedeelde update-en-geef-terug voor `bewerk`/`zet_publicatie`: één transactie, één
+        RETURNING-roundtrip, of `BerichtNietGevonden` als het id niet bestaat."""
         async with self._engine.begin() as conn:
             result = await conn.execute(
                 update(berichten)
                 .where(berichten.c.id == bericht_id)
-                .values(
-                    titel=titel.strip(),
-                    inhoud=inhoud,
-                    type=type,
-                    versie=versie.strip() if versie else None,
-                    updated=nu(),
-                )
+                .values(**waarden)
                 .returning(berichten)
             )
             rij = result.first()
@@ -203,24 +195,29 @@ class SqlAlchemyBerichtenStore:
             raise BerichtNietGevonden(f"Bericht {bericht_id} bestaat niet.")
         return bericht_admin_uit_rij(rij)
 
+    async def bewerk(
+        self, bericht_id: int, titel: str, inhoud: str, type: BerichtType, versie: str | None
+    ) -> BerichtAdminRead:
+        """Werk een bericht bij (inhoud/metadata). Leesbewijzen blijven ongemoeid — bewerken
+        is geen nieuwe publicatie."""
+        return await self._werk_bij(
+            bericht_id,
+            titel=titel.strip(),
+            inhoud=inhoud,
+            type=type,
+            versie=versie.strip() if versie else None,
+            updated=nu(),
+        )
+
     async def zet_publicatie(self, bericht_id: int, gepubliceerd: bool) -> BerichtAdminRead:
         """Publiceer of depubliceer een bericht: zet resp. wist `gepubliceerd_op`."""
         moment = nu()
-        async with self._engine.begin() as conn:
-            result = await conn.execute(
-                update(berichten)
-                .where(berichten.c.id == bericht_id)
-                .values(
-                    gepubliceerd=gepubliceerd,
-                    gepubliceerd_op=moment if gepubliceerd else None,
-                    updated=moment,
-                )
-                .returning(berichten)
-            )
-            rij = result.first()
-        if rij is None:
-            raise BerichtNietGevonden(f"Bericht {bericht_id} bestaat niet.")
-        return bericht_admin_uit_rij(rij)
+        return await self._werk_bij(
+            bericht_id,
+            gepubliceerd=gepubliceerd,
+            gepubliceerd_op=moment if gepubliceerd else None,
+            updated=moment,
+        )
 
     async def verwijder(self, bericht_id: int) -> None:
         """Verwijder een bericht + al zijn leesbewijzen, in één transactie (cascade). Geen losse
