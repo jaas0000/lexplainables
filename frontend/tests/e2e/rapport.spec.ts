@@ -24,7 +24,9 @@ test("rapport-pagina toont melding als analyse nog niet klaar is (409)", async (
   // Maak een nieuwe analyse aan (status wordt 'wachtrij').
   await page.goto("/projecten/nieuw");
   await page.getByPlaceholder("BWBR0011823").fill("BWBR0011823");
-  await page.getByRole("combobox").fill("9");
+  // Twee "combobox"-elementen op de pagina (artikel-input met role=combobox én een
+  // rapport-<select>) — scope op de placeholder "9" om exact de artikel-input te raken.
+  await page.getByPlaceholder("9").fill("9");
   await page.getByRole("button", { name: "Analyse starten" }).click();
   await page.waitForURL(/\/projecten\/[0-9a-f-]{36}/);
 
