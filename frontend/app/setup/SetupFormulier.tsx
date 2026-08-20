@@ -3,6 +3,23 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+const HELPTEKST_STIJL = {
+  margin: "0.25rem 0 0",
+  fontSize: "0.8125rem",
+} as const;
+
+function VeldFout({ id, tekst }: { id: string; tekst: string }) {
+  return (
+    <p
+      id={id}
+      role="alert"
+      style={{ ...HELPTEKST_STIJL, color: "rgb(var(--fout))" }}
+    >
+      {tekst}
+    </p>
+  );
+}
+
 export default function SetupFormulier() {
   const router = useRouter();
 
@@ -112,17 +129,10 @@ export default function SetupFormulier() {
           aria-invalid={!!veldFouten.gebruikersnaam}
         />
         {veldFouten.gebruikersnaam && (
-          <p
+          <VeldFout
             id="s-gebruikersnaam-fout"
-            role="alert"
-            style={{
-              margin: "0.25rem 0 0",
-              fontSize: "0.8125rem",
-              color: "rgb(var(--fout))",
-            }}
-          >
-            {veldFouten.gebruikersnaam}
-          </p>
+            tekst={veldFouten.gebruikersnaam}
+          />
         )}
       </div>
 
@@ -143,17 +153,7 @@ export default function SetupFormulier() {
           aria-invalid={!!veldFouten.email}
         />
         {veldFouten.email && (
-          <p
-            id="s-email-fout"
-            role="alert"
-            style={{
-              margin: "0.25rem 0 0",
-              fontSize: "0.8125rem",
-              color: "rgb(var(--fout))",
-            }}
-          >
-            {veldFouten.email}
-          </p>
+          <VeldFout id="s-email-fout" tekst={veldFouten.email} />
         )}
       </div>
 
@@ -177,25 +177,11 @@ export default function SetupFormulier() {
           aria-invalid={!!veldFouten.wachtwoord}
         />
         {veldFouten.wachtwoord ? (
-          <p
-            id="s-wachtwoord-fout"
-            role="alert"
-            style={{
-              margin: "0.25rem 0 0",
-              fontSize: "0.8125rem",
-              color: "rgb(var(--fout))",
-            }}
-          >
-            {veldFouten.wachtwoord}
-          </p>
+          <VeldFout id="s-wachtwoord-fout" tekst={veldFouten.wachtwoord} />
         ) : (
           <p
             id="s-wachtwoord-hint"
-            style={{
-              margin: "0.25rem 0 0",
-              fontSize: "0.8125rem",
-              color: "rgb(var(--faint))",
-            }}
+            style={{ ...HELPTEKST_STIJL, color: "rgb(var(--faint))" }}
           >
             Minimaal 8 tekens.
           </p>
@@ -221,17 +207,7 @@ export default function SetupFormulier() {
           aria-invalid={!!veldFouten.bevestiging}
         />
         {veldFouten.bevestiging && (
-          <p
-            id="s-bevestiging-fout"
-            role="alert"
-            style={{
-              margin: "0.25rem 0 0",
-              fontSize: "0.8125rem",
-              color: "rgb(var(--fout))",
-            }}
-          >
-            {veldFouten.bevestiging}
-          </p>
+          <VeldFout id="s-bevestiging-fout" tekst={veldFouten.bevestiging} />
         )}
       </div>
 
