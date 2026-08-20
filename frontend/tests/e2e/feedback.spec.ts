@@ -32,7 +32,9 @@ test("gebruiker opent feedbackformulier, vult tekst in en ziet succesbericht", a
   await expect(page.getByText("Geef feedback")).toBeVisible();
 
   // Vul tekst in en verzend.
-  await page.getByLabel("Uw opmerking").fill("E2E-test feedback via Playwright");
+  await page
+    .getByLabel("Uw opmerking")
+    .fill("E2E-test feedback via Playwright");
   await page.getByRole("button", { name: "Verzenden" }).click();
 
   // Succesbericht verschijnt zonder page-reload.
@@ -54,13 +56,17 @@ test("beheerder verwijdert al verwijderd feedbackitem en ziet zichtbare foutmeld
 
   // Ga naar de feedbackpagina.
   await page.goto("/beheer/feedback");
-  const eersteVerwijderKnop = page.getByRole("button", { name: "Verwijderen" }).first();
+  const eersteVerwijderKnop = page
+    .getByRole("button", { name: "Verwijderen" })
+    .first();
   await expect(eersteVerwijderKnop).toBeVisible();
 
   // Tweede tabblad, zelfde sessie — verwijdert hetzelfde item.
   const page2 = await context.newPage();
   await page2.goto("/beheer/feedback");
-  const eersteVerwijderKnop2 = page2.getByRole("button", { name: "Verwijderen" }).first();
+  const eersteVerwijderKnop2 = page2
+    .getByRole("button", { name: "Verwijderen" })
+    .first();
   await expect(eersteVerwijderKnop2).toBeVisible();
 
   // Eerste tab verwijdert.

@@ -15,7 +15,8 @@ const NEPPE_BERICHTEN: Bericht[] = [
   {
     id: 1,
     titel: "Nieuwe analysemethode beschikbaar",
-    inhoud: "De verbeterde LLM-analyse is nu beschikbaar voor alle projecten. Pas de instellingen aan via het modelprofielen-scherm.",
+    inhoud:
+      "De verbeterde LLM-analyse is nu beschikbaar voor alle projecten. Pas de instellingen aan via het modelprofielen-scherm.",
     type: "update",
     versie: "2.4.0",
     gepubliceerd_op: "2026-08-10T10:00:00Z",
@@ -24,7 +25,8 @@ const NEPPE_BERICHTEN: Bericht[] = [
   {
     id: 2,
     titel: "Gepland onderhoud op 20 augustus",
-    inhoud: "Het systeem is op 20 augustus van 02:00–04:00 niet bereikbaar wegens database-migraties.",
+    inhoud:
+      "Het systeem is op 20 augustus van 02:00–04:00 niet bereikbaar wegens database-migraties.",
     type: "waarschuwing",
     versie: null,
     gepubliceerd_op: "2026-08-12T08:00:00Z",
@@ -33,7 +35,8 @@ const NEPPE_BERICHTEN: Bericht[] = [
   {
     id: 3,
     titel: "Nieuwe exportfunctie aangekondigd",
-    inhoud: "PDF-export wordt volgende sprint uitgerold. Meer informatie volgt via het beheerteam.",
+    inhoud:
+      "PDF-export wordt volgende sprint uitgerold. Meer informatie volgt via het beheerteam.",
     type: "info",
     versie: null,
     gepubliceerd_op: "2026-08-05T09:00:00Z",
@@ -44,7 +47,13 @@ const NEPPE_BERICHTEN: Bericht[] = [
 export default function BerichtenPagina() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <h1 style={{ fontSize: "1.375rem" }}>Berichten</h1>
         <span
           style={{
@@ -63,11 +72,14 @@ export default function BerichtenPagina() {
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         {NEPPE_BERICHTEN.map((b) => {
           const { kleurVar } = TYPE_META[b.type];
-          const datum = new Date(b.gepubliceerd_op).toLocaleDateString("nl-NL", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          });
+          const datum = new Date(b.gepubliceerd_op).toLocaleDateString(
+            "nl-NL",
+            {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            },
+          );
 
           return (
             <div
@@ -76,7 +88,9 @@ export default function BerichtenPagina() {
               style={{
                 position: "relative",
                 paddingLeft: "1.75rem",
-                background: b.gelezen ? "rgb(var(--paper))" : "rgb(var(--surface))",
+                background: b.gelezen
+                  ? "rgb(var(--paper))"
+                  : "rgb(var(--surface))",
               }}
             >
               {/* Gekleurde linkerbalk voor ongelezen */}
@@ -95,7 +109,15 @@ export default function BerichtenPagina() {
                 />
               )}
 
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  flexWrap: "wrap",
+                  marginBottom: "0.5rem",
+                }}
+              >
                 <TypeBadge type={b.type} />
                 {b.versie && (
                   <span
@@ -112,15 +134,34 @@ export default function BerichtenPagina() {
                     {b.versie}
                   </span>
                 )}
-                <span style={{ fontSize: "0.75rem", color: "rgb(var(--faint))", marginLeft: "auto" }}>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "rgb(var(--faint))",
+                    marginLeft: "auto",
+                  }}
+                >
                   {datum}
                 </span>
               </div>
 
-              <p style={{ fontSize: "1rem", fontWeight: 600, color: "rgb(var(--ink))", marginBottom: "0.375rem" }}>
+              <p
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  color: "rgb(var(--ink))",
+                  marginBottom: "0.375rem",
+                }}
+              >
                 {b.titel}
               </p>
-              <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))", lineHeight: 1.6 }}>
+              <p
+                style={{
+                  fontSize: "0.875rem",
+                  color: "rgb(var(--muted))",
+                  lineHeight: 1.6,
+                }}
+              >
                 {b.inhoud}
               </p>
             </div>

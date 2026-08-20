@@ -20,9 +20,7 @@ export default function InstellingenPagina() {
       .then((data) => setInstellingen(data as AppInstellingen))
       .catch((err) =>
         setFout(
-          err instanceof Error
-            ? err.message
-            : "Kon instellingen niet ophalen.",
+          err instanceof Error ? err.message : "Kon instellingen niet ophalen.",
         ),
       )
       .finally(() => setLaden(false));
@@ -124,13 +122,19 @@ export default function InstellingenPagina() {
                   }}
                 >
                   Legt per call de letterlijke system/user-prompt en de ruwe
-                  respons vast (incl. auto-correctie en gefaalde calls). Standaard
-                  uit; aanzetten kost extra opslag per analyse.
+                  respons vast (incl. auto-correctie en gefaalde calls).
+                  Standaard uit; aanzetten kost extra opslag per analyse.
                 </p>
               </div>
 
               {/* Tag + knop rechts */}
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                }}
+              >
                 <span
                   style={{
                     fontSize: "0.75rem",

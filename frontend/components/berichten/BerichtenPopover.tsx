@@ -17,10 +17,13 @@ interface Bericht {
 
 function BerichtItem({ bericht }: { bericht: Bericht }) {
   const { kleurVar } = TYPE_META[bericht.type];
-  const datum = new Date(bericht.gepubliceerd_op ?? bericht.created).toLocaleDateString(
-    "nl-NL",
-    { day: "numeric", month: "long", year: "numeric" },
-  );
+  const datum = new Date(
+    bericht.gepubliceerd_op ?? bericht.created,
+  ).toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div
@@ -28,7 +31,9 @@ function BerichtItem({ bericht }: { bericht: Bericht }) {
         position: "relative",
         padding: "0.75rem 1rem 0.75rem 1.25rem",
         borderBottom: "1px solid rgb(var(--line))",
-        background: bericht.gelezen ? "rgb(var(--paper))" : "rgb(var(--surface))",
+        background: bericht.gelezen
+          ? "rgb(var(--paper))"
+          : "rgb(var(--surface))",
       }}
     >
       {!bericht.gelezen && (
@@ -45,7 +50,14 @@ function BerichtItem({ bericht }: { bericht: Bericht }) {
           }}
         />
       )}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.375rem",
+          flexWrap: "wrap",
+        }}
+      >
         <TypeBadge type={bericht.type} />
         {bericht.versie && (
           <span
@@ -73,7 +85,13 @@ function BerichtItem({ bericht }: { bericht: Bericht }) {
       >
         {bericht.titel}
       </p>
-      <p style={{ marginTop: "0.2rem", fontSize: "0.75rem", color: "rgb(var(--faint))" }}>
+      <p
+        style={{
+          marginTop: "0.2rem",
+          fontSize: "0.75rem",
+          color: "rgb(var(--faint))",
+        }}
+      >
         {datum}
       </p>
     </div>
@@ -231,7 +249,13 @@ export function BerichtenPopover() {
               borderBottom: "1px solid rgb(var(--line))",
             }}
           >
-            <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "rgb(var(--ink))" }}>
+            <p
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                color: "rgb(var(--ink))",
+              }}
+            >
               Berichten
             </p>
           </div>

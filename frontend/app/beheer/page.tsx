@@ -570,7 +570,10 @@ export default function BeheerPagina() {
 
       {/* ---- Sectie: Gebruikers ---- */}
       <section>
-        <SectieHeader titel="Gebruikers" subtitel="Accounts, rollen en wachtwoorden" />
+        <SectieHeader
+          titel="Gebruikers"
+          subtitel="Accounts, rollen en wachtwoorden"
+        />
         <div
           style={{
             display: "flex",

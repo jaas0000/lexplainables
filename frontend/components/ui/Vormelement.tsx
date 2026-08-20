@@ -8,7 +8,9 @@ export function Vormelement({
   className?: string;
 }) {
   return (
-    <div className={`rounded-button rounded-br-vorm bg-lint text-paper ${className}`}>
+    <div
+      className={`rounded-button rounded-br-vorm bg-lint text-paper ${className}`}
+    >
       {children}
     </div>
   );

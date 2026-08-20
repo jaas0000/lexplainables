@@ -16,7 +16,14 @@ export default async function DisclaimerPage({
 
   const params = await searchParams;
   const callbackUrl =
-    (Array.isArray(params.callbackUrl) ? params.callbackUrl[0] : params.callbackUrl) ?? "/";
+    (Array.isArray(params.callbackUrl)
+      ? params.callbackUrl[0]
+      : params.callbackUrl) ?? "/";
 
-  return <DisclaimerClient alGeaccepteerd={alGeaccepteerd} callbackUrl={callbackUrl} />;
+  return (
+    <DisclaimerClient
+      alGeaccepteerd={alGeaccepteerd}
+      callbackUrl={callbackUrl}
+    />
+  );
 }

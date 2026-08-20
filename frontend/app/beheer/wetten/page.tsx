@@ -37,13 +37,10 @@ function BewerkenFormulier({
     setBezig(true);
     setFout(null);
     try {
-      const bijgewerkt = (await beheerFetch(
-        `/api/admin/wetten/${wet.bwb_id}`,
-        {
-          method: "PUT",
-          body: JSON.stringify({ bwb_id: wet.bwb_id, naam: naam.trim() }),
-        },
-      )) as WetRead;
+      const bijgewerkt = (await beheerFetch(`/api/admin/wetten/${wet.bwb_id}`, {
+        method: "PUT",
+        body: JSON.stringify({ bwb_id: wet.bwb_id, naam: naam.trim() }),
+      })) as WetRead;
       onOpgeslagen(bijgewerkt);
     } catch (err) {
       setFout(veldfout(err));
@@ -124,9 +121,7 @@ function BewerkenFormulier({
         </button>
       </div>
 
-      <div
-        style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}
-      >
+      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
         <button type="submit" className="btn btn-primary" disabled={bezig}>
           {bezig ? "Opslaan…" : "Opslaan"}
         </button>
@@ -376,7 +371,9 @@ export default function WettenPagina() {
 
   function wetBijgewerkt(bijgewerkt: WetRead) {
     setWetten((prev) =>
-      prev ? prev.map((w) => (w.bwb_id === bijgewerkt.bwb_id ? bijgewerkt : w)) : [bijgewerkt],
+      prev
+        ? prev.map((w) => (w.bwb_id === bijgewerkt.bwb_id ? bijgewerkt : w))
+        : [bijgewerkt],
     );
   }
 

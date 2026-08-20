@@ -22,10 +22,10 @@ test("api-tokens-pagina laadt met heading en aanmaakformulier", async ({
   page,
 }) => {
   await page.goto("/beheer/api-tokens");
+  await expect(page.getByRole("heading", { name: "API-tokens" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "API-tokens" }),
+    page.getByRole("button", { name: "Nieuw token aanmaken" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Nieuw token aanmaken" })).toBeVisible();
 });
 
 test("nieuw token aanmaken toont eenmalige token-modal", async ({ page }) => {
@@ -42,7 +42,9 @@ test("nieuw token aanmaken toont eenmalige token-modal", async ({ page }) => {
   ).toBeVisible();
 
   // Modal sluiten.
-  await page.getByRole("button", { name: "Ik heb het token opgeslagen" }).click();
+  await page
+    .getByRole("button", { name: "Ik heb het token opgeslagen" })
+    .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
 
   // Nieuw token staat in de lijst.
@@ -55,7 +57,9 @@ test("token intrekken verwijdert het uit de lijst", async ({ page }) => {
   // Maak een token aan om in te trekken.
   await page.getByLabel("Label").fill("e2e-intrek");
   await page.getByRole("button", { name: "Nieuw token aanmaken" }).click();
-  await page.getByRole("button", { name: "Ik heb het token opgeslagen" }).click();
+  await page
+    .getByRole("button", { name: "Ik heb het token opgeslagen" })
+    .click();
 
   // Intrekken.
   const rij = page.getByRole("row").filter({ hasText: "e2e-intrek" });

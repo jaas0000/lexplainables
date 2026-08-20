@@ -16,8 +16,14 @@ export async function beheerFetch(pad: string, init: RequestInit = {}) {
     throw new BeheerFetchFout(401, "Niet geautoriseerd.");
   }
   if (!res.ok) {
-    const detail = await res.json().then((d: { detail?: string }) => d.detail).catch(() => null);
-    throw new BeheerFetchFout(res.status, detail ?? `${res.status} ${res.statusText}`);
+    const detail = await res
+      .json()
+      .then((d: { detail?: string }) => d.detail)
+      .catch(() => null);
+    throw new BeheerFetchFout(
+      res.status,
+      detail ?? `${res.status} ${res.statusText}`,
+    );
   }
   if (res.status === 204) return undefined;
   return res.json();

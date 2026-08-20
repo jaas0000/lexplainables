@@ -51,6 +51,10 @@ test("foutpad: /disclaimer met cookie toont terug-link, geen accepteerknop", asy
   await page.goto("/disclaimer");
 
   // "Terug naar de startpagina"-link zichtbaar, geen accepteerknop
-  await expect(page.getByRole("link", { name: "Terug naar de startpagina" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Begrepen — doorgaan" })).not.toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Terug naar de startpagina" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Begrepen — doorgaan" }),
+  ).not.toBeVisible();
 });

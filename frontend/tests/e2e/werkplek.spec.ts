@@ -156,7 +156,9 @@ test("submit-knop is uitgeschakeld als verplichte velden leeg zijn", async ({
   ).toBeDisabled();
 });
 
-test("documentdetail toont elementen en beslissingsacties", async ({ page }) => {
+test("documentdetail toont elementen en beslissingsacties", async ({
+  page,
+}) => {
   const docMetElement = {
     ...DUMMY_DOCUMENT,
     elementen: [DUMMY_ELEMENT],
@@ -176,7 +178,9 @@ test("documentdetail toont elementen en beslissingsacties", async ({ page }) => 
   await page.goto(`/werkplek/${DUMMY_DOCUMENT.slug}`);
 
   // Element is zichtbaar
-  await expect(page.getByText("De belastingplichtige betaalt belasting.")).toBeVisible();
+  await expect(
+    page.getByText("De belastingplichtige betaalt belasting."),
+  ).toBeVisible();
   await expect(page.getByText("Norm")).toBeVisible();
 
   // Beslissingsacties zijn zichtbaar
@@ -217,7 +221,11 @@ test("goedkeuren-beslissing verstuurt POST naar de BFF", async ({ page }) => {
         ...DUMMY_ELEMENT,
         levenscyclus: "human_goedgekeurd",
         beslissingen: [
-          { type: "goedkeuren", actor: "beheerder", tijd: new Date().toISOString() },
+          {
+            type: "goedkeuren",
+            actor: "beheerder",
+            tijd: new Date().toISOString(),
+          },
         ],
       },
     ],
@@ -286,7 +294,9 @@ test("afwijzen-formulier vereist een reden", async ({ page }) => {
   ).toBeEnabled();
 });
 
-test("auditlog-tabblad toont tijdlijn of lege placeholder", async ({ page }) => {
+test("auditlog-tabblad toont tijdlijn of lege placeholder", async ({
+  page,
+}) => {
   await page.route(
     `/api/annotatie/documenten/${DUMMY_DOCUMENT.slug}`,
     (route) => {

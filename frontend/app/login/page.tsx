@@ -18,7 +18,14 @@ export default async function LoginPagina() {
   return (
     <div style={{ maxWidth: "24rem", margin: "0 auto" }}>
       <div style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ fontSize: "1.875rem", fontWeight: 600, lineHeight: 1.2, marginBottom: "0.25rem" }}>
+        <h1
+          style={{
+            fontSize: "1.875rem",
+            fontWeight: 600,
+            lineHeight: 1.2,
+            marginBottom: "0.25rem",
+          }}
+        >
           Inloggen
         </h1>
         <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>

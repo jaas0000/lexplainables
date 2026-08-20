@@ -124,7 +124,13 @@ function BegrippenTabel({ begrippen }: { begrippen: Begrip[] }) {
   }
   return (
     <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          fontSize: "0.875rem",
+        }}
+      >
         <thead>
           <tr>
             {["Naam", "Definitie", "Klasse"].map((h) => (
@@ -261,9 +267,7 @@ export default function RapportPagina({
 
   if (laden) {
     return (
-      <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
-        Laden…
-      </p>
+      <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>Laden…</p>
     );
   }
 

@@ -15,7 +15,9 @@ test.describe("setup-flow", () => {
     // Controleer dat we op de setup-pagina zijn (niet doorgestuurd naar login).
     // Als de API al ingericht is, zal de test hier falen (expected behavior:
     // in CI start je met een lege database).
-    const heading = page.getByRole("heading", { name: /eerste beheerder aanmaken/i });
+    const heading = page.getByRole("heading", {
+      name: /eerste beheerder aanmaken/i,
+    });
     await expect(heading).toBeVisible();
 
     // Vul het formulier in met een unieke gebruikersnaam
@@ -29,10 +31,14 @@ test.describe("setup-flow", () => {
 
     // Na succesvol aanmaken → redirect naar /login
     await page.waitForURL("/login");
-    await expect(page.getByRole("heading", { name: /inloggen/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /inloggen/i }),
+    ).toBeVisible();
   });
 
-  test("foutpad: al ingericht — /setup redirect naar /login", async ({ page }) => {
+  test("foutpad: al ingericht — /setup redirect naar /login", async ({
+    page,
+  }) => {
     // Als de database al een gebruiker heeft (doordat een vorige test 'm aangemaakt heeft
     // of doordat de API-server al ingericht is), moet /setup doorsturen naar /login.
     // Dit test het pad waarbij de server-side redirect in de SetupPagina plaatsvindt.

@@ -34,9 +34,9 @@ test("rapport-pagina toont melding als analyse nog niet klaar is (409)", async (
   await page.goto(`/projecten/${analyseId}/rapport`);
 
   // Rapport is nog niet beschikbaar → melding zichtbaar.
-  await expect(
-    page.getByRole("alert"),
-  ).toContainText("Rapport nog niet beschikbaar");
+  await expect(page.getByRole("alert")).toContainText(
+    "Rapport nog niet beschikbaar",
+  );
 
   // Teruglink naar de analyse-detailpagina aanwezig.
   await expect(

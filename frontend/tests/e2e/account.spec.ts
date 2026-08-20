@@ -28,7 +28,9 @@ test("gelukkig pad: account-pagina laadt gebruikersnaam en rol", async ({
   await page.goto("/account");
 
   await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Mijn gegevens" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Mijn gegevens" }),
+  ).toBeVisible();
 
   // Gebruikersnaam zichtbaar in de gegevens-sectie.
   await expect(page.getByText("beheerder")).toBeVisible();
@@ -44,7 +46,10 @@ test("gelukkig pad: wachtwoord wijzigen en terugzetten", async ({ page }) => {
 
   // Vul het formulier in.
   await page.getByLabel("Huidig wachtwoord").fill(SEED_WACHTWOORD);
-  await page.getByLabel("Nieuw wachtwoord", { exact: false }).first().fill(tijdelijkWachtwoord);
+  await page
+    .getByLabel("Nieuw wachtwoord", { exact: false })
+    .first()
+    .fill(tijdelijkWachtwoord);
   await page.getByLabel("Bevestig nieuw wachtwoord").fill(tijdelijkWachtwoord);
   await page.getByRole("button", { name: "Wachtwoord opslaan" }).click();
 
@@ -56,7 +61,10 @@ test("gelukkig pad: wachtwoord wijzigen en terugzetten", async ({ page }) => {
 
   // Zet het wachtwoord terug zodat de volgende test-run werkt.
   await page.getByLabel("Huidig wachtwoord").fill(tijdelijkWachtwoord);
-  await page.getByLabel("Nieuw wachtwoord", { exact: false }).first().fill(SEED_WACHTWOORD);
+  await page
+    .getByLabel("Nieuw wachtwoord", { exact: false })
+    .first()
+    .fill(SEED_WACHTWOORD);
   await page.getByLabel("Bevestig nieuw wachtwoord").fill(SEED_WACHTWOORD);
   await page.getByRole("button", { name: "Wachtwoord opslaan" }).click();
   await expect(page.getByText("Wachtwoord succesvol gewijzigd.")).toBeVisible();
@@ -68,7 +76,10 @@ test("foutpad: verkeerd huidig wachtwoord toont foutmelding bij het veld", async
   await page.goto("/account");
 
   await page.getByLabel("Huidig wachtwoord").fill("dit-is-verkeerd");
-  await page.getByLabel("Nieuw wachtwoord", { exact: false }).first().fill("nieuwwachtwoord1");
+  await page
+    .getByLabel("Nieuw wachtwoord", { exact: false })
+    .first()
+    .fill("nieuwwachtwoord1");
   await page.getByLabel("Bevestig nieuw wachtwoord").fill("nieuwwachtwoord1");
   await page.getByRole("button", { name: "Wachtwoord opslaan" }).click();
 

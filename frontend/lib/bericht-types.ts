@@ -1,8 +1,11 @@
 export type BerichtType = "info" | "update" | "waarschuwing" | "kritiek";
 
-export const TYPE_META: Record<BerichtType, { label: string; kleurVar: string }> = {
-  info:         { label: "Info",         kleurVar: "--info" },
-  update:       { label: "Update",       kleurVar: "--succes" },
+export const TYPE_META: Record<
+  BerichtType,
+  { label: string; kleurVar: string }
+> = {
+  info: { label: "Info", kleurVar: "--info" },
+  update: { label: "Update", kleurVar: "--succes" },
   waarschuwing: { label: "Waarschuwing", kleurVar: "--waarschuwing" },
-  kritiek:      { label: "Kritiek",      kleurVar: "--fout" },
+  kritiek: { label: "Kritiek", kleurVar: "--fout" },
 };

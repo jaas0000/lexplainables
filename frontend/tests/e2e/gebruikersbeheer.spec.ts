@@ -25,7 +25,9 @@ test("gelukkig pad: gebruiker aanmaken, rol wijzigen en wachtwoord resetten", as
   const naam = `e2e-gebruiker-${Date.now()}`;
 
   await page.goto("/beheer/gebruikers");
-  await expect(page.getByRole("heading", { name: "Gebruikersbeheer" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Gebruikersbeheer" }),
+  ).toBeVisible();
 
   // Gebruiker aanmaken.
   await page.getByLabel("Gebruikersnaam").fill(naam);
@@ -46,12 +48,16 @@ test("gelukkig pad: gebruiker aanmaken, rol wijzigen en wachtwoord resetten", as
   await rij.getByRole("button", { name: "Wachtwoord resetten" }).click();
 
   // Tijdelijk wachtwoord melding verschijnt.
-  await expect(page.getByText("Tijdelijk wachtwoord — noteer dit nu")).toBeVisible();
+  await expect(
+    page.getByText("Tijdelijk wachtwoord — noteer dit nu"),
+  ).toBeVisible();
   await expect(page.getByText(naam)).toBeVisible();
 
   // Sluiten.
   await page.getByRole("button", { name: "Sluiten" }).click();
-  await expect(page.getByText("Tijdelijk wachtwoord — noteer dit nu")).not.toBeVisible();
+  await expect(
+    page.getByText("Tijdelijk wachtwoord — noteer dit nu"),
+  ).not.toBeVisible();
 
   // Opruimen: gebruiker verwijderen.
   page.on("dialog", (dialog) => dialog.accept());
@@ -63,7 +69,9 @@ test("foutpad: laatste beheerder verwijderen geeft 409-melding", async ({
   page,
 }) => {
   await page.goto("/beheer/gebruikers");
-  await expect(page.getByRole("heading", { name: "Gebruikersbeheer" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Gebruikersbeheer" }),
+  ).toBeVisible();
 
   // Probeer de 'beheerder'-gebruiker te verwijderen (is de enige beheerder in een verse testomgeving).
   page.on("dialog", (dialog) => dialog.accept());

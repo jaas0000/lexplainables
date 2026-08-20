@@ -27,34 +27,64 @@ export default function StartPagina() {
         >
           Mockups
         </span>
-        <Link href="/mockup/feedback" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/feedback"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           Feedback (story 009)
         </Link>
-        <Link href="/mockup/wetcatalogus" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/wetcatalogus"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           Wetcatalogus (story 010)
         </Link>
-        <Link href="/mockup/llm-profielen" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/llm-profielen"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           LLM-profielen (story 011)
         </Link>
-        <Link href="/mockup/analyse" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/analyse"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           Analyse (story 012)
         </Link>
-        <Link href="/mockup/rapport" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/rapport"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           Rapport (story 013)
         </Link>
-        <Link href="/mockup/gebruikersbeheer" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/gebruikersbeheer"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           Gebruikersbeheer (story 014)
         </Link>
-        <Link href="/mockup/setup" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/setup"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           Setup (story 015)
         </Link>
-        <Link href="/mockup/account" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/account"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           Account (story 016)
         </Link>
-        <Link href="/mockup/instellingen" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/instellingen"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           Instellingen (story 019)
         </Link>
-        <Link href="/mockup/wettenbank-beheer" style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}>
+        <Link
+          href="/mockup/wettenbank-beheer"
+          style={{ fontSize: "0.875rem", color: "rgb(var(--lint))" }}
+        >
           Wettenbank-beheer (story 020)
         </Link>
       </nav>
@@ -95,11 +125,11 @@ export default function StartPagina() {
             maxWidth: "48ch",
           }}
         >
-          Brongetrouwe analyse van wetgeving — per artikel, lid en bronreferentie — volgens het
-          Juridisch Analyseschema van Ausems, Bulles &amp; Lokin.
+          Brongetrouwe analyse van wetgeving — per artikel, lid en
+          bronreferentie — volgens het Juridisch Analyseschema van Ausems,
+          Bulles &amp; Lokin.
         </p>
       </div>
     </div>
   );
 }
-
