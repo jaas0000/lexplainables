@@ -1,24 +1,17 @@
 import { test, expect } from "@playwright/test";
+import { apiGet, apiPost, login, resetProfielen } from "./_helpers";
 
 // Vereist (frontend-bouwen regel 6b): de Next.js-server én de API draaien al vóórdat deze
 // test start — dit bestand start ze niet zelf (geen `webServer` in playwright.config.ts).
-// Elke test gebruikt een eigen, unieke profielnaam, zodat tests onafhankelijk van elkaar
-// (en van eerder achtergebleven testdata) blijven werken.
+// Elke test ruimt eerst alle profielen op via de admin-API en gebruikt daarna unieke
+// profielnamen, zodat de foutpad-tests (enige profiel, naam-conflict) deterministisch zijn.
+// De API weigert het laatste profiel te verwijderen (EnigeProfielFout), dus na
+// `resetProfielen` blijven er 0 of 1 profielen over — de "enige profiel"-test vult naar 1
+// aan wanneer nodig.
 
-test.beforeEach(async ({ page, context }) => {
-  await context.addCookies([
-    {
-      name: "disclaimer_geaccepteerd",
-      value: "1",
-      domain: "localhost",
-      path: "/",
-    },
-  ]);
-  await page.goto("/login");
-  await page.getByLabel("Gebruikersnaam").fill("beheerder");
-  await page.getByLabel("Wachtwoord").fill("beheerder123");
-  await page.getByRole("button", { name: "Inloggen" }).click();
-  await page.waitForURL("/");
+test.beforeEach(async ({ page, context, request }) => {
+  await resetProfielen(request);
+  await login(page, context);
 });
 
 test("gelukkig pad: profiel aanmaken, standaard instellen en verwijderen", async ({
@@ -94,50 +87,42 @@ test("foutpad: naam-conflict bij aanmaken toont zichtbare foutmelding", async ({
   await page.getByLabel("API base URL *").fill("https://api.openai.com/v1");
   await page.getByRole("button", { name: "Aanmaken" }).click();
 
-  await expect(page.getByRole("alert")).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText(/bestaat al|conflict/i);
+  const alert = page.locator('p[role="alert"]');
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(/bestaat al|conflict/i);
 });
 
 test("foutpad: verwijderen van het enige profiel toont zichtbare foutmelding", async ({
   page,
+  request,
 }) => {
-  const naam = `e2e-enige-${Date.now()}`;
+  // Zorg dat er precies één profiel is. `resetProfielen` verwijdert alles op één na
+  // (of laat de tabel leeg bij een verse DB); vul aan tot exact 1 waar nodig.
+  const bestaand = (await apiGet(request, "/v1/admin/profielen")) as unknown[];
+  if (bestaand.length === 0) {
+    await apiPost(request, "/v1/admin/profielen", {
+      naam: `e2e-enige-${Date.now()}`,
+      provider: "openai",
+      model: "gpt-4o",
+      api_base: "https://api.openai.com/v1",
+      is_standaard: false,
+    });
+  }
 
   await page.goto("/beheer/llm-profielen");
   await expect(
     page.getByRole("heading", { name: "LLM-profielen" }),
   ).toBeVisible();
+  await expect(page.locator("tbody tr")).toHaveCount(1);
 
-  // Zorg dat er precies één profiel is: verwijder alle bestaande profielen tot er één over is,
-  // of maak er één aan als er geen zijn. Dit is een simplistische opzet voor de test —
-  // in een volledige test-harness zou je de database leegmaken vóór elke test.
-  const aantalRows = await page.locator("tbody tr").count();
-
-  if (aantalRows === 0) {
-    // Geen profielen: maak er één aan.
-    await page.getByLabel("Naam *").fill(naam);
-    await page.getByLabel("Model *").fill("gpt-4o");
-    await page.getByLabel("API base URL *").fill("https://api.openai.com/v1");
-    await page.getByRole("button", { name: "Aanmaken" }).click();
-    await expect(page.locator("tbody tr", { hasText: naam })).toBeVisible();
-  }
-
-  // Probeer het laatste profiel te verwijderen (als er meerdere zijn, sla test over).
-  const huidigeAantal = await page.locator("tbody tr").count();
-  if (huidigeAantal !== 1) {
-    test.skip(
-      true,
-      "Meer dan één profiel aanwezig — sla test over om bestaande data te respecteren.",
-    );
-    return;
-  }
-
-  const enige = page.locator("tbody tr").first();
-  await enige.getByRole("button", { name: "Verwijder" }).click();
+  await page
+    .locator("tbody tr")
+    .first()
+    .getByRole("button", { name: "Verwijder" })
+    .click();
 
   // Foutmelding moet zichtbaar worden.
-  await expect(page.getByRole("alert")).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText(
-    /enige profiel|kan niet/i,
-  );
+  const alert = page.locator('p[role="alert"]');
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(/enige profiel|kan niet/i);
 });
