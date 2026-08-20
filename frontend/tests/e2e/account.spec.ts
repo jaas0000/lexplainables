@@ -86,9 +86,11 @@ test("foutpad: verkeerd huidig wachtwoord toont foutmelding bij het veld", async
   await page.getByLabel("Bevestig nieuw wachtwoord").fill("nieuwwachtwoord1");
   await page.getByRole("button", { name: "Wachtwoord opslaan" }).click();
 
-  // Foutmelding bij het huidig-wachtwoord-veld.
-  await expect(page.getByRole("alert")).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText("klopt niet");
+  // Foutmelding bij het huidig-wachtwoord-veld. Scoped naar de <p role="alert"> in het
+  // formulier — `getByRole("alert")` matcht ook Next.js' `__next-route-announcer__` <div>.
+  const foutmelding = page.locator('p[role="alert"]');
+  await expect(foutmelding).toBeVisible();
+  await expect(foutmelding).toContainText("klopt niet");
 });
 
 test("Account-link in de navigatie is zichtbaar en navigeert naar /account", async ({
