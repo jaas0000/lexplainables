@@ -6,3 +6,7 @@ export const TYPE_META: Record<BerichtType, { label: string; kleurVar: string }>
   waarschuwing: { label: "Waarschuwing", kleurVar: "--waarschuwing" },
   kritiek:      { label: "Kritiek",      kleurVar: "--fout" },
 };
+
+export const BERICHT_TYPES: readonly BerichtType[] = Object.keys(
+  TYPE_META,
+) as BerichtType[];
