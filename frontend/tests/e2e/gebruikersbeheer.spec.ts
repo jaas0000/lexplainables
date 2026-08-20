@@ -1,22 +1,14 @@
 import { test, expect } from "@playwright/test";
+import { SEED_GEBRUIKER, login, resetGebruikers } from "./_helpers";
 
 // Vereist: de Next.js-server én de API draaien vóórdat deze test start.
-// Elke test gebruikt unieke gebruikersnamen zodat tests onafhankelijk blijven.
+// Elke test gebruikt unieke gebruikersnamen zodat tests onafhankelijk blijven, en
+// `resetGebruikers` verwijdert alle niet-seed gebruikers vooraf (om residu van eerder
+// gefaalde tests op te ruimen — anders faalt de "laatste beheerder"-invariant-check).
 
-test.beforeEach(async ({ page, context }) => {
-  await context.addCookies([
-    {
-      name: "disclaimer_geaccepteerd",
-      value: "1",
-      domain: "localhost",
-      path: "/",
-    },
-  ]);
-  await page.goto("/login");
-  await page.getByLabel("Gebruikersnaam").fill("beheerder");
-  await page.getByLabel("Wachtwoord").fill("beheerder123");
-  await page.getByRole("button", { name: "Inloggen" }).click();
-  await page.waitForURL("/");
+test.beforeEach(async ({ page, context, request }) => {
+  await resetGebruikers(request);
+  await login(page, context);
 });
 
 test("gelukkig pad: gebruiker aanmaken, rol wijzigen en wachtwoord resetten", async ({
@@ -51,7 +43,9 @@ test("gelukkig pad: gebruiker aanmaken, rol wijzigen en wachtwoord resetten", as
   await expect(
     page.getByText("Tijdelijk wachtwoord — noteer dit nu"),
   ).toBeVisible();
-  await expect(page.getByText(naam)).toBeVisible();
+  // De naam verschijnt zowel in de modal-paragraaf ("Voor <naam>") als in de card in de
+  // achtergrond — `.first()` prikt op de modal-instantie zonder strict-mode-conflict.
+  await expect(page.getByText(naam).first()).toBeVisible();
 
   // Sluiten.
   await page.getByRole("button", { name: "Sluiten" }).click();
@@ -73,9 +67,13 @@ test("foutpad: laatste beheerder verwijderen geeft 409-melding", async ({
     page.getByRole("heading", { name: "Gebruikersbeheer" }),
   ).toBeVisible();
 
-  // Probeer de 'beheerder'-gebruiker te verwijderen (is de enige beheerder in een verse testomgeving).
+  // Na `resetGebruikers` is er nog maar één beheerder: de seed. Scope de card exact op
+  // de seed-naam (i.p.v. substring "beheerder", dat óók een rol-tag matcht).
   page.on("dialog", (dialog) => dialog.accept());
-  const rij = page.locator(".card", { hasText: "beheerder" }).first();
+  const rij = page
+    .locator(".card")
+    .filter({ has: page.getByText(SEED_GEBRUIKER, { exact: true }) })
+    .first();
   await rij.getByRole("button", { name: "Verwijderen" }).click();
 
   // Foutmelding verschijnt.
