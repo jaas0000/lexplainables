@@ -10,7 +10,8 @@ async function schakel2FAUit(): Promise<void> {
   // Best-effort cleanup: als de test halverwege faalt, zit de seed-beheerder nog met 2FA
   // aan en kunnen vervolgtests niet inloggen. Directe DB-wipe is de betrouwbare route
   // (het API-uitschakel-pad vereist een geldige TOTP-code, die we niet altijd hebben).
-  const url = process.env.DATABASE_URL_SYNC ?? "postgresql://lex:lex@localhost:5432/lex";
+  const url =
+    process.env.DATABASE_URL_SYNC ?? "postgresql://lex:lex@localhost:5432/lex";
   const client = new Client({ connectionString: url });
   await client.connect();
   try {
