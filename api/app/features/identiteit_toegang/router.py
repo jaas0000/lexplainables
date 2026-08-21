@@ -6,10 +6,13 @@ admin_router: beheerder-only CRUD voor gebruikersaccounts (werkwijze-ADR-0003).
 
 from __future__ import annotations
 
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.db import get_engine
 from app.shared.auth import GebruikerContext, huidige_beheerder, vereist_api_token
+from app.shared.rate_limit import probeer_toestaan
 
 from .models import (
     GebruikerCreate,
@@ -44,6 +47,12 @@ from .store import (
     wijzig_gebruiker,
 )
 
+# Brute-force-rem op /verify: per-userid + globaal (tegen password-spraying). In-process
+# (per replica) → defense-in-depth, echte bescherming hoort op de proxy/WAF. 0 = uit.
+_LOGIN_MAX = int(os.environ.get("LOGIN_RATE_LIMIT_MAX", "10"))
+_LOGIN_WINDOW = float(os.environ.get("LOGIN_RATE_LIMIT_WINDOW_S", "60"))
+_LOGIN_GLOBAL_FACTOR = 20
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 admin_router = APIRouter(prefix="/admin/gebruikers", tags=["gebruikers-admin"])
 
@@ -75,6 +84,19 @@ async def setup(body: SetupVerzoek, engine=Depends(get_engine)) -> GebruikerInfo
 
 @router.post("/verify", response_model=VerifyResult, dependencies=[Depends(vereist_api_token)])
 async def verify(request: VerifyRequest, engine=Depends(get_engine)) -> VerifyResult:
+    # Brute-force-rem: per-userid ÉN globaal (tegen password-spraying over veel userids). Beide
+    # moeten passeren; anders 429. Rem uit als LOGIN_RATE_LIMIT_MAX=0.
+    userid = request.gebruikersnaam.strip().lower()
+    per_userid_ok = probeer_toestaan(f"login:{userid}", _LOGIN_MAX, _LOGIN_WINDOW)
+    globaal_ok = probeer_toestaan(
+        "login:__globaal__", _LOGIN_MAX * _LOGIN_GLOBAL_FACTOR, _LOGIN_WINDOW
+    )
+    if not (per_userid_ok and globaal_ok):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Te veel inlogpogingen; probeer later opnieuw.",
+            headers={"Retry-After": str(int(_LOGIN_WINDOW))},
+        )
     return await verifieer_credentials(engine, request.gebruikersnaam, request.wachtwoord)
 
 

@@ -40,6 +40,16 @@ def stel_api_token_in(monkeypatch):
     monkeypatch.setattr("app.shared.auth.API_TOKEN", TEST_API_TOKEN)
 
 
+@pytest.fixture(autouse=True)
+def wis_rate_limit():
+    """De rate-limiter is module-niveau state; wissen zodat tests onafhankelijk zijn."""
+    from app.shared.rate_limit import wis
+
+    wis()
+    yield
+    wis()
+
+
 @pytest.fixture
 def client(tmp_path) -> TestClient:
     async_engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
@@ -126,6 +136,27 @@ async def test_verify_fout_wachtwoord(db_engine):
 async def test_verify_onbekende_gebruiker(db_engine):
     result = await verifieer_credentials(db_engine, "onbekend", "wachtwoord")
     assert result.ok is False
+
+
+def test_verify_te_veel_pogingen_geeft_429(client, monkeypatch):
+    """Brute-force-rem: na _LOGIN_MAX pogingen op dezelfde userid → 429.
+
+    Monkeypatch de module-constanten direct — env-vars worden bij module-import gelezen, dus
+    `setenv` alleen werkt niet zonder reload (en reload breekt de al-in-`app`-geregistreerde
+    router). Constanten patchen is de eenvoudigste route en test wat we willen testen.
+    """
+    monkeypatch.setattr("app.features.identiteit_toegang.router._LOGIN_MAX", 3)
+
+    body = {"gebruikersnaam": "onbekend", "wachtwoord": "wat-dan-ook"}
+    headers = {"Authorization": f"Bearer {TEST_API_TOKEN}"}
+    # Eerste 3 pogingen: 200 met ok=false (userid bestaat niet, credentials-check faalt).
+    for _ in range(3):
+        resp = client.post("/v1/auth/verify", json=body, headers=headers)
+        assert resp.status_code == 200
+    # Vierde poging: rate limit geraakt → 429.
+    resp = client.post("/v1/auth/verify", json=body, headers=headers)
+    assert resp.status_code == 429
+    assert "retry-after" in {k.lower() for k in resp.headers}
 
 
 @pytest.mark.asyncio

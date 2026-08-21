@@ -36,6 +36,7 @@ gebruikersbeheer (aanmaken/bewerken/verwijderen door beheerder), inloggen (verif
 - Verify goede credentials.
 - Verify fout wachtwoord.
 - Verify onbekende gebruiker.
+- Verify te veel pogingen geeft 429.
 - Verify inactieve gebruiker.
 - Maak gebruiker indien ontbreekt is idempotent.
 - Me zonder token geeft 401.
