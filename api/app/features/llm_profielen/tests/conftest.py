@@ -1,9 +1,6 @@
 """Testfixtures voor het llm_profielen-domein.
 
-Elke test krijgt een eigen, kortlevende SQLite-database (bestand in `tmp_path`). Het schema
-wordt opgezet met een gewone synchrone engine; de async engine (aiosqlite) opent verbindingen
-pas tijdens de requests die TestClient uitvoert.
-
+Elke test krijgt een schoon schema op de gedeelde Postgres-testserver (ADR-0003).
 `FERNET_KEY` wordt via `monkeypatch.setenv` gezet per test die encryptie nodig heeft.
 """
 

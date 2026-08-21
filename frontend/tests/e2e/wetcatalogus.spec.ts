@@ -60,6 +60,9 @@ test("foutpad: onbereikbare structuur-route geeft foutmelding in de UI", async (
   await expect(wetDropdown).toBeVisible();
   await wetDropdown.selectOption({ label: "Wet werk en bijstand" });
 
-  // WetSelector toont een foutmelding via role="alert".
-  await expect(page.locator('[role="alert"]')).toBeVisible();
+  // WetSelector toont een foutmelding via role="alert". Filter op tekst want Next's
+  // `__next-route-announcer__` heeft óók role="alert" (maar is leeg) en breekt strict-mode.
+  await expect(
+    page.getByRole("alert").filter({ hasText: /wet niet gevonden/i }),
+  ).toBeVisible();
 });
