@@ -26,6 +26,7 @@ from .features.projecten.router import router as projecten_router
 from .features.runtime_config.router import admin_router as runtime_config_admin_router
 from .features.wetcatalogus.router import admin_router as wetcatalogus_admin_router
 from .features.wetcatalogus.router import router as wetcatalogus_router
+from .shared import observability
 from .shared.jobs.store import PostgresJobStore
 from .shared.llm import throttle as llm_throttle
 
@@ -54,7 +55,10 @@ async def _reaper_loop() -> None:
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(app: FastAPI):
+    # Logging + OTel eerst — traces moeten alle startup-events dekken (project-ADR-0006).
+    observability.setup(app)
+
     # Proces-globale LLM-concurrency-rem uit env — voorkomt zwerm-429's bij veel gelijktijdige
     # analyses (project-ADR-0005, shared/llm/throttle.py). 0 = uit.
     llm_throttle.configure(int(os.environ.get("LLM_MAX_CONCURRENCY", "4")))
@@ -71,6 +75,9 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="wetsanalyse-api (referentie-implementatie)", lifespan=lifespan)
+
+# Request-id + access-log middleware — pure ASGI, veilig voor SSE (project-ADR-0006).
+app.add_middleware(observability.RequestContextMiddleware)
 
 # CORS: publieke routes zijn toegankelijk vanuit de browser. Admin-routes gaan via de BFF
 # (ADR-0003). Origins komen uit een env-var; default "*" voor lokale ontwikkeling.

@@ -20,6 +20,21 @@ dependencies = [
     "litellm>=1.40",
 ]
 
+[project.optional-dependencies]
+# OpenTelemetry-stack: optioneel (project-ADR-0006). Zonder deze extra draaien logging en
+# request-middleware gewoon; get_tracer()/get_meter() geven no-op-shims terug. Installeer
+# alleen in de productie-image (Dockerfile: `uv sync --extra otel`) en waar je écht traces
+# naar een collector wilt sturen.
+otel = [
+    "opentelemetry-api>=1.27",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-exporter-otlp-proto-http>=1.27",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.27",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.48b0",
+    "opentelemetry-instrumentation-asyncpg>=0.48b0",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

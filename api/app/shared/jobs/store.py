@@ -22,8 +22,18 @@ from sqlalchemy import literal, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from ..observability import get_meter, get_tracer
 from ..tijd import nu
 from .models import Job, job_uit_rij, jobs
+
+_tracer = get_tracer("app.shared.jobs.store")
+# Tellers voor lifecycle-events — bezig_jobs kan later gecombineerd worden met een gauge/observer
+# als een consumer periodiek naar de DB polt; voor nu volstaat een up-down-counter die claim/finish
+# accuraat bijhoudt in-process (per replica).
+_bezig_jobs = get_meter("app.shared.jobs.store").create_up_down_counter(
+    "active_bezig_jobs",
+    description="Aantal jobs in status 'bezig' (in-process, per replica).",
+)
 
 
 class JobNietGevonden(LookupError):
@@ -66,86 +76,105 @@ class PostgresJobStore:
         bezig-lockt overslagen worden en pakt de volgende (of `None`). Zonder `SKIP LOCKED`
         zouden ze op elkaar wachten.
         """
-        moment = nu()
-        verloopt = moment + timedelta(seconds=lease_seconden)
-        # Subquery met FOR UPDATE SKIP LOCKED — Postgres-only.
-        binnenkant = (
-            select(jobs.c.id)
-            .where(jobs.c.status == "wachtend", jobs.c.soort == soort)
-            .order_by(jobs.c.aangemaakt)
-            .limit(1)
-            .with_for_update(skip_locked=True)
-        ).scalar_subquery()
-        stmt = (
-            update(jobs)
-            .where(jobs.c.id == binnenkant)
-            .values(
-                status="bezig",
-                lease_eigenaar=eigenaar,
-                lease_verloopt=verloopt,
-                pogingen=jobs.c.pogingen + 1,
-                bijgewerkt=moment,
+        with _tracer.start_as_current_span("jobs.claim") as span:
+            span.set_attribute("job.soort", soort)
+            moment = nu()
+            verloopt = moment + timedelta(seconds=lease_seconden)
+            binnenkant = (
+                select(jobs.c.id)
+                .where(jobs.c.status == "wachtend", jobs.c.soort == soort)
+                .order_by(jobs.c.aangemaakt)
+                .limit(1)
+                .with_for_update(skip_locked=True)
+            ).scalar_subquery()
+            stmt = (
+                update(jobs)
+                .where(jobs.c.id == binnenkant)
+                .values(
+                    status="bezig",
+                    lease_eigenaar=eigenaar,
+                    lease_verloopt=verloopt,
+                    pogingen=jobs.c.pogingen + 1,
+                    bijgewerkt=moment,
+                )
+                .returning(jobs)
             )
-            .returning(jobs)
-        )
-        async with self._engine.begin() as conn:
-            resultaat = await conn.execute(stmt)
-            rij = resultaat.one_or_none()
-        return job_uit_rij(rij) if rij is not None else None
+            async with self._engine.begin() as conn:
+                resultaat = await conn.execute(stmt)
+                rij = resultaat.one_or_none()
+            if rij is None:
+                span.set_attribute("job.status", "leeg")
+                return None
+            span.set_attribute("job.status", "bezig")
+            span.set_attribute("job.id", str(rij.id))
+            _bezig_jobs.add(1, {"soort": soort})
+            return job_uit_rij(rij)
 
     async def voltooi(self, job_id: UUID, eigenaar: str) -> Job:
         """Job → `klaar`. Faalt met `JobNietGevonden` als de eigenaar niet (meer) klopt
         (bijv. lease verlopen en door reaper heropend). Dat is bewust hard: een worker die
         z'n lease is kwijtgeraakt hoort niet stiekem "af te ronden" wat een ander misschien
         al opnieuw begonnen is."""
-        stmt = (
-            update(jobs)
-            .where(
-                jobs.c.id == job_id,
-                jobs.c.status == "bezig",
-                jobs.c.lease_eigenaar == eigenaar,
+        with _tracer.start_as_current_span("jobs.voltooi") as span:
+            span.set_attribute("job.id", str(job_id))
+            stmt = (
+                update(jobs)
+                .where(
+                    jobs.c.id == job_id,
+                    jobs.c.status == "bezig",
+                    jobs.c.lease_eigenaar == eigenaar,
+                )
+                .values(
+                    status="klaar",
+                    lease_eigenaar=None,
+                    lease_verloopt=None,
+                    bijgewerkt=nu(),
+                )
+                .returning(jobs)
             )
-            .values(
-                status="klaar",
-                lease_eigenaar=None,
-                lease_verloopt=None,
-                bijgewerkt=nu(),
-            )
-            .returning(jobs)
-        )
-        async with self._engine.begin() as conn:
-            rij = (await conn.execute(stmt)).one_or_none()
-        if rij is None:
-            raise JobNietGevonden(
-                f"Job {job_id} bestaat niet, is niet bezig, of eigenaar {eigenaar} klopt niet."
-            )
-        return job_uit_rij(rij)
+            async with self._engine.begin() as conn:
+                rij = (await conn.execute(stmt)).one_or_none()
+            if rij is None:
+                span.set_attribute("job.status", "niet_gevonden")
+                raise JobNietGevonden(
+                    f"Job {job_id} bestaat niet, is niet bezig, of eigenaar {eigenaar} klopt niet."
+                )
+            span.set_attribute("job.status", "klaar")
+            span.set_attribute("job.soort", rij.soort)
+            _bezig_jobs.add(-1, {"soort": rij.soort})
+            return job_uit_rij(rij)
 
     async def faal(self, job_id: UUID, eigenaar: str, fout: str) -> Job:
         """Job → `mislukt` met foutmelding. Zelfde eigenaar-check als `voltooi`."""
-        stmt = (
-            update(jobs)
-            .where(
-                jobs.c.id == job_id,
-                jobs.c.status == "bezig",
-                jobs.c.lease_eigenaar == eigenaar,
+        with _tracer.start_as_current_span("jobs.faal") as span:
+            span.set_attribute("job.id", str(job_id))
+            stmt = (
+                update(jobs)
+                .where(
+                    jobs.c.id == job_id,
+                    jobs.c.status == "bezig",
+                    jobs.c.lease_eigenaar == eigenaar,
+                )
+                .values(
+                    status="mislukt",
+                    fout=fout,
+                    lease_eigenaar=None,
+                    lease_verloopt=None,
+                    bijgewerkt=nu(),
+                )
+                .returning(jobs)
             )
-            .values(
-                status="mislukt",
-                fout=fout,
-                lease_eigenaar=None,
-                lease_verloopt=None,
-                bijgewerkt=nu(),
-            )
-            .returning(jobs)
-        )
-        async with self._engine.begin() as conn:
-            rij = (await conn.execute(stmt)).one_or_none()
-        if rij is None:
-            raise JobNietGevonden(
-                f"Job {job_id} bestaat niet, is niet bezig, of eigenaar {eigenaar} klopt niet."
-            )
-        return job_uit_rij(rij)
+            async with self._engine.begin() as conn:
+                rij = (await conn.execute(stmt)).one_or_none()
+            if rij is None:
+                span.set_attribute("job.status", "niet_gevonden")
+                raise JobNietGevonden(
+                    f"Job {job_id} bestaat niet, is niet bezig, of eigenaar {eigenaar} klopt niet."
+                )
+            span.set_attribute("job.status", "mislukt")
+            span.set_attribute("job.soort", rij.soort)
+            _bezig_jobs.add(-1, {"soort": rij.soort})
+            return job_uit_rij(rij)
 
     async def haal(self, job_id: UUID) -> Job | None:
         """Read-only lookup — handig voor tests en voor consumers die de status willen zien."""
