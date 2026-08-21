@@ -174,3 +174,14 @@ jobs:
           name: playwright-report
           path: frontend/playwright-report/
           retention-days: 7
+
+      # test-results/ bevat de raw traces/screenshots/videos per test (playwright.config.ts
+      # § `use.trace/screenshot/video`) — losstaand van de HTML-report zodat je 'm ook
+      # direct kunt openen zonder de HTML te renderen.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: frontend/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
