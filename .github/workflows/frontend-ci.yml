@@ -106,6 +106,10 @@ jobs:
       API_TOKEN: "ci-api-token-test"
       AUTH_SECRET: "ci-auth-secret-minstens-32-tekens-lang!"
       API_BASE_URL: "http://localhost:8000"
+      # Rate-limit uit in CI: Playwright's fullyParallel test-workers doen elk hun login
+      # als seed-beheerder — met de default (10/60s) raakt dat het plafond binnen de eerste
+      # workers. In productie blijft de rem aan (default in de code).
+      LOGIN_RATE_LIMIT_MAX: "0"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
