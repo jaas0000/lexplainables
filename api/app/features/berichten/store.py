@@ -15,9 +15,9 @@ from __future__ import annotations
 from typing import Protocol
 
 from sqlalchemy import ColumnElement, delete, func, insert, literal, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from ...shared.db import dialect_insert
 from ...shared.tijd import nu
 from .models import (
     BerichtAdminRead,
@@ -81,8 +81,7 @@ class BerichtenStore(Protocol):
 
 
 class SqlAlchemyBerichtenStore:
-    """Implementatie tegen een async SQLAlchemy-engine (SQLite in tests, en lokaal via
-    aiosqlite — productie zou Postgres/asyncpg zijn, zie stack-profiel.md)."""
+    """Implementatie tegen een async SQLAlchemy-engine (asyncpg, ADR-0003)."""
 
     def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
@@ -128,14 +127,13 @@ class SqlAlchemyBerichtenStore:
             berichten.c.id, literal(userid).label("userid"), literal(moment).label("gelezen_op")
         ).where(berichten.c.gepubliceerd.is_(True))
         async with self._engine.begin() as conn:
-            # Dialect-aware upsert: bij gelijktijdige aanroepen (twee tabbladen) kan dezelfde
-            # (bericht_id, userid) twee keer geïnsert worden — de PK-constraint vangt dat af
-            # i.p.v. een los "insert waar nog geen rij bestaat" dat onder concurrency een
-            # duplicate-key-fout kan geven (check-then-insert is niet atomair). De
-            # `from_select`-vorm past niet op `shared.db.upsert()` (die neemt een values-dict),
-            # dus we gebruiken hier de laag-eronder-helper `dialect_insert`.
+            # Bij gelijktijdige aanroepen (twee tabbladen) kan dezelfde (bericht_id, userid)
+            # twee keer geïnsert worden — de PK-constraint vangt dat af i.p.v. een los "insert
+            # waar nog geen rij bestaat" dat onder concurrency een duplicate-key-fout kan
+            # geven (check-then-insert is niet atomair). Postgres-only sinds ADR-0003, dus
+            # rechtstreeks `pg_insert` — de `from_select`-vorm past niet op `shared.db.upsert()`.
             stmt = (
-                dialect_insert(conn, bericht_leesbewijzen)
+                pg_insert(bericht_leesbewijzen)
                 .from_select(["bericht_id", "userid", "gelezen_op"], select_stmt)
                 .on_conflict_do_nothing(index_elements=["bericht_id", "userid"])
             )

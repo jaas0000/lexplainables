@@ -78,11 +78,9 @@ class DatabaseWetcatalogusStore:
         return [wet_uit_rij(rij) for rij in rijen]
 
     async def upsert(self, bwb_id: str, naam: str, bijgewerkt_door: str) -> WetRead:
-        # Vervangt de eerdere check-then-insert/update door één dialect-aware upsert met
-        # RETURNING (zowel Postgres als SQLite 3.35+ steunen dit). Zie `shared/db.py`.
+        # Postgres-only ON CONFLICT DO UPDATE met RETURNING — zie `shared/db.py` en ADR-0003.
         moment = nu()
         stmt = upsert(
-            self._engine,
             wet_catalogus,
             values={
                 "bwb_id": bwb_id,

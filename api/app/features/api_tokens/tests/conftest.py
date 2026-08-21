@@ -1,7 +1,8 @@
 """Testfixtures voor het api_tokens-domein.
 
-Elke test krijgt een eigen, kortlevende SQLite-database. De router leunt op de store-abstractie
-(werkwijze-ADR-0007): deze fixture overschrijft `get_store`, de routercode blijft ongewijzigd.
+Elke test krijgt een schoon schema op de gedeelde Postgres-testserver (ADR-0003). De router
+leunt op de store-abstractie (werkwijze-ADR-0007): deze fixture overschrijft `get_store`, de
+routercode blijft ongewijzigd.
 
 Voor de auth-integratietest is er een aparte `auth_client`-fixture die `db._engine` patchet
 zodat `vereist_api_token` dezelfde engine gebruikt als de test-store.

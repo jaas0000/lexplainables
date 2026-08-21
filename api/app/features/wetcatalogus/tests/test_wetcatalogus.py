@@ -199,20 +199,14 @@ def test_admin_zonder_auth_geeft_401(monkeypatch, tmp_path):
     importlib.reload(auth_module)
 
     from fastapi.testclient import TestClient
-    from sqlalchemy import create_engine
-    from sqlalchemy.ext.asyncio import create_async_engine
 
     from app.features.wetcatalogus.models import metadata
     from app.features.wetcatalogus.router import get_store
     from app.features.wetcatalogus.store import DatabaseWetcatalogusStore
     from app.main import app
+    from conftest import maak_test_engine
 
-    db_pad = tmp_path / "auth_test.db"
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+    async_engine = maak_test_engine(metadata, tmp_path=tmp_path)
     store = DatabaseWetcatalogusStore(async_engine)
     app.dependency_overrides[get_store] = lambda: store
     # Geen huidige_beheerder-override → echte auth actief.

@@ -1,20 +1,21 @@
-"""Unit-tests voor `app.shared.db` (dialect_insert + upsert).
+"""Unit-tests voor `app.shared.db` (`upsert`).
 
-Twee sporen:
-- **Echt tegen SQLite** — bewijst het insert- én update-pad tegen een levende engine, dat is
-  waar de bugs opduiken (constraint-namen, RETURNING, PK-conflict).
-- **Dialect-only tegen Postgres** — één test die de gecompileerde SQL controleert
-  (`ON CONFLICT ... DO UPDATE`), zonder daadwerkelijke PG-server. Genoeg om te bewijzen dat de
-  dialectkeuze switcht; de rest van het gedrag is identiek qua statement-vorm.
+Draait tegen de Postgres-testserver (ADR-0003, Postgres-only). De helper produceert altijd
+`pg_insert` — een echte engine bewijst het pad end-to-end (insert, update-bij-conflict,
+`.returning(...)`-chaining).
 """
 
 from __future__ import annotations
 
-import pytest
-from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine, select
-from sqlalchemy.dialects.postgresql import dml as pg_dml
+from collections.abc import AsyncIterator
 
-from app.shared.db import dialect_insert, upsert
+import pytest
+import pytest_asyncio
+from sqlalchemy import Column, Integer, MetaData, String, Table, select
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from app.shared.db import upsert
+from conftest import maak_test_engine, sync_engine_voor
 
 
 @pytest.fixture
@@ -30,90 +31,51 @@ def tabel() -> Table:
     )
 
 
-@pytest.fixture
-def sqlite_engine(tabel: Table):
-    engine = create_engine("sqlite://")
-    tabel.metadata.create_all(engine)
+@pytest_asyncio.fixture
+async def engine(tabel: Table, tmp_path) -> AsyncIterator[AsyncEngine]:
+    """Postgres-async-engine met alleen de test-tabel."""
+    async_engine = maak_test_engine(tabel.metadata, tmp_path=tmp_path)
     try:
-        yield engine
+        yield async_engine
     finally:
-        engine.dispose()
+        await async_engine.dispose()
 
 
-# --- SQLite: insert-pad ---------------------------------------------------------
+def _sync_execute(async_engine: AsyncEngine, stmt) -> list:
+    """Run een statement synchroon op dezelfde DB — voor de blocking test-body."""
+    sync = sync_engine_voor(async_engine)
+    with sync.begin() as conn:
+        result = conn.execute(stmt)
+        rijen = result.fetchall() if result.returns_rows else []
+    sync.dispose()
+    return rijen
 
 
-def test_upsert_insert_do_nothing_bij_conflict(sqlite_engine, tabel):
+def test_upsert_insert_do_nothing_bij_conflict(engine: AsyncEngine, tabel):
     """`update_cols=None` → tweede insert doet niets, eerste waarde blijft staan."""
-    with sqlite_engine.begin() as conn:
-        conn.execute(upsert(conn, tabel, {"sleutel": "s", "waarde": "eerst"}, ["sleutel"]))
-        conn.execute(upsert(conn, tabel, {"sleutel": "s", "waarde": "tweede"}, ["sleutel"]))
+    sync = sync_engine_voor(engine)
+    with sync.begin() as conn:
+        conn.execute(upsert(tabel, {"sleutel": "s", "waarde": "eerst"}, ["sleutel"]))
+        conn.execute(upsert(tabel, {"sleutel": "s", "waarde": "tweede"}, ["sleutel"]))
         rij = conn.execute(select(tabel).where(tabel.c.sleutel == "s")).one()
+    sync.dispose()
     assert rij.waarde == "eerst"
 
 
-def test_upsert_update_pad_bij_conflict(sqlite_engine, tabel):
+def test_upsert_update_pad_bij_conflict(engine: AsyncEngine, tabel):
     """`update_cols=["waarde"]` → tweede insert overschrijft de bestaande rij."""
-    with sqlite_engine.begin() as conn:
-        conn.execute(
-            upsert(conn, tabel, {"sleutel": "s", "waarde": "eerst"}, ["sleutel"], ["waarde"])
-        )
-        conn.execute(
-            upsert(conn, tabel, {"sleutel": "s", "waarde": "tweede"}, ["sleutel"], ["waarde"])
-        )
+    sync = sync_engine_voor(engine)
+    with sync.begin() as conn:
+        conn.execute(upsert(tabel, {"sleutel": "s", "waarde": "eerst"}, ["sleutel"], ["waarde"]))
+        conn.execute(upsert(tabel, {"sleutel": "s", "waarde": "tweede"}, ["sleutel"], ["waarde"]))
         rij = conn.execute(select(tabel).where(tabel.c.sleutel == "s")).one()
+    sync.dispose()
     assert rij.waarde == "tweede"
 
 
-def test_upsert_met_returning(sqlite_engine, tabel):
+def test_upsert_met_returning(engine: AsyncEngine, tabel):
     """De helper geeft een statement terug waar `.returning(...)` op te chainen valt."""
-    stmt = upsert(
-        sqlite_engine, tabel, {"sleutel": "s", "waarde": "v"}, ["sleutel"], ["waarde"]
-    ).returning(tabel)
-    with sqlite_engine.begin() as conn:
-        rij = conn.execute(stmt).one()
-    assert (rij.sleutel, rij.waarde) == ("s", "v")
-
-
-def test_dialect_insert_from_select(sqlite_engine, tabel):
-    """`dialect_insert` ondersteunt `from_select` — het pad dat berichten.store gebruikt."""
-    bron = select(tabel.c.sleutel, tabel.c.waarde).where(tabel.c.sleutel == "s")
-    with sqlite_engine.begin() as conn:
-        conn.execute(upsert(conn, tabel, {"sleutel": "s", "waarde": "v"}, ["sleutel"]))
-        # Insert-from-select met conflict → do_nothing (idempotent).
-        stmt = (
-            dialect_insert(conn, tabel)
-            .from_select(["sleutel", "waarde"], bron)
-            .on_conflict_do_nothing(index_elements=["sleutel"])
-        )
-        conn.execute(stmt)
-        aantal = conn.execute(select(tabel)).all()
-    assert len(aantal) == 1
-
-
-# --- PostgreSQL: alleen dialect-keuze, gecompileerde SQL ------------------------
-
-
-class _FakePgEngine:
-    """Minimale stand-in voor een PG-engine — de helper leest alleen `.dialect.name`, dus
-    een echte driver of connectie is niet nodig."""
-
-    class _Dialect:
-        name = "postgresql"
-
-    dialect = _Dialect()
-
-
-def test_upsert_kiest_pg_insert_op_postgres_engine(tabel):
-    """Op een Postgres-dialect switcht de helper naar `pg_insert`. Bewijs: het gebouwde
-    statement is een instance van het PG-specifieke `Insert`-DML-type. SQLite's `on_conflict`
-    genereert dezelfde SQL-vorm — we asserten daarom op de klasse, niet op de gecompileerde
-    string (die zou ook slagen als de switch verkeerd stond)."""
-    stmt = upsert(
-        _FakePgEngine(),
-        tabel,
-        {"sleutel": "s", "waarde": "v"},
-        ["sleutel"],
-        ["waarde"],
-    )
-    assert isinstance(stmt, pg_dml.Insert)
+    stmt = upsert(tabel, {"sleutel": "s", "waarde": "v"}, ["sleutel"], ["waarde"]).returning(tabel)
+    rijen = _sync_execute(engine, stmt)
+    assert len(rijen) == 1
+    assert (rijen[0].sleutel, rijen[0].waarde) == ("s", "v")

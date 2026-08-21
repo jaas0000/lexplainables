@@ -1,8 +1,7 @@
 """Testfixtures voor het wetcatalogus-domein (story 020).
 
-Elke test krijgt een eigen, kortlevende SQLite-database. Het schema wordt opgezet
-met een synchrone engine; de async engine (aiosqlite) wordt gebruikt door de store.
-De seeddata (drie wetten) weerspiegelt de hardgecodeerde data uit story 010.
+Elke test krijgt een schoon schema op de gedeelde Postgres-testserver (ADR-0003). De seed
+(drie wetten) weerspiegelt de hardgecodeerde data uit story 010.
 
 `huidige_gebruiker` en `huidige_beheerder` worden overgeslagen via dependency-overrides.
 """

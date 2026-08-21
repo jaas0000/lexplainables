@@ -1,48 +1,65 @@
-# ADR-0003: PostgreSQL in productie, SQLite blijft voor tests
+# ADR-0003: PostgreSQL — enige database, ook in tests
 
 **Status:** geaccepteerd
 **Datum:** 2026-08-21
+**Bijgewerkt:** 2026-08-21 (SQLite volledig verwijderd; oorspronkelijke tekst hieronder)
 
 ## Context
 
-Werkwijze-ADR-0005 vereist Alembic voor migraties maar laat de DB-keuze open. Lexplainables
-draait tot nu toe op SQLite (`aiosqlite`) — snel en zonder externe afhankelijkheid, maar
-onbruikbaar in een enterprise-productiescontext. De doelgroep van de applicatie (klein team in
-een enterprise-omgeving) kent alleen PostgreSQL als operationele DB.
+Werkwijze-ADR-0005 vereist Alembic voor migraties maar laat de DB-keuze open. De doelgroep
+(klein team in een enterprise-omgeving) kent alleen PostgreSQL als operationele DB.
 
-Wetsanalyse-ai gebruikt al PostgreSQL met async SQLAlchemy + `asyncpg`, met een lease-reaper
-voor async jobs en een startup-retry-loop voor cold-start-race-condities.
+Aanvankelijk (versie 1 van deze ADR, hieronder in het historische spoor) was de keuze:
+Postgres in productie, SQLite blijft toegestaan als test-DB en voor lokale dev. Dat leek
+comfortabel, maar bracht drie kosten mee:
 
-Alternatieven die overwogen zijn:
-- **Alleen SQLite** — niet acceptabel voor de doelomgeving.
-- **Alleen PostgreSQL** — verlengt de test-run (elke test start een Postgres-container of leunt
-  op transacties/rollback), en verplaatst een goedkope CI-check naar een dure.
-- **Testcontainers voor Postgres** — geeft wél de echte DB in tests, maar 10× langzamere
-  test-runs en fragieler in CI. Niet voldoende opbrengst voor deze fase.
+- **Twee dialecten onderhouden.** Elke feature moet SQL zo schrijven dat 'ie op beide draait.
+- **Latent bugs.** Postgres/asyncpg is strikter dan SQLite (tz-aware datetimes op
+  `timestamptz`-kolommen, boolean server-defaults). Die kwamen pas naar boven toen fase 1
+  story 2 (PR #37) een echte Postgres-CI-matrix invoerde — precies wat je niet wil.
+- **Ondersteboven prioriteit.** SQLite maakte lokaal draaien iets makkelijker, maar productie
+  is Postgres — de tests horen te bewijzen dat de productiepad werkt, niet de dev-comfort-pad.
+
+Alternatieven op het moment van deze update:
+- **SQLite behouden voor tests** (versie 1): de bewezen bron van latent-bugs.
+- **Testcontainers** (SQLite eruit + Postgres per test-run gepromoveerd): de gekozen route.
+- **In-memory Postgres-alternatief**: bestaat niet betrouwbaar; testcontainers is de norm.
 
 ## Beslissing
 
-**PostgreSQL is de enige productie-database.** SQLite blijft toegestaan als
-**test-DB** en voor lokale ontwikkelaars die geen Docker willen draaien — Alembic-migraties
-moeten op beide DBs schoon draaien (CI-check `check-migraties` op beide).
+**PostgreSQL is de enige database — ook in tests.** SQLite (en `aiosqlite`) volledig
+verwijderd. Zowel productie als CI als lokale dev draaien tegen Postgres.
 
-Concrete keuzes:
-- Driver: `asyncpg` voor Postgres, `aiosqlite` voor SQLite.
-- Dialect-specifieke SQL vermijden: `ON CONFLICT DO NOTHING` (Postgres) én `INSERT OR IGNORE`
-  (SQLite) — waar mogelijk gebruiken we een update-dan-insert-patroon dat op beide identiek werkt
-  (voorbeeld: `feedback_leesbewijzen.markeer_gezien` in `api/app/features/feedback/store.py`).
-- Startup: bounded retry op DB-connect voor cold-start (zoals in wetsanalyse-ai's `main.py`).
+Concreet:
+- Driver: `asyncpg` (runtime, via SQLAlchemy async), `psycopg2-binary` (Alembic sync-migraties).
+- CI: één Postgres-service per relevante job (`test-api`, `check-migraties`).
+- Lokaal draaien: `docker compose up -d postgres`, dan `TEST_DATABASE_URL(_SYNC)` zetten.
+- Test-schema-reset: `metadata.drop_all → metadata.create_all` per test (via de
+  `maak_test_engine`-helper in `api/conftest.py`), met `NullPool` om verbindingsuitputting te
+  voorkomen bij ~166 tests.
 
 ## Consequenties
 
-- **Bewust geaccepteerd:** twee database-dialecten onderhouden. Elke feature moet zijn SQL zo
-  schrijven dat 'ie op beide draait; dat kost aandacht en betekent dat sommige Postgres-only
-  patronen (bijv. `JSONB`-indexen, `LATERAL JOIN`) niet gebruikt kunnen worden. Voor het
-  feature-oppervlak van deze applicatie is die beperking mild.
-- **CI weegt beide dialecten:** `check-migraties` draait upgrade+downgrade op zowel SQLite als
-  Postgres. Elke feature-testrun draait alleen op SQLite — een aparte integratietest-suite tegen
-  Postgres zit alleen op de kritieke paden (annotatie, async jobs).
-- **Docker-compose met Postgres** wordt de standaard voor lokaal draaien. Ontwikkelaars die
-  bewust op SQLite willen werken kunnen `DATABASE_URL=sqlite+aiosqlite:///./dev.db` zetten.
-- **Vervangt niets uit werkwijze-v2** — dit is een projectkeuze binnen de vrijheid die ADR-0005
-  van de werkwijze expliciet openlaat.
+- **Bewust geaccepteerd:** ontwikkelaars hebben Docker (of een lokale Postgres) nodig om
+  tests te draaien. Voor deze doelgroep (enterprise-team, kant-en-klare docker-compose
+  meegeleverd) is dat geen echte drempel.
+- **Winst:** één set SQL-patronen. Elke bug die zich alleen op Postgres manifesteert,
+  manifesteert zich ook in CI. Geen valse zekerheid meer via "SQLite is groen, dus goed".
+- **Test-run iets langzamer:** Postgres-schema-reset per test kost meer dan een fresh
+  in-memory SQLite. Compenseert door NullPool zodat verbindingen niet ophopen. Netto op deze
+  suite: van ~7s (SQLite-only) naar ~45s (Postgres). Acceptabel — geen deployment-bottleneck.
+- **Migraties simpeler:** geen dialect-agnostische SQL meer nodig. Postgres-specifieke
+  features (JSONB, `SELECT FOR UPDATE SKIP LOCKED`, advisory locks, partial indexes) mogen
+  vanaf hier zonder omweg — nodig voor bijv. story 3 (async jobstore met lease-reaper).
+
+## Historisch spoor: versie 1 (2026-08-21)
+
+De eerste versie van deze ADR koos voor "Postgres in productie, SQLite in tests" als
+compromis. Dat werd binnen dezelfde dag herzien: fase 1 story 2 introduceerde een echte
+Postgres-test-matrix (PR #37) die 2 latent-bugs onthulde (naive datetime,
+boolean-server-default). Kort daarna volgde het besluit om SQLite volledig te schrappen — de
+bewijskracht van "onze tests draaien tegen productie-DB" woog zwaarder dan het gemak van
+SQLite-fixtures.
+
+Geen aparte "vervangen door"-ADR: dit is dezelfde beslissing, aangescherpt op basis van wat we
+zagen. De tekst hierboven weerspiegelt de definitieve stand.

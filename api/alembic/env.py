@@ -7,8 +7,8 @@ accepteert een lijst van `MetaData`-objecten voor autogenerate, dus elke nieuwe 
 hier alleen zijn eigen import toe.
 
 Migraties draaien synchroon (het gebruikelijke Alembic-patroon, ook als de app zelf async is
-via aiosqlite/asyncpg): `DATABASE_URL_SYNC` gebruikt daarom een sync-driver
-(`sqlite://…`/`postgresql://…`), los van de async `DATABASE_URL` van de app zelf.
+via asyncpg): `DATABASE_URL_SYNC` gebruikt daarom een sync-driver (`postgresql://…`), los van
+de async `DATABASE_URL` van de app zelf.
 """
 
 from __future__ import annotations

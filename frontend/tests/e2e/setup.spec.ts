@@ -1,10 +1,5 @@
 import { test, expect } from "@playwright/test";
-// `node:sqlite` is een Node 22-built-in maar @types/node@20 declareert 'm (nog) niet —
-// ts-ignore op de import zodat `next build` (tsc) niet struikelt. CI en lokaal draaien
-// Node 22, dus runtime-import werkt gewoon.
-// @ts-expect-error node:sqlite bestaat in Node 22 runtime, ontbreekt in @types/node@20
-import { DatabaseSync } from "node:sqlite";
-import { existsSync } from "node:fs";
+import { Client } from "pg";
 import { API_BASE_URL, API_TOKEN } from "./_helpers";
 
 // Vereist: de Next.js-server én de API draaien al vóórdat deze test start.
@@ -12,39 +7,36 @@ import { API_BASE_URL, API_TOKEN } from "./_helpers";
 // De gelukkig-pad test heeft een lege `gebruikers`-tabel nodig (needs_setup: true) —
 // dat kan niet via de admin-API worden opgebouwd (de "laatste actieve beheerder"-
 // invariant staat het verwijderen van de laatste beheerder niet toe). Daarom wipen we
-// hier direct via SQLite (Node 22 heeft `node:sqlite` ingebouwd). Na afloop zetten we
-// de seed-beheerder terug via het publieke setup-endpoint, zodat vervolgtests weer
-// kunnen inloggen als "beheerder".
+// hier direct via Postgres (sinds ADR-0003 de enige DB — was eerder `node:sqlite`).
+// Na afloop zetten we de seed-beheerder terug via het publieke setup-endpoint, zodat
+// vervolgtests weer kunnen inloggen als "beheerder".
 //
-// De DB-pad wordt afgeleid uit env `DATABASE_URL_SYNC` (bijv.
-// `sqlite:///./ci-e2e.db` in CI, resolved t.o.v. de api-cwd — dus vanaf frontend/
-// prependen we `../api/`). Lokaal valt hij terug op `../api/local-e2e.db`.
+// De DB-URL komt uit env `DATABASE_URL_SYNC` (Postgres sync-URL, formaat
+// `postgresql://user:pass@host:port/db`) — pg parseert die zelf.
 
-function dbPad(): string {
+function dbUrl(): string {
   const env = process.env.DATABASE_URL_SYNC;
-  if (env?.startsWith("sqlite:///")) {
-    const rel = env.slice("sqlite:///".length); // bv. "./ci-e2e.db"
-    const kandidaten = [`../api/${rel.replace(/^\.\//, "")}`, rel];
-    for (const p of kandidaten) if (existsSync(p)) return p;
+  if (env?.startsWith("postgresql://") || env?.startsWith("postgres://")) {
+    return env;
   }
-  const fallbacks = ["../api/ci-e2e.db", "../api/local-e2e.db"];
-  for (const p of fallbacks) if (existsSync(p)) return p;
-  throw new Error(
-    "Kon SQLite DB-bestand niet vinden — controleer DATABASE_URL_SYNC of de fallback-paden ../api/{ci,local}-e2e.db.",
-  );
+  return "postgresql://lex:lex@localhost:5432/lex";
 }
 
-function wipeGebruikers() {
-  const db = new DatabaseSync(dbPad());
-  db.exec("DELETE FROM gebruikers");
-  db.close();
+async function wipeGebruikers() {
+  const client = new Client({ connectionString: dbUrl() });
+  await client.connect();
+  try {
+    await client.query("DELETE FROM gebruikers");
+  } finally {
+    await client.end();
+  }
 }
 
 async function herstelSeedBeheerder(
   request: import("@playwright/test").APIRequestContext,
 ) {
   // Wipe eerst — de gelukkig-test heeft mogelijk een admin{timestamp} aangemaakt.
-  wipeGebruikers();
+  await wipeGebruikers();
   // Herzet de seed-beheerder via het setup-endpoint (gate: API_TOKEN, werkt alleen als
   // de tabel leeg is).
   const res = await request.post(`${API_BASE_URL}/v1/auth/setup`, {
@@ -71,7 +63,7 @@ test.describe("setup-flow", () => {
     request,
   }) => {
     // Wipe de gebruikers-tabel zodat needs_setup: true — het formulier verschijnt.
-    wipeGebruikers();
+    await wipeGebruikers();
     try {
       await page.goto("/setup");
       const heading = page.getByRole("heading", {

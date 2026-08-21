@@ -1,6 +1,6 @@
 """Gedragstests voor het berichten-domein (feature-bouwen regel 6: gedrag, niet vorm — vorm is
 al gegarandeerd door models.py/ADR-0011). Elke test gaat via de echte HTTP-laag (router +
-store + SQLite), niet via losse functieaanroepen, zodat de acceptatiecriteria uit
+store + Postgres), niet via losse functieaanroepen, zodat de acceptatiecriteria uit
 docs/stories/002-berichten-lezen-en-beheren.md end-to-end gedekt zijn."""
 
 from __future__ import annotations

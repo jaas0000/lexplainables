@@ -1,6 +1,6 @@
 """Gedragstests voor het runtime_config-domein (feature-bouwen regel 6).
 
-Alle tests gaan via de echte HTTP-laag (router + store + SQLite), zodat de acceptatiecriteria
+Alle tests gaan via de echte HTTP-laag (router + store + Postgres), zodat de acceptatiecriteria
 van story 019 end-to-end gedekt zijn. Auth wordt overgeslagen via de conftest.py-override.
 """
 
@@ -89,7 +89,7 @@ def test_ttl_cache_geeft_zelfde_object_terug_zonder_db_hit(client, async_engine)
     assert resp1.status_code == 200
 
     # Schrijf direct in de DB via een synchrone engine (dialect-agnostisch — update-dan-insert
-    # in plaats van INSERT OR REPLACE zodat het op zowel SQLite als Postgres werkt), maar wis
+    # via SQLAlchemy Core i.p.v. asyncpg direct — houdt de test simpel), maar wis
     # de cache NIET. De cache is gevuld → GET geeft nog steeds de gecachte waarde (False).
     sync = sync_engine_voor(async_engine)
     with sync.begin() as conn:

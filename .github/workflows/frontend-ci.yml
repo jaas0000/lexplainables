@@ -82,12 +82,27 @@ jobs:
 
   test-frontend-e2e:
     # ADR-0016 stap 4: deze service bedient een frontend, dus hoort de Playwright-E2E-test
-    # hier te draaien — met de API, Keycloak én de frontend-devserver allebei opgestart in
-    # deze job (frontend-bouwen regel 6b), geen `webServer`-config in playwright.config.ts.
+    # hier te draaien — met de API én de frontend-devserver allebei opgestart in deze job
+    # (frontend-bouwen regel 6b), geen `webServer`-config in playwright.config.ts. De API
+    # praat Postgres (ADR-0003) — een Postgres-service komt naast de api op.
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lex
+          POSTGRES_PASSWORD: lex
+          POSTGRES_DB: lex
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U lex -d lex"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
     env:
-      DATABASE_URL: "sqlite+aiosqlite:///./ci-e2e.db"
-      DATABASE_URL_SYNC: "sqlite:///./ci-e2e.db"
+      DATABASE_URL: "postgresql+asyncpg://lex:lex@localhost:5432/lex"
+      DATABASE_URL_SYNC: "postgresql://lex:lex@localhost:5432/lex"
       API_TOKEN: "ci-api-token-test"
       AUTH_SECRET: "ci-auth-secret-minstens-32-tekens-lang!"
       API_BASE_URL: "http://localhost:8000"

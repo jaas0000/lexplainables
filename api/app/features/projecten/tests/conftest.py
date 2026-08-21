@@ -1,8 +1,7 @@
 """Testfixtures voor het projecten-domein.
 
-Elke test krijgt een eigen, kortlevende SQLite-database (bestand in `tmp_path`). Het schema
-wordt opgezet met een gewone synchrone engine; de async engine (aiosqlite) opent verbindingen
-pas tijdens de requests die TestClient uitvoert.
+Elke test krijgt een schoon schema op de gedeelde Postgres-testserver (ADR-0003) met zowel
+projecten- als llm_calls-tabellen (samen gebruikt in dezelfde tests).
 """
 
 from __future__ import annotations
