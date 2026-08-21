@@ -1,1 +1,34 @@
-services: {}
+# Lokale ontwikkel-stack. Alleen Postgres voor fase 0 — service-containers (api, frontend,
+# graph-qa, wettenbank-mcp, frontend-chat) komen als hun `Dockerfile` in latere fases wordt
+# toegevoegd (zie docs/project/migratie-wetsanalyse.md).
+#
+# Snelstart:
+#   docker compose up -d postgres
+#   export DATABASE_URL="postgresql+asyncpg://lex:lex@localhost:5432/lex"
+#   export DATABASE_URL_SYNC="postgresql://lex:lex@localhost:5432/lex"
+#   cd api && uv run alembic upgrade head && uv run uvicorn app.main:app --reload
+#
+# Ontwikkelaars die geen Docker willen: zet DATABASE_URL="sqlite+aiosqlite:///./dev.db"
+# (SQLite blijft ondersteund voor lokale dev + tests, zie ADR-0003).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lex
+      POSTGRES_PASSWORD: lex
+      POSTGRES_DB: lex
+    ports:
+      - "5432:5432"
+    volumes:
+      - lex-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lex -d lex"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  lex-postgres-data:

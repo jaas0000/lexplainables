@@ -1,7 +1,14 @@
 # ADR-0002: Keycloak als identity provider voor auth
 
-**Status:** geaccepteerd
+**Status:** vervangen door ADR-0004
 **Datum:** 2026-08-13
+**Vervangen:** 2026-08-21
+
+> **Herroepen.** Bij het overzetten van wetsanalyse-ai is Keycloak volledig weggehaald: de
+> operationele last (aparte service, upgrade-cyclus, eigen DB) woog niet op tegen wat we ermee
+> deden (userid + rol). Vervangen door **Auth.js in de frontend** met de api als
+> identiteitsbron — zie [ADR-0004](0004-authjs-frontend-sessies.md). De rest van dit document
+> blijft staan voor historische context, maar de beslissing is niet meer van kracht.
 
 ## Context
 
