@@ -31,12 +31,7 @@ test.describe("2FA-activering", () => {
     await schakel2FAUit();
   });
 
-  // TODO(vervolg): 2FA-login-flow e2e faalt op de tweede-scherm-transitie zonder duidelijke
-  // console-fout — de api-log toont dat activeer werkt (204) en verify-na-activatie 200 geeft.
-  // De 11 api-unit-tests dekken de backend-flow volledig, dus we schippen de e2e tijdelijk;
-  // fixen vereist beter test-artefact-inzicht (Playwright HTML-report of screenshot on-failure).
-  // Zie `docs/project/vervolgpunten.md`.
-  test.skip("gebruiker koppelt en logt in met code", async ({
+  test("gebruiker koppelt en logt in met code", async ({
     page,
     context,
     request,
