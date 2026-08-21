@@ -31,6 +31,12 @@ llm_call_ctx: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
 )
 
 
+def _huidige_context() -> dict:
+    """Huidige call-context als dict (leeg bij ontbreken). Wrapt `ContextVar.get() or {}` +
+    kopie, zodat callers zonder gedachten aan de default-None kunnen werken."""
+    return dict(llm_call_ctx.get() or {})
+
+
 @contextlib.contextmanager
 def gebruik_context(**velden):
     """Zet de call-context voor de duur van het blok (gemerged met de huidige) en herstel daarna.
@@ -38,7 +44,7 @@ def gebruik_context(**velden):
     Verwachte velden voor volledige capture: `analyse_id` (verplicht om te loggen),
     `activiteit`, `bron_id`. Ontbrekende velden worden als lege string / None opgeslagen.
     """
-    huidig = dict(llm_call_ctx.get() or {})
+    huidig = _huidige_context()
     huidig.update({k: v for k, v in velden.items() if v is not None})
     token = llm_call_ctx.set(huidig)
     try:
@@ -82,7 +88,7 @@ class CapturingLLMClient:
         try:
             if not await self._config.capture_ingeschakeld():
                 return
-            ctx = llm_call_ctx.get() or {}
+            ctx = _huidige_context()
             analyse_id = ctx.get("analyse_id")
             if not analyse_id:
                 # Geen analyse-id → geen zinnige capture-rij mogelijk (tabel vereist het).

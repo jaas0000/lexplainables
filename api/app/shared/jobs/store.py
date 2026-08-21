@@ -18,7 +18,7 @@ from datetime import timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import literal, select, text, update
+from sqlalchemy import select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -115,38 +115,31 @@ class PostgresJobStore:
         (bijv. lease verlopen en door reaper heropend). Dat is bewust hard: een worker die
         z'n lease is kwijtgeraakt hoort niet stiekem "af te ronden" wat een ander misschien
         al opnieuw begonnen is."""
-        with _tracer.start_as_current_span("jobs.voltooi") as span:
-            span.set_attribute("job.id", str(job_id))
-            stmt = (
-                update(jobs)
-                .where(
-                    jobs.c.id == job_id,
-                    jobs.c.status == "bezig",
-                    jobs.c.lease_eigenaar == eigenaar,
-                )
-                .values(
-                    status="klaar",
-                    lease_eigenaar=None,
-                    lease_verloopt=None,
-                    bijgewerkt=nu(),
-                )
-                .returning(jobs)
-            )
-            async with self._engine.begin() as conn:
-                rij = (await conn.execute(stmt)).one_or_none()
-            if rij is None:
-                span.set_attribute("job.status", "niet_gevonden")
-                raise JobNietGevonden(
-                    f"Job {job_id} bestaat niet, is niet bezig, of eigenaar {eigenaar} klopt niet."
-                )
-            span.set_attribute("job.status", "klaar")
-            span.set_attribute("job.soort", rij.soort)
-            _bezig_jobs.add(-1, {"soort": rij.soort})
-            return job_uit_rij(rij)
+        return await self._sluit_bezig(
+            job_id, eigenaar, span_naam="jobs.voltooi", extra_waarden={"status": "klaar"}
+        )
 
     async def faal(self, job_id: UUID, eigenaar: str, fout: str) -> Job:
         """Job → `mislukt` met foutmelding. Zelfde eigenaar-check als `voltooi`."""
-        with _tracer.start_as_current_span("jobs.faal") as span:
+        return await self._sluit_bezig(
+            job_id,
+            eigenaar,
+            span_naam="jobs.faal",
+            extra_waarden={"status": "mislukt", "fout": fout},
+        )
+
+    async def _sluit_bezig(
+        self,
+        job_id: UUID,
+        eigenaar: str,
+        *,
+        span_naam: str,
+        extra_waarden: dict[str, Any],
+    ) -> Job:
+        """Gedeelde afsluitpad voor `voltooi`/`faal`: eigenaar-fenced update van een
+        `bezig`-job, lease-reset, decrement van de counter, span-annotatie. De `extra_waarden`
+        dragen het status-specifieke deel (`status`, optioneel `fout`)."""
+        with _tracer.start_as_current_span(span_naam) as span:
             span.set_attribute("job.id", str(job_id))
             stmt = (
                 update(jobs)
@@ -156,11 +149,10 @@ class PostgresJobStore:
                     jobs.c.lease_eigenaar == eigenaar,
                 )
                 .values(
-                    status="mislukt",
-                    fout=fout,
                     lease_eigenaar=None,
                     lease_verloopt=None,
                     bijgewerkt=nu(),
+                    **extra_waarden,
                 )
                 .returning(jobs)
             )
@@ -171,7 +163,7 @@ class PostgresJobStore:
                 raise JobNietGevonden(
                     f"Job {job_id} bestaat niet, is niet bezig, of eigenaar {eigenaar} klopt niet."
                 )
-            span.set_attribute("job.status", "mislukt")
+            span.set_attribute("job.status", rij.status)
             span.set_attribute("job.soort", rij.soort)
             _bezig_jobs.add(-1, {"soort": rij.soort})
             return job_uit_rij(rij)
@@ -194,7 +186,7 @@ class PostgresJobStore:
                 status="wachtend",
                 lease_eigenaar=None,
                 lease_verloopt=None,
-                bijgewerkt=literal(nu()),
+                bijgewerkt=nu(),
             )
         )
         async with self._engine.begin() as conn:

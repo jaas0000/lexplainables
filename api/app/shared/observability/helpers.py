@@ -36,20 +36,30 @@ class _NoopInstrument:
     def record(self, *_a: Any, **_k: Any) -> None: ...
 
 
+# Module-level singletons: shims zijn stateless, dus elke aanroep dezelfde instance geven is
+# goedkoper dan bij elke get_tracer()/start_as_current_span()-aanroep een nieuwe maken.
+_NOOP_SPAN = _NoopSpan()
+_NOOP_INSTRUMENT = _NoopInstrument()
+
+
 class _NoopTracer:
     def start_as_current_span(self, *_a: Any, **_k: Any) -> _NoopSpan:
-        return _NoopSpan()
+        return _NOOP_SPAN
 
 
 class _NoopMeter:
     def create_counter(self, *_a: Any, **_k: Any) -> _NoopInstrument:
-        return _NoopInstrument()
+        return _NOOP_INSTRUMENT
 
     def create_histogram(self, *_a: Any, **_k: Any) -> _NoopInstrument:
-        return _NoopInstrument()
+        return _NOOP_INSTRUMENT
 
     def create_up_down_counter(self, *_a: Any, **_k: Any) -> _NoopInstrument:
-        return _NoopInstrument()
+        return _NOOP_INSTRUMENT
+
+
+_NOOP_TRACER = _NoopTracer()
+_NOOP_METER = _NoopMeter()
 
 
 def get_tracer(naam: str) -> Any:
@@ -58,11 +68,11 @@ def get_tracer(naam: str) -> Any:
     `tracer.start_as_current_span(...)` doen als contextmanager."""
     if _OTEL_API:
         return _ot_trace.get_tracer(naam)
-    return _NoopTracer()
+    return _NOOP_TRACER
 
 
 def get_meter(naam: str) -> Any:
     """Meter voor de app — echte meter met de extra, anders shim. Zie `get_tracer`."""
     if _OTEL_API:
         return _ot_metrics.get_meter(naam)
-    return _NoopMeter()
+    return _NOOP_METER
