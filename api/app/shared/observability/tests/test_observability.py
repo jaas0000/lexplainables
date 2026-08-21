@@ -54,7 +54,7 @@ def test_setup_zonder_endpoint_faalt_niet(monkeypatch):
     setup()  # mag niet raisen
 
 
-def test_setup_met_endpoint_zonder_extra_logt_warning_en_gaat_door(monkeypatch, caplog):
+def test_setup_met_endpoint_zonder_extra_logt_warning_en_gaat_door(monkeypatch, capsys):
     """Endpoint gezet maar OTel-extra ontbreekt → warning, geen crash. Op de test-runner
     zal `_OTEL_API` doorgaans False zijn (geen otel-dep), dus dit pad wordt echt getest."""
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
@@ -69,9 +69,12 @@ def test_setup_met_endpoint_zonder_extra_logt_warning_en_gaat_door(monkeypatch, 
         pytest.skip(
             "opentelemetry is geïnstalleerd; deze test dekt alleen het niet-geïnstalleerd-pad"
         )
-    with caplog.at_level(logging.WARNING):
-        setup()
-    assert any("opentelemetry ontbreekt" in r.message.lower() for r in caplog.records)
+    # `caplog` werkt hier niet: `setup()` roept `logging.config.dictConfig` aan die de
+    # root-logger-handlers vervangt, waarmee caplog's ingeplugde handler verdwijnt. We lezen
+    # de warning uit stdout — daar landt de JsonFormatter-uitvoer.
+    setup()
+    uitvoer = capsys.readouterr().out
+    assert "opentelemetry ontbreekt" in uitvoer.lower()
 
 
 # --- get_tracer / get_meter --------------------------------------------------------
