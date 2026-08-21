@@ -60,7 +60,7 @@ asyncio.run(maak_gebruiker_indien_ontbreekt(get_engine(), 'beheerder', 'beheerde
 
 ## Structuur (topologie vastgelegd; gebouwd: `api`, `frontend`, `tools/wetsanalyse-admin-mcp`)
 
-Zes services, zie [`docs/architectuur/adr/0001-multi-service-topologie.md`](docs/architectuur/adr/0001-multi-service-topologie.md)
+Zes services, zie [`docs/project/architectuur/adr/0001-multi-service-topologie.md`](docs/project/architectuur/adr/0001-multi-service-topologie.md)
 voor de volledige afweging:
 
 | Service | Verantwoordelijk voor |
@@ -74,7 +74,7 @@ voor de volledige afweging:
 
 Alle projectspecifieke stack-keuzes (de ene bron, contractgeneratie, feature-eenheid, dunne
 verzamelaars, migraties, frontends, codestandaard) staan in
-[`docs/architectuur/stack-profiel.md`](docs/architectuur/stack-profiel.md) — `feature-bouwen`
+[`docs/project/architectuur/stack-profiel.md`](docs/project/architectuur/stack-profiel.md) — `feature-bouwen`
 regel 3 leest daaruit.
 
 ## Instellingen
@@ -87,13 +87,24 @@ regel 3 leest daaruit.
 - **Simplify bij feature-bouwen:** ja <!-- ja | nee -->
   `ja` — `feature-bouwen` regel 9 draait `/simplify` vóór elke aflevering.
 
+## Docs-structuur
+
+- `docs/project/` — hoe we werken en wat we hebben gebouwd: `architectuur/` (ADR's over dit
+  project), `werkwijze/` (methodologie-ADR's + de originele werkwijze-`CLAUDE.md`), `features/`
+  (gegenereerd door `scripts/docs/genereer-feature-docs.py`), `stories/`, `vervolgpunten.md`,
+  `changelog-technisch.md`.
+- `docs/domein/` — waar de app over gaat: JAS, wetsanalyse-methode, WetsTaal, referenties.
+  Vult zich naarmate wetsanalyse-content wordt overgezet.
+- `CHANGELOG.md` blijft op de root (open-source-conventie).
+
 ## Skills
 
-De skills staan in `werkwijze-v2-multi-service/werkwijze/.claude/skills/` — niets kopiëren.
-Zolang die repo als sibling-map in dezelfde workspace staat als deze repo, ontdekt Claude Code
-`.claude/skills/` uit elke aanwezige repo zelf en scoped ze automatisch op pad (bv.
-`werkwijze-v2-multi-service/werkwijze:code-review`), ook als een andere, niet-verwante repo in
-dezelfde workspace toevallig een skill met dezelfde naam heeft.
+De skills staan in `.claude/skills/` — in-project, geen sibling-repo-dependency. De methode
+zelf staat in `docs/project/werkwijze/CLAUDE.md` (met bijbehorende ADR's onder
+`docs/project/werkwijze/adr/`); dit CLAUDE.md hier verwijst naar die inhoud maar herhaalt hem
+niet. Zodra de werkwijze stabiel is en herbruikbaar moet worden voor een tweede project, is de
+afsplitsing terug naar een aparte werkwijze-repo triviaal (`.claude/skills/` +
+`docs/project/werkwijze/` kopiëren).
 
 ## Volgende stap
 
