@@ -27,13 +27,13 @@ def upgrade() -> None:
     # Batch-alter voor SQLite-compatibiliteit (ondersteunt geen ALTER TABLE DROP COLUMN
     # natief in oudere versies; batch_alter_table herschrijft de tabel).
     with op.batch_alter_table("analyses") as batch:
-        batch.drop_column("rapport")             # uit 0009 (story 013)
-        batch.drop_column("model_profiel")       # uit 0005 (engine-config)
-        batch.drop_column("analysefocus")        # uit 0005 (act3-input)
-        batch.drop_column("human_in_the_loop")   # uit 0005 (review-flow)
-        batch.drop_column("begrippenlijst")      # uit 0005 (act3-input)
-        batch.drop_column("huidige_fase")        # uit 0005 (engine-status)
-        batch.drop_column("foutmelding")         # uit 0005 (engine-status)
+        batch.drop_column("rapport")  # uit 0009 (story 013)
+        batch.drop_column("model_profiel")  # uit 0005 (engine-config)
+        batch.drop_column("analysefocus")  # uit 0005 (act3-input)
+        batch.drop_column("human_in_the_loop")  # uit 0005 (review-flow)
+        batch.drop_column("begrippenlijst")  # uit 0005 (act3-input)
+        batch.drop_column("huidige_fase")  # uit 0005 (engine-status)
+        batch.drop_column("foutmelding")  # uit 0005 (engine-status)
 
 
 def downgrade() -> None:
