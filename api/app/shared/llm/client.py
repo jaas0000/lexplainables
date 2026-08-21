@@ -87,6 +87,15 @@ def _wachttijd(poging: int, retry_after_s: float | None) -> float:
     return min(basis + jitter, _MAX_BACKOFF_S)
 
 
+def _record_duur(start: float, config: LlmConfig, ok: bool) -> None:
+    """Emit de call-duur histogram met de standaard-labels. Één plek zodat de drie exit-paden
+    (success, LLMFout-reraise, exhaustion) dezelfde labelset gebruiken."""
+    _llm_call_duur_ms.record(
+        (time.perf_counter() - start) * 1000,
+        {"provider": config.provider, "model": config.model, "ok": "true" if ok else "false"},
+    )
+
+
 class LitellmClient:
     """`LLMPort`-implementatie via `litellm.acompletion`.
 
@@ -119,10 +128,7 @@ class LitellmClient:
                     span.set_attribute("llm.tokens.in", tokens_in)
                     span.set_attribute("llm.tokens.out", tokens_out)
                     span.set_attribute("llm.pogingen", poging)
-                    _llm_call_duur_ms.record(
-                        (time.perf_counter() - start) * 1000,
-                        {"provider": config.provider, "model": config.model, "ok": "true"},
-                    )
+                    _record_duur(start, config, ok=True)
                     return LLMResult(
                         tekst=tekst,
                         model=getattr(resp, "model", config.model) or config.model,
@@ -132,19 +138,13 @@ class LitellmClient:
                     )
                 except LLMFout as exc:
                     span.record_exception(exc)
-                    _llm_call_duur_ms.record(
-                        (time.perf_counter() - start) * 1000,
-                        {"provider": config.provider, "model": config.model, "ok": "false"},
-                    )
+                    _record_duur(start, config, ok=False)
                     raise
                 except Exception as exc:  # noqa: BLE001 — vertaal provider-fout naar LLM*Fout
                     laatste_fout = exc
                     if not _is_transient(exc) or poging >= _MAX_POGINGEN:
                         span.record_exception(exc)
-                        _llm_call_duur_ms.record(
-                            (time.perf_counter() - start) * 1000,
-                            {"provider": config.provider, "model": config.model, "ok": "false"},
-                        )
+                        _record_duur(start, config, ok=False)
                         if _is_transient(exc):
                             raise LLMTransientFout(
                                 f"LLM-call transient gefaald na {poging} pogingen: {exc}",

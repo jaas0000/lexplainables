@@ -64,13 +64,6 @@ def _trace_context() -> dict[str, str]:
         return {}
 
 
-def _redact_value(sleutel: str, waarde: Any) -> Any:
-    """Redacteer een enkele waarde als de sleutelnaam een geheim suggereert."""
-    if sleutel.lower() in GEHEIME_VELDEN:
-        return "[GEREDACTEERD]"
-    return waarde
-
-
 def _redact_dict(data: dict[str, Any]) -> dict[str, Any]:
     """Redacteer alle geheime velden in een dict (recursief). Bewaart de structuur."""
     schoon: dict[str, Any] = {}
@@ -107,8 +100,10 @@ class JsonFormatter(logging.Formatter):
                 continue
             if isinstance(v, dict):
                 regel[k] = _redact_dict(v)
+            elif k.lower() in GEHEIME_VELDEN:
+                regel[k] = "[GEREDACTEERD]"
             else:
-                regel[k] = _redact_value(k, v)
+                regel[k] = v
         if record.exc_info:
             regel["exception"] = self.formatException(record.exc_info)
         return json.dumps(regel, ensure_ascii=False, default=str)
@@ -263,7 +258,7 @@ def setup(app: Any = None) -> None:
 
     logging.config.dictConfig(_dict_config())
 
-    endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "") or ""
+    endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
     if endpoint:
         if not _OTEL_API:
             logger.warning(
