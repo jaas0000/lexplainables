@@ -12,11 +12,23 @@ import asyncio
 import logging
 import os
 import random
+import time
+
+from app.shared.observability import get_meter, get_tracer
 
 from .base import LlmConfig, LLMFout, LLMPermanenteFout, LLMResult, LLMTransientFout
 from .throttle import llm_slot
 
 logger = logging.getLogger(__name__)
+
+_tracer = get_tracer("app.shared.llm.client")
+# Duur van een LLM-call in ms — histogram zodat percentiles zichtbaar worden. Bij no-op
+# meter is dit een shim die niets doet.
+_llm_call_duur_ms = get_meter("app.shared.llm.client").create_histogram(
+    "llm_call_duration_ms",
+    unit="ms",
+    description="Wandklok-duur per LLM-call (inclusief retry-wachttijd).",
+)
 
 # Bounded retry-knoppen — env, met veilige defaults. 0 zet retry uit.
 _MAX_POGINGEN = int(os.environ.get("LLM_RETRY_MAX", "3"))
@@ -92,39 +104,62 @@ class LitellmClient:
             {"role": "user", "content": user},
         ]
         laatste_fout: BaseException | None = None
-        for poging in range(1, max(_MAX_POGINGEN, 1) + 1):
-            try:
-                async with llm_slot():
-                    resp = await self._call_litellm(config, messages)
-                tekst = resp.choices[0].message.content or ""
-                usage = getattr(resp, "usage", None)
-                return LLMResult(
-                    tekst=tekst,
-                    model=getattr(resp, "model", config.model) or config.model,
-                    provider=config.provider,
-                    tokens_in=int(getattr(usage, "prompt_tokens", 0) or 0),
-                    tokens_out=int(getattr(usage, "completion_tokens", 0) or 0),
-                )
-            except LLMFout:
-                raise
-            except Exception as exc:  # noqa: BLE001 — vertaal provider-fout naar LLM*Fout
-                laatste_fout = exc
-                if not _is_transient(exc) or poging >= _MAX_POGINGEN:
-                    if _is_transient(exc):
-                        raise LLMTransientFout(
-                            f"LLM-call transient gefaald na {poging} pogingen: {exc}",
-                            retry_after_s=_retry_after(exc),
-                        ) from exc
-                    raise LLMPermanenteFout(f"LLM-call permanent gefaald: {exc}") from exc
-                wacht = _wachttijd(poging, _retry_after(exc))
-                logger.info(
-                    "LLM-call transient gefaald (poging %d/%d), wacht %.1fs: %s",
-                    poging,
-                    _MAX_POGINGEN,
-                    wacht,
-                    type(exc).__name__,
-                )
-                await asyncio.sleep(wacht)
+        start = time.perf_counter()
+        with _tracer.start_as_current_span("llm.complete") as span:
+            span.set_attribute("llm.provider", config.provider)
+            span.set_attribute("llm.model", config.model)
+            for poging in range(1, max(_MAX_POGINGEN, 1) + 1):
+                try:
+                    async with llm_slot():
+                        resp = await self._call_litellm(config, messages)
+                    tekst = resp.choices[0].message.content or ""
+                    usage = getattr(resp, "usage", None)
+                    tokens_in = int(getattr(usage, "prompt_tokens", 0) or 0)
+                    tokens_out = int(getattr(usage, "completion_tokens", 0) or 0)
+                    span.set_attribute("llm.tokens.in", tokens_in)
+                    span.set_attribute("llm.tokens.out", tokens_out)
+                    span.set_attribute("llm.pogingen", poging)
+                    _llm_call_duur_ms.record(
+                        (time.perf_counter() - start) * 1000,
+                        {"provider": config.provider, "model": config.model, "ok": "true"},
+                    )
+                    return LLMResult(
+                        tekst=tekst,
+                        model=getattr(resp, "model", config.model) or config.model,
+                        provider=config.provider,
+                        tokens_in=tokens_in,
+                        tokens_out=tokens_out,
+                    )
+                except LLMFout as exc:
+                    span.record_exception(exc)
+                    _llm_call_duur_ms.record(
+                        (time.perf_counter() - start) * 1000,
+                        {"provider": config.provider, "model": config.model, "ok": "false"},
+                    )
+                    raise
+                except Exception as exc:  # noqa: BLE001 — vertaal provider-fout naar LLM*Fout
+                    laatste_fout = exc
+                    if not _is_transient(exc) or poging >= _MAX_POGINGEN:
+                        span.record_exception(exc)
+                        _llm_call_duur_ms.record(
+                            (time.perf_counter() - start) * 1000,
+                            {"provider": config.provider, "model": config.model, "ok": "false"},
+                        )
+                        if _is_transient(exc):
+                            raise LLMTransientFout(
+                                f"LLM-call transient gefaald na {poging} pogingen: {exc}",
+                                retry_after_s=_retry_after(exc),
+                            ) from exc
+                        raise LLMPermanenteFout(f"LLM-call permanent gefaald: {exc}") from exc
+                    wacht = _wachttijd(poging, _retry_after(exc))
+                    logger.info(
+                        "LLM-call transient gefaald (poging %d/%d), wacht %.1fs: %s",
+                        poging,
+                        _MAX_POGINGEN,
+                        wacht,
+                        type(exc).__name__,
+                    )
+                    await asyncio.sleep(wacht)
         # Onbereikbaar — de laatste iteratie raist altijd. Zekerheidshalve:
         raise LLMTransientFout(
             f"LLM-call onverwacht buiten de retry-lus zonder resultaat: {laatste_fout}"
