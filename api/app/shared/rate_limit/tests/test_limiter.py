@@ -102,12 +102,14 @@ def test_cap_fail_closed_op_nieuwe_sleutel_bij_volle_tabel():
 
 
 def test_cap_veegt_verlopen_sleutels_bij_druk():
-    """Als de tabel vol lijkt maar bevat verlopen entries, veegt de limiter die eerst weg —
-    daarna past een nieuwe sleutel er alsnog in."""
-    # Vul de tabel met verlopen entries (kort venster + wachten).
+    """Als de tabel vol lijkt maar bevat verlopen entries voor het huidige venster, veegt de
+    limiter die eerst weg — daarna past een nieuwe sleutel er alsnog in. Alle callers gebruiken
+    hetzelfde venster (in dit project: één env-var, één venster); dat is de aanname van de
+    veeg-logica."""
+    kort_venster = 0.02
     for i in range(MAX_SLEUTELS):
-        probeer_toestaan(f"oud-{i}", 100, venster_s=0.02)
+        probeer_toestaan(f"oud-{i}", 100, venster_s=kort_venster)
     time.sleep(0.03)
 
     # Nu is de tabel vol met verlopen entries — de nieuwe sleutel triggert de veeg + past.
-    assert probeer_toestaan("nieuw", 100, venster_s=60.0) is True
+    assert probeer_toestaan("nieuw", 100, venster_s=kort_venster) is True
