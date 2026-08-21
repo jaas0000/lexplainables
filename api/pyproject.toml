@@ -8,9 +8,8 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0",
     "sqlmodel>=0.0.21",
     "pydantic>=2.9",
-    # DB-drivers: aiosqlite voor tests + snelle lokale dev; asyncpg voor productie (runtime);
-    # psycopg2-binary voor Alembic (sync-migraties tegen Postgres) — zie ADR-0003.
-    "aiosqlite>=0.20",
+    # DB-drivers: asyncpg voor productie (runtime); psycopg2-binary voor Alembic
+    # (sync-migraties). Uitsluitend Postgres — zie ADR-0003.
     "asyncpg>=0.29",
     "psycopg2-binary>=2.9",
     "alembic>=1.13",

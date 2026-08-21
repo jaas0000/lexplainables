@@ -1,10 +1,7 @@
 """Testfixtures voor het annotatie-domein.
 
-Elke test krijgt een eigen, kortlevende SQLite-database (bestand in `tmp_path`, niet in-memory:
-een async engine met meerdere verbindingen naar hetzelfde in-memory-bestand deelt anders geen
-state). Het schema wordt opgezet met een synchrone engine (`metadata.create_all`) — dat vermijdt
-event-loop-koppeling vooraf; de async engine opent zijn verbindingen pas tijdens de requests die
-de TestClient uitvoert.
+Elke test krijgt een schoon schema op de gedeelde Postgres-testserver (ADR-0003). Zie
+`api/conftest.py` § `maak_test_engine` voor de implementatie.
 """
 
 from __future__ import annotations

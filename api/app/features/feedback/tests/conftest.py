@@ -1,11 +1,8 @@
 """Testfixtures voor het feedback-domein.
 
-Elke test krijgt een eigen, kortlevende SQLite-database (een bestand in `tmp_path`, niet
-in-memory: een async engine met meerdere verbindingen naar hetzelfde in-memory-bestand deelt
-anders geen state). Het schema wordt opgezet met een gewone SYNCHRONE engine
-(`metadata.create_all`) — dat vermijdt elke event-loop-koppeling vooraf; de ASYNC engine (met
-aiosqlite, zoals de app 'm ook gebruikt) opent zijn verbindingen pas tijdens de requests die de
-TestClient zelf uitvoert.
+Elke test krijgt een schoon schema op de gedeelde Postgres-testserver (ADR-0003). Zie
+`api/conftest.py` § `maak_test_engine` voor de implementatie (drop_all → create_all met NullPool
+om verbindingsuitputting te voorkomen).
 
 De router leunt op de store-abstractie (werkwijze-ADR-0007): deze fixture overschrijft alleen
 `get_store`, de routercode zelf blijft ongewijzigd.

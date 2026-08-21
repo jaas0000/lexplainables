@@ -77,7 +77,6 @@ class RuntimeConfigStore:
             async with self._engine.begin() as conn:
                 for sleutel, waarde in te_schrijven.items():
                     stmt = upsert(
-                        conn,
                         app_instellingen,
                         values={"sleutel": sleutel, "waarde": waarde, "bijgewerkt": moment},
                         conflict_cols=["sleutel"],

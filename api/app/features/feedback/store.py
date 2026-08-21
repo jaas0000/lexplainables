@@ -2,7 +2,7 @@
 
 `FeedbackStore` beschrijft de operaties die router.py nodig heeft, niet de databasedetails.
 `SqlAlchemyFeedbackStore` is de enige huidige implementatie (async SQLAlchemy Core). Tests
-draaien 'm tegen een eigen, kortlevende SQLite-engine (zie tests/conftest.py) — dezelfde
+draaien 'm tegen de gedeelde Postgres-testserver (zie tests/conftest.py) — dezelfde
 implementatie, geen aparte fake, dus blijft de echte SQL ook in tests gedekt.
 """
 
@@ -39,8 +39,7 @@ class FeedbackStore(Protocol):
 
 
 class SqlAlchemyFeedbackStore:
-    """Implementatie tegen een async SQLAlchemy-engine (SQLite in tests, en lokaal via
-    aiosqlite — productie zou Postgres/asyncpg zijn, zie stack-profiel.md)."""
+    """Implementatie tegen een async SQLAlchemy-engine (asyncpg, ADR-0003)."""
 
     def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
@@ -123,8 +122,9 @@ class SqlAlchemyFeedbackStore:
         markeren binnenkomt ten onrechte als gezien telt."""
         moment = tot or nu()
         async with self._engine.begin() as conn:
-            # Update-dan-insert i.p.v. een dialect-specifieke ON CONFLICT: werkt identiek op
-            # SQLite (tests) en Postgres (productie). Geen bescherming tegen een gelijktijdige
+            # Update-dan-insert (kon ook `pg_insert(...).on_conflict_do_update(...)` zijn nu
+            # we Postgres-only zijn, ADR-0003 — laten staan tot een echte concurrency-issue
+            # dat rechtvaardigt). Geen bescherming tegen een gelijktijdige
             # eerste markering door dezelfde beheerder (theoretische race, geen reëel risico
             # voor een single-user-actie als "ik heb de pagina gezien").
             result = await conn.execute(

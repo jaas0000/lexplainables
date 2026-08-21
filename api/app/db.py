@@ -11,7 +11,10 @@ import os
 
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./wetsanalyse.db")
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+asyncpg://lex:lex@localhost:5432/lex",
+)
 
 _engine: AsyncEngine | None = None
 

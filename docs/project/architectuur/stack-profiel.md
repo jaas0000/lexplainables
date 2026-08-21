@@ -83,16 +83,16 @@ blijven na de herindeling.
 
 ## Database
 
-**PostgreSQL in productie én CI, SQLite blijft voor lokale tests** — zie
-[ADR-0003](adr/0003-postgresql-productie-sqlite-tests.md). Driver: `asyncpg` voor Postgres,
-`aiosqlite` voor SQLite. Dialect-specifieke SQL vermijden; waar nodig een update-dan-insert
-patroon dat op beide werkt.
+**PostgreSQL — enige database, ook in tests** — zie
+[ADR-0003](adr/0003-postgresql-productie-sqlite-tests.md). Driver: `asyncpg` (runtime),
+`psycopg2-binary` (Alembic sync-migraties). Geen SQLite meer; ontwikkelaars draaien lokaal
+via `docker compose up -d postgres`.
 
 ## Migraties
 
 Alembic, zoals werkwijze-ADR-0005 — één migratiehistorie per service met een eigen database
 (`api`, en `wettenbank-mcp` indien die een eigen database krijgt). CI (`check-migraties`)
-draait upgrade+downgrade op beide dialecten. Vervangt de huidige
+draait upgrade+downgrade tegen Postgres. Vervangt de huidige
 `reconcile_schema()`-functie in `api`.
 
 ## Auth

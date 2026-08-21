@@ -165,17 +165,10 @@ async def test_ingetrokken_db_token_wordt_geweigerd(auth_client):
 @pytest.mark.asyncio
 async def test_verifieer_update_laatste_gebruik(tmp_path):
     """update_laatste_gebruik schrijft de timestamp best-effort zonder uitzondering."""
-    from sqlalchemy import create_engine as se
-    from sqlalchemy.ext.asyncio import create_async_engine as ase
-
     from app.features.api_tokens.models import metadata
+    from conftest import maak_test_engine
 
-    db_pad = tmp_path / "ltu.db"
-    sync_engine = se(f"sqlite:///{db_pad}")
-    metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    engine = ase(f"sqlite+aiosqlite:///{db_pad}")
+    engine = maak_test_engine(metadata, tmp_path=tmp_path)
     store = SqlAlchemyApiTokenStore(engine)
 
     token_read, plaintext = await store.maak("ltu", "beheerder")

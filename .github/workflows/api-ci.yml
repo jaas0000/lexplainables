@@ -16,22 +16,10 @@ on:
 
 jobs:
   test-api:
-    # Draait de test-suite tegen beide dialecten (project-ADR-0003). De SQLite-run gebruikt de
-    # helpers uit `api/conftest.py` (kortlevende DB per test); de Postgres-run zet
-    # `TEST_DATABASE_URL(_SYNC)` waarna de helpers een gedeelde Postgres met per-test-reset
-    # (`drop_all → create_all`) gebruiken. Beide moeten groen — zo faalt hier een SQLite-only
-    # runtime-assumptie, niet pas bij een echte deploy.
+    # Draait de test-suite tegen Postgres (project-ADR-0003: Postgres-only, geen SQLite meer).
+    # Fixture-helpers uit `api/conftest.py` gebruiken `TEST_DATABASE_URL(_SYNC)` en resetten
+    # het schema per test (`drop_all → create_all`).
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - dialect: sqlite
-            test_url_sync: ""
-            test_url: ""
-          - dialect: postgres
-            test_url_sync: "postgresql://lex:lex@localhost:5432/lex"
-            test_url: "postgresql+asyncpg://lex:lex@localhost:5432/lex"
     services:
       postgres:
         image: postgres:16-alpine
@@ -49,11 +37,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
-      - name: Tests (${{ matrix.dialect }})
+      - name: Tests
         working-directory: api
         env:
-          TEST_DATABASE_URL_SYNC: ${{ matrix.test_url_sync }}
-          TEST_DATABASE_URL: ${{ matrix.test_url }}
+          TEST_DATABASE_URL_SYNC: "postgresql://lex:lex@localhost:5432/lex"
+          TEST_DATABASE_URL: "postgresql+asyncpg://lex:lex@localhost:5432/lex"
         run: |
           uv sync
           uv run pytest -q
@@ -74,18 +62,9 @@ jobs:
 
   check-migraties:
     # Alembic is verplicht zodra een service een productiedatabase heeft (werkwijze-ADR-0005).
-    # Draai de volledige historie heen én terug tegen beide dialecten (project-ADR-0003:
-    # Postgres in productie, SQLite in tests). Elke migratie moet cleanroom toepasbaar zijn op
-    # allebei — anders faalt hier, niet pas bij een echte deploy.
+    # Draait upgrade+downgrade tegen Postgres (project-ADR-0003: Postgres-only). Elke migratie
+    # moet cleanroom toepasbaar zijn — anders faalt hier, niet pas bij een echte deploy.
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - dialect: sqlite
-            url_sync: "sqlite:///./ci-migratie-check.db"
-          - dialect: postgres
-            url_sync: "postgresql://lex:lex@localhost:5432/lex"
     services:
       postgres:
         image: postgres:16-alpine
@@ -103,12 +82,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
-      - name: alembic upgrade + downgrade (${{ matrix.dialect }})
+      - name: alembic upgrade + downgrade
         working-directory: api
         env:
-          # env.py leest DATABASE_URL_SYNC (sync driver — psycopg2 voor Postgres, plain sqlite
-          # voor SQLite) — zie api/alembic/env.py.
-          DATABASE_URL_SYNC: ${{ matrix.url_sync }}
+          # env.py leest DATABASE_URL_SYNC (sync driver — psycopg2 voor Postgres).
+          DATABASE_URL_SYNC: "postgresql://lex:lex@localhost:5432/lex"
         run: |
           uv sync
           uv run alembic upgrade head
