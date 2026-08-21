@@ -118,8 +118,11 @@ def _dict_config() -> dict[str, Any]:
     """Bouw de logging.dictConfig uit env: LOG_LEVEL (info) + LOG_FORMAT (json|text)."""
     is_json = os.environ.get("LOG_FORMAT", "json").lower() != "text"
     level = os.environ.get("LOG_LEVEL", "info").upper()
+    # Dictconfig's `()`-sleutel accepteert een callable object direct — dat is robuuster dan
+    # een dotted-path-string voor klasses in modules-die-niet-packages-zijn (dan probeert
+    # Python die string als submodule te importeren en faalt met "is not a package").
     formatter = (
-        {"()": f"{__name__}.JsonFormatter"}
+        {"()": JsonFormatter}
         if is_json
         else {"format": "%(asctime)s %(levelname)-7s %(name)s | %(message)s"}
     )
