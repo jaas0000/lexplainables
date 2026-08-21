@@ -1,34 +1,29 @@
-"""Projecten (analyses).
+"""Projecten (werkgebieden).
 
-Wat: analisten maken analyses aan met één of meer bronnen (bwb_id + artikel + lid); een
-background-job orkestreert act2/act3 via `engine/orchestrator`; SSE geeft live status;
-rapport-endpoint levert eindresultaat + Markdown-download; LLM-calls-log koppelt aan
-`llm_calls`.
-Waarom: eigen domein voor analyse-orkestratie — status-machine, background-task-lifecycle,
-SSE-stream, human-in-the-loop akkoord/afwijzen. Los van annotatie (dat is post-analyse
-werkplek) en van de engine zelf (dat is stateless orkestratie-code).
-Grens: het rekenwerk zit in `engine/orchestrator.py`, niet hier; de analyse-status en
-tussenresultaten worden hier bewaard; annotatie op individuele elementen woont in
-`annotatie/`.
+Wat: analisten maken werkgebieden aan met één of meer bronnen (bwb_id + artikel + lid);
+CRUD-endpoints leveren lijst/detail/verwijderen; annotatie op individuele elementen woont in
+`annotatie/`. Read-only LLM-calls-log koppelt aan `llm_calls`.
+Waarom: eigen domein voor de werkgebied-metadata (naam + bronnen + omschrijving) los van
+annotatie (dat is een aparte werkplek-stap). De ooit gebouwde JAS-orkestratie (act2/act3,
+review-flow, rapport, SSE) is opgeruimd (migratie 0012, migratie-plan fase 1) — annotatie is
+de enige overgebleven analyse-stap.
+Grens: geen orkestratie meer, geen SSE, geen rapport-endpoint; het domein bewaart alleen de
+werkgebied-metadata. Voor annotatie zie `annotatie/`; voor LLM-calls-registratie zie
+`llm_calls/`.
 
 Tabellen:
-  - analyses: id + naam + client_id + status (actief/wacht_op_review/klaar/fout) + fase +
-    bronnen (JSON) + begrippenlijst (JSON, optioneel) + human_in_the_loop + resultaat
-    (JSON) + timestamps.
+  - analyses: id + naam + status (`nieuw`) + bronnen (JSON) + omschrijving + timestamps
+    (aangemaakt/bijgewerkt) + gebruiker_id.
 
 Beslissingen:
   - ADR-0007 (store-abstractie): router leunt op `AnalyseStore` Protocol; rolfilter (analist
-    vs. beheerder) zit in de store, niet in de router (story 012 §Auth).
+    vs. beheerder) zit in de store, niet in de router.
   - ADR-0011 (schema-eenheid): SQLAlchemy Core + Pydantic + expliciete mapping.
-  - Story 012 §Human-in-the-loop: default `true`; `akkoord` zet status terug op `actief`
-    (job pikt op via polling), `afwijzen` zet status op `fout` (job stopt).
-  - Story 024: echte LLM-orkestratie via `engine/orchestrator.voer_analyse_uit`, geen mock.
+  - Migratie-plan fase 1: rapport (013) + analyse-engine (024) verwijderd — JAS-pipeline is
+    legacy; annotatie is de enige overgebleven analyse-stap.
 
 Interacties:
-  - engine/orchestrator.py: `voer_analyse_uit` is de background-task; roept LLM aan via
-    `engine/`, schrijft naar `llm_calls`.
-  - shared/auth.py: `huidige_beheerder` op alle endpoints (BFF geeft rol door via
-    X-User-Id).
-  - llm_calls/dependencies.py: `get_llm_calls_store` voor de log-per-analyse-route.
+  - shared/auth.py: `huidige_beheerder` op alle endpoints (BFF geeft rol door via X-User-Id).
+  - llm_calls/dependencies.py: `get_llm_calls_store` voor de log-per-werkgebied-route.
   - db.py: `AsyncEngine` via `get_engine()` naar de store.
 """

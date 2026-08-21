@@ -3,7 +3,7 @@
 `AnalyseStore` beschrijft de operaties die router.py nodig heeft. `SqlAlchemyAnalyseStore`
 is de enige huidige implementatie. Tests draaien 'm tegen een eigen, kortlevende SQLite-engine.
 
-Rolfilter staat hier, niet in router.py (story 012 §Auth/rollen):
+Rolfilter staat hier, niet in router.py (werkwijze-ADR-0007):
 - `is_beheerder=True`  → geen gebruiker_id-filter; beheerder ziet en verwijdert alles.
 - `is_beheerder=False` → filter op gebruiker_id; analist ziet en verwijdert alleen eigen.
 """
@@ -13,14 +13,13 @@ from __future__ import annotations
 import uuid
 from typing import Protocol
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from ...shared.tijd import nu
 from .models import (
     AnalyseDetail,
     AnalyseOverzicht,
-    BegripInvoer,
     BronKeuze,
     analyse_detail_uit_rij,
     analyse_overzicht_uit_rij,
@@ -32,10 +31,6 @@ class AnalyseNietGevonden(LookupError):
     """Analyse-id onbekend, of de aanvragende gebruiker heeft geen toegang."""
 
 
-class RapportNietBeschikbaar(LookupError):
-    """Rapport is nog niet beschikbaar (status ≠ klaar, of rapport-veld is nog leeg)."""
-
-
 class AnalyseStore(Protocol):
     async def maak(
         self,
@@ -43,10 +38,6 @@ class AnalyseStore(Protocol):
         naam: str | None,
         bronnen: list[BronKeuze],
         omschrijving: str | None,
-        analysefocus: str | None,
-        begrippenlijst: list[BegripInvoer] | None,
-        model_profiel: str | None,
-        human_in_the_loop: bool,
     ) -> AnalyseDetail: ...
 
     async def lijst(self, gebruiker_id: str, is_beheerder: bool) -> list[AnalyseOverzicht]: ...
@@ -57,27 +48,9 @@ class AnalyseStore(Protocol):
 
     async def verwijder(self, analyse_id: str, gebruiker_id: str, is_beheerder: bool) -> None: ...
 
-    async def zet_status(
-        self,
-        analyse_id: str,
-        status: str,
-        huidige_fase: str | None = None,
-        foutmelding: str | None = None,
-    ) -> None: ...
-
-    async def haal_status(self, analyse_id: str) -> str | None: ...
-
-    async def haal_rij_op_id(self, analyse_id: str): ...
-
-    async def sla_rapport_op(self, analyse_id: str, rapport: dict) -> None: ...
-
-    async def haal_rapport(
-        self, analyse_id: str, gebruiker_id: str, is_beheerder: bool
-    ) -> dict: ...
-
 
 class SqlAlchemyAnalyseStore:
-    """Implementatie tegen een async SQLAlchemy-engine (aiosqlite in tests en lokaal)."""
+    """Implementatie tegen een async SQLAlchemy-engine."""
 
     def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
@@ -88,15 +61,10 @@ class SqlAlchemyAnalyseStore:
         naam: str | None,
         bronnen: list[BronKeuze],
         omschrijving: str | None,
-        analysefocus: str | None,
-        begrippenlijst: list[BegripInvoer] | None,
-        model_profiel: str | None,
-        human_in_the_loop: bool,
     ) -> AnalyseDetail:
         analyse_id = str(uuid.uuid4())
         moment = nu()
         bronnen_data = [b.model_dump() for b in bronnen]
-        begrippen_data = [b.model_dump() for b in begrippenlijst] if begrippenlijst else None
 
         async with self._engine.begin() as conn:
             result = await conn.execute(
@@ -104,15 +72,9 @@ class SqlAlchemyAnalyseStore:
                 .values(
                     id=analyse_id,
                     naam=naam,
-                    status="wachtrij",
+                    status="nieuw",
                     bronnen=bronnen_data,
-                    model_profiel=model_profiel,
                     omschrijving=omschrijving,
-                    analysefocus=analysefocus,
-                    human_in_the_loop=human_in_the_loop,
-                    begrippenlijst=begrippen_data,
-                    huidige_fase=None,
-                    foutmelding=None,
                     aangemaakt=moment,
                     bijgewerkt=moment,
                     gebruiker_id=gebruiker_id,
@@ -148,59 +110,3 @@ class SqlAlchemyAnalyseStore:
             result = await conn.execute(stmt)
         if result.rowcount == 0:
             raise AnalyseNietGevonden(f"Analyse {analyse_id} niet gevonden.")
-
-    async def zet_status(
-        self,
-        analyse_id: str,
-        status: str,
-        huidige_fase: str | None = None,
-        foutmelding: str | None = None,
-    ) -> None:
-        """Werk status, fase en eventuele foutmelding bij (gebruikt door de background-job)."""
-        async with self._engine.begin() as conn:
-            await conn.execute(
-                update(analyses)
-                .where(analyses.c.id == analyse_id)
-                .values(
-                    status=status,
-                    huidige_fase=huidige_fase,
-                    foutmelding=foutmelding,
-                    bijgewerkt=nu(),
-                )
-            )
-
-    async def haal_status(self, analyse_id: str) -> str | None:
-        """Lees alleen de huidige status op (poll-endpoint voor de background-job)."""
-        async with self._engine.connect() as conn:
-            rij = await conn.execute(select(analyses.c.status).where(analyses.c.id == analyse_id))
-            result = rij.first()
-        return result.status if result else None
-
-    async def haal_rij_op_id(self, analyse_id: str):
-        """Geef de volledige rij terug voor de background-job (inclusief alle config-velden)."""
-        async with self._engine.connect() as conn:
-            rij = await conn.execute(select(analyses).where(analyses.c.id == analyse_id))
-            return rij.first()
-
-    async def sla_rapport_op(self, analyse_id: str, rapport: dict) -> None:
-        """Sla het eindrapport op in analyses.rapport (migratie 0009)."""
-        async with self._engine.begin() as conn:
-            await conn.execute(
-                update(analyses)
-                .where(analyses.c.id == analyse_id)
-                .values(rapport=rapport, bijgewerkt=nu())
-            )
-
-    async def haal_rapport(self, analyse_id: str, gebruiker_id: str, is_beheerder: bool) -> dict:
-        """Haal het rapport op; controleert eigenaarschap, status en aanwezigheid.
-
-        Gooit AnalyseNietGevonden als de analyse onbekend is of de gebruiker geen toegang heeft.
-        Gooit RapportNietBeschikbaar als de status ≠ 'klaar' of het rapport-veld leeg is.
-        """
-        analyse = await self.detail(analyse_id, gebruiker_id, is_beheerder)
-        if analyse.status != "klaar" or analyse.rapport is None:
-            raise RapportNietBeschikbaar(
-                f"Rapport voor analyse {analyse_id} is nog niet beschikbaar "
-                f"(status: {analyse.status})."
-            )
-        return analyse.rapport

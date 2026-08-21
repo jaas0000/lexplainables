@@ -31,13 +31,14 @@ function formatDatum(iso: string): string {
 
 export default function ProjectenPagina() {
   const router = useRouter();
-  const [analyses, setAnalyses] = useState<AnalyseOverzicht[] | null>(null);
+  const [werkgebieden, setWerkgebieden] = useState<AnalyseOverzicht[] | null>(
+    null,
+  );
   const [fout, setFout] = useState<string | null>(null);
-  const laden = analyses === null && fout === null;
+  const laden = werkgebieden === null && fout === null;
 
   // Filters
   const [zoek, setZoek] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const [wetFilter, setWetFilter] = useState("");
   const [sortering, setSortering] = useState<"nieuwste" | "oudste">("nieuwste");
 
@@ -51,12 +52,12 @@ export default function ProjectenPagina() {
           return;
         }
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-        setAnalyses((await res.json()) as AnalyseOverzicht[]);
+        setWerkgebieden((await res.json()) as AnalyseOverzicht[]);
       } catch (err) {
         setFout(
           err instanceof Error
             ? err.message
-            : "Fout bij het ophalen van analyses.",
+            : "Fout bij het ophalen van werkgebieden.",
         );
       }
     }
@@ -66,15 +67,14 @@ export default function ProjectenPagina() {
   async function verwijder(id: string) {
     const res = await fetch(`/api/projecten/${id}`, { method: "DELETE" });
     if (res.ok || res.status === 204) {
-      setAnalyses((prev) => prev?.filter((a) => a.id !== id) ?? null);
+      setWerkgebieden((prev) => prev?.filter((a) => a.id !== id) ?? null);
     }
   }
 
   const gefilterd = useMemo(
     () =>
-      (analyses ?? [])
+      (werkgebieden ?? [])
         .filter((a) => {
-          if (statusFilter && a.status !== statusFilter) return false;
           if (wetFilter && !a.bronnen.some((b) => b.bwb_id === wetFilter))
             return false;
           if (zoek) {
@@ -97,7 +97,7 @@ export default function ProjectenPagina() {
             ? b.bijgewerkt.localeCompare(a.bijgewerkt)
             : a.bijgewerkt.localeCompare(b.bijgewerkt),
         ),
-    [analyses, statusFilter, wetFilter, zoek, sortering],
+    [werkgebieden, wetFilter, zoek, sortering],
   );
 
   // Unieke wetten voor de wet-filter-dropdown
@@ -105,12 +105,12 @@ export default function ProjectenPagina() {
     () =>
       Array.from(
         new Map(
-          (analyses ?? [])
+          (werkgebieden ?? [])
             .flatMap((a) => a.bronnen)
             .map((b) => [b.bwb_id, b.bwb_id]),
         ).values(),
       ),
-    [analyses],
+    [werkgebieden],
   );
 
   return (
@@ -148,7 +148,7 @@ export default function ProjectenPagina() {
                 margin: 0,
               }}
             >
-              Analyses
+              Werkgebieden
             </h1>
             <p
               style={{
@@ -158,8 +158,8 @@ export default function ProjectenPagina() {
                 maxWidth: "36rem",
               }}
             >
-              Elke analyse duidt een werkgebied — één of meer bronnen
-              (wetsartikel of lid) — brongetrouw volgens het Juridisch
+              Een werkgebied is een verzameling bronnen (wetsartikel of lid) die
+              je vervolgens in de werkplek annoteert volgens het Juridisch
               Analyseschema.
             </p>
           </div>
@@ -174,7 +174,7 @@ export default function ProjectenPagina() {
               }}
               onClick={() => router.push("/projecten/nieuw")}
             >
-              Nieuwe analyse
+              Nieuw werkgebied
             </button>
           </div>
         </div>
@@ -205,19 +205,6 @@ export default function ProjectenPagina() {
           value={zoek}
           onChange={(e) => setZoek(e.target.value)}
         />
-        <select
-          className="field-input"
-          style={{ width: "13rem", flex: "0 0 auto" }}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">Alle statussen</option>
-          <option value="wachtrij">In wachtrij</option>
-          <option value="actief">Actief</option>
-          <option value="review">Wacht op review</option>
-          <option value="klaar">Klaar</option>
-          <option value="fout">Fout</option>
-        </select>
         <select
           className="field-input"
           style={{ width: "14rem", flex: "0 0 auto" }}
@@ -252,7 +239,7 @@ export default function ProjectenPagina() {
       )}
 
       {/* Lege staat */}
-      {!laden && analyses !== null && analyses.length === 0 && (
+      {!laden && werkgebieden !== null && werkgebieden.length === 0 && (
         <div
           style={{
             padding: "2.5rem",
@@ -264,22 +251,22 @@ export default function ProjectenPagina() {
             borderRadius: "8px",
           }}
         >
-          Nog geen analyses aangemaakt.
+          Nog geen werkgebieden aangemaakt.
           <br />
           <button
             className="btn btn-primary"
             style={{ marginTop: "1rem" }}
             onClick={() => router.push("/projecten/nieuw")}
           >
-            + Eerste analyse starten
+            + Eerste werkgebied aanmaken
           </button>
         </div>
       )}
 
       {/* Filter levert niets op */}
       {!laden &&
-        analyses !== null &&
-        analyses.length > 0 &&
+        werkgebieden !== null &&
+        werkgebieden.length > 0 &&
         gefilterd.length === 0 && (
           <div
             style={{
@@ -292,7 +279,7 @@ export default function ProjectenPagina() {
               borderRadius: "8px",
             }}
           >
-            Geen analyses gevonden met deze filters.
+            Geen werkgebieden gevonden met deze filters.
           </div>
         )}
 

@@ -3,10 +3,6 @@
 Elke test krijgt een eigen, kortlevende SQLite-database (bestand in `tmp_path`). Het schema
 wordt opgezet met een gewone synchrone engine; de async engine (aiosqlite) opent verbindingen
 pas tijdens de requests die TestClient uitvoert.
-
-`asyncio.sleep` in de router-module wordt gepatchd naar een no-op zodat de
-achtergrond-job (`_voer_analyse_uit`) in tests in milliseconden afloopt in plaats van
-seconden — de statusovergangen worden daarna direct via de store getest.
 """
 
 from __future__ import annotations
@@ -26,17 +22,6 @@ from app.features.projecten.store import SqlAlchemyAnalyseStore
 from app.main import app
 from app.shared.auth import huidige_beheerder
 from conftest import TEST_BEHEERDER
-
-
-@pytest.fixture(autouse=True)
-def versnelde_sleep(monkeypatch):
-    """Patchet asyncio.sleep in de router naar een no-op zodat de background-job in tests
-    vrijwel direct afloopt en tests niet onnodig vertragen."""
-
-    async def instant_sleep(_seconds: float) -> None:
-        pass
-
-    monkeypatch.setattr("app.features.projecten.router.asyncio.sleep", instant_sleep)
 
 
 @pytest.fixture
