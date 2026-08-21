@@ -6,11 +6,7 @@ export const STATUS_META: Record<
   AnalyseStatus,
   { label: string; kleurVar: string }
 > = {
-  wachtrij: { label: "In wachtrij", kleurVar: "--muted" },
-  actief: { label: "Actief", kleurVar: "--info" },
-  review: { label: "Wacht op review", kleurVar: "--gold" },
-  klaar: { label: "Klaar", kleurVar: "--succes" },
-  fout: { label: "Fout", kleurVar: "--fout" },
+  nieuw: { label: "Nieuw", kleurVar: "--info" },
 };
 
 export function StatusDot({ status }: { status: AnalyseStatus }) {

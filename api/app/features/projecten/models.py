@@ -1,11 +1,11 @@
 """De ene bron voor het projecten-domein (werkwijze-ADR-0011).
 
-Één entiteit: `analyses` — analyses aangemaakt door ingelogde gebruikers. Per analyse:
-bronartikelen, status, voortgangsinfo en optionele configuratie (model-profiel,
-human-in-the-loop, begrippenlijst).
+Één entiteit: `analyses` — het werkgebied dat een ingelogde gebruiker aanmaakt om vervolgens
+in de werkplek te annoteren. Per werkgebied: naam, bronartikelen, optionele omschrijving en
+metadata (aangemaakt, bijgewerkt, gebruiker).
 
-Status-levenscyclus: wachtrij → actief → review (optioneel) → klaar
-                                      ↘ fout
+Legacy: de JAS-pipeline (act2/act3, review-flow, rapport) is verwijderd (migratie 0012);
+alleen annotatie blijft als analyse-stap. Zie `docs/project/migratie-wetsanalyse.md`.
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ from typing import Literal
 from pydantic import BaseModel, Field
 from sqlalchemy import (
     JSON,
-    Boolean,
     Column,
     DateTime,
     Index,
@@ -26,11 +25,7 @@ from sqlalchemy import (
     Text,
 )
 
-AnalyseStatus = Literal["wachtrij", "actief", "review", "klaar", "fout"]
-
-# Statussen waarna geen verdere overgang meer volgt; SSE sluit de stroom zodra een van
-# deze bereikt wordt.
-TERMINAL_STATUSSEN: frozenset[str] = frozenset({"klaar", "fout"})
+AnalyseStatus = Literal["nieuw"]
 
 metadata = MetaData()
 
@@ -40,15 +35,8 @@ analyses = Table(
     Column("id", String(36), primary_key=True),
     Column("naam", String(256), nullable=True),
     Column("status", String(32), nullable=False),
-    Column("bronnen", JSON, nullable=False),  # list[BronKeuze] als JSON
-    Column("model_profiel", String(128), nullable=True),
+    Column("bronnen", JSON, nullable=False),
     Column("omschrijving", Text, nullable=True),
-    Column("analysefocus", Text, nullable=True),
-    Column("human_in_the_loop", Boolean, nullable=False),
-    Column("begrippenlijst", JSON, nullable=True),  # list[BegripInvoer] als JSON of None
-    Column("huidige_fase", Text, nullable=True),
-    Column("foutmelding", Text, nullable=True),
-    Column("rapport", JSON, nullable=True),  # eindrapport na act3 (migratie 0009)
     Column("aangemaakt", DateTime(timezone=True), nullable=False),
     Column("bijgewerkt", DateTime(timezone=True), nullable=False),
     Column("gebruiker_id", String(128), nullable=False),
@@ -67,34 +55,23 @@ class BronKeuze(BaseModel):
     lid: str | None = None
 
 
-class BegripInvoer(BaseModel):
-    """Eén begrip uit een eventuele bestaande begrippenlijst."""
-
-    naam: str
-    definitie: str | None = None
-
-
 class AnalyseAanmaken(BaseModel):
-    """Wat een ingelogde gebruiker meestuurt bij het aanmaken van een analyse."""
+    """Wat een ingelogde gebruiker meestuurt bij het aanmaken van een werkgebied."""
 
     naam: str | None = None
     bronnen: list[BronKeuze] = Field(..., min_length=1, max_length=50)
     omschrijving: str | None = None
-    analysefocus: str | None = None
-    begrippenlijst: list[BegripInvoer] | None = None
-    model_profiel: str | None = None
-    human_in_the_loop: bool = True
 
 
 class AangemaaktAcceptatie(BaseModel):
-    """Directe bevestiging na aanmaken — 202 Accepted, analyse loopt asynchroon."""
+    """Directe bevestiging na aanmaken van een werkgebied."""
 
     id: str
     status: AnalyseStatus
 
 
 class AnalyseOverzicht(BaseModel):
-    """Samenvatting voor de analyselijst."""
+    """Samenvatting voor de werkgebied-lijst."""
 
     id: str
     naam: str  # nooit None in het read-contract; afgeleid als de gebruiker geen naam gaf
@@ -104,16 +81,9 @@ class AnalyseOverzicht(BaseModel):
 
 
 class AnalyseDetail(AnalyseOverzicht):
-    """Volledige detailweergave van één analyse."""
+    """Volledige detailweergave van één werkgebied."""
 
     omschrijving: str | None
-    analysefocus: str | None
-    model_profiel: str | None
-    human_in_the_loop: bool
-    begrippenlijst: list[BegripInvoer] | None
-    huidige_fase: str | None
-    foutmelding: str | None
-    rapport: dict | None  # eindrapport (gevuld na status 'klaar')
 
 
 # ─── Mapping-functies (werkwijze-ADR-0011) ────────────────────────────────────
@@ -142,21 +112,9 @@ def analyse_overzicht_uit_rij(rij) -> AnalyseOverzicht:
 
 
 def analyse_detail_uit_rij(rij) -> AnalyseDetail:
-    """Expliciete mapping databaserij → AnalyseDetail (werkwijze-ADR-0011).
-
-    Bouwt voort op analyse_overzicht_uit_rij om naam- en bronnen-afleiding niet te
-    dupliceren.
-    """
+    """Expliciete mapping databaserij → AnalyseDetail (werkwijze-ADR-0011)."""
     overzicht = analyse_overzicht_uit_rij(rij)
-    begrippen = [BegripInvoer(**b) for b in rij.begrippenlijst] if rij.begrippenlijst else None
     return AnalyseDetail(
         **overzicht.model_dump(),
         omschrijving=rij.omschrijving,
-        analysefocus=rij.analysefocus,
-        model_profiel=rij.model_profiel,
-        human_in_the_loop=rij.human_in_the_loop,
-        begrippenlijst=begrippen,
-        huidige_fase=rij.huidige_fase,
-        foutmelding=rij.foutmelding,
-        rapport=rij.rapport,
     )

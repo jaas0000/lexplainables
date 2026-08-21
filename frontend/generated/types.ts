@@ -613,13 +613,13 @@ export interface paths {
         };
         /**
          * Lijst Analyses
-         * @description Geef alle analyses terug die de ingelogde gebruiker mag zien.
+         * @description Geef alle werkgebieden terug die de ingelogde gebruiker mag zien.
          */
         get: operations["lijst_analyses_v1_projecten_get"];
         put?: never;
         /**
          * Maak Analyse
-         * @description Maak een nieuwe analyse aan en start de achtergrond-job (202 Accepted).
+         * @description Maak een nieuw werkgebied aan.
          */
         post: operations["maak_analyse_v1_projecten_post"];
         delete?: never;
@@ -637,82 +637,16 @@ export interface paths {
         };
         /**
          * Detail Analyse
-         * @description Geef het detail van één analyse terug.
+         * @description Geef het detail van één werkgebied terug.
          */
         get: operations["detail_analyse_v1_projecten__analyse_id__get"];
         put?: never;
         post?: never;
         /**
          * Verwijder Analyse
-         * @description Verwijder een analyse (eigen of, voor een beheerder, elke analyse).
+         * @description Verwijder een werkgebied (eigen of, voor een beheerder, elke).
          */
         delete: operations["verwijder_analyse_v1_projecten__analyse_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/projecten/{analyse_id}/afwijzen": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Afwijzen Analyse
-         * @description Human-in-the-loop: wijs de analyse af na act2-review.
-         *
-         *     Zet de status op 'fout' zodat de background-job stopt.
-         *     Geeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.
-         */
-        post: operations["afwijzen_analyse_v1_projecten__analyse_id__afwijzen_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/projecten/{analyse_id}/akkoord": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Akkoord Analyse
-         * @description Human-in-the-loop: geef akkoord na act2-review.
-         *
-         *     Zet de status terug op 'actief' zodat de background-job doorgaat naar act3.
-         *     Geeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.
-         */
-        post: operations["akkoord_analyse_v1_projecten__analyse_id__akkoord_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/projecten/{analyse_id}/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Analyse Events
-         * @description SSE-stroom: stuurt status-updates tot de analyse terminaal is (klaar/fout).
-         */
-        get: operations["analyse_events_v1_projecten__analyse_id__events_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -727,56 +661,11 @@ export interface paths {
         };
         /**
          * Lijst Llm Calls
-         * @description Geef alle vastgelegde LLM-calls voor een analyse terug (alleen beheerders).
+         * @description Geef alle vastgelegde LLM-calls voor een werkgebied terug (alleen beheerders).
          *
-         *     Lege lijst als capture uitgeschakeld was of de analyse onbekend is — geen 404.
+         *     Lege lijst als capture uitgeschakeld was of het werkgebied onbekend is — geen 404.
          */
         get: operations["lijst_llm_calls_v1_projecten__analyse_id__llm_calls_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/projecten/{analyse_id}/rapport": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Haal Rapport
-         * @description Geef het rapport als JSON terug.
-         *
-         *     404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.
-         */
-        get: operations["haal_rapport_v1_projecten__analyse_id__rapport_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/projecten/{analyse_id}/rapport.md": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Haal Rapport Md
-         * @description Geef het rapport als Markdown-download.
-         *
-         *     404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.
-         *     Content-Disposition: attachment; filename="rapport-{analyse_id}.md"
-         */
-        get: operations["haal_rapport_md_v1_projecten__analyse_id__rapport_md_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -836,16 +725,16 @@ export interface components {
         Aandacht: "groen" | "geel" | "rood";
         /**
          * AangemaaktAcceptatie
-         * @description Directe bevestiging na aanmaken — 202 Accepted, analyse loopt asynchroon.
+         * @description Directe bevestiging na aanmaken van een werkgebied.
          */
         AangemaaktAcceptatie: {
             /** Id */
             id: string;
             /**
              * Status
-             * @enum {string}
+             * @constant
              */
-            status: "wachtrij" | "actief" | "review" | "klaar" | "fout";
+            status: "nieuw";
         };
         /** AdminBerichtenPaginaOut */
         AdminBerichtenPaginaOut: {
@@ -865,22 +754,11 @@ export interface components {
         };
         /**
          * AnalyseAanmaken
-         * @description Wat een ingelogde gebruiker meestuurt bij het aanmaken van een analyse.
+         * @description Wat een ingelogde gebruiker meestuurt bij het aanmaken van een werkgebied.
          */
         AnalyseAanmaken: {
-            /** Analysefocus */
-            analysefocus?: string | null;
-            /** Begrippenlijst */
-            begrippenlijst?: components["schemas"]["BegripInvoer"][] | null;
             /** Bronnen */
             bronnen: components["schemas"]["BronKeuze"][];
-            /**
-             * Human In The Loop
-             * @default true
-             */
-            human_in_the_loop: boolean;
-            /** Model Profiel */
-            model_profiel?: string | null;
             /** Naam */
             naam?: string | null;
             /** Omschrijving */
@@ -888,13 +766,9 @@ export interface components {
         };
         /**
          * AnalyseDetail
-         * @description Volledige detailweergave van één analyse.
+         * @description Volledige detailweergave van één werkgebied.
          */
         AnalyseDetail: {
-            /** Analysefocus */
-            analysefocus: string | null;
-            /** Begrippenlijst */
-            begrippenlijst: components["schemas"]["BegripInvoer"][] | null;
             /**
              * Bijgewerkt
              * Format: date-time
@@ -902,33 +776,21 @@ export interface components {
             bijgewerkt: string;
             /** Bronnen */
             bronnen: components["schemas"]["BronKeuze"][];
-            /** Foutmelding */
-            foutmelding: string | null;
-            /** Huidige Fase */
-            huidige_fase: string | null;
-            /** Human In The Loop */
-            human_in_the_loop: boolean;
             /** Id */
             id: string;
-            /** Model Profiel */
-            model_profiel: string | null;
             /** Naam */
             naam: string;
             /** Omschrijving */
             omschrijving: string | null;
-            /** Rapport */
-            rapport: {
-                [key: string]: unknown;
-            } | null;
             /**
              * Status
-             * @enum {string}
+             * @constant
              */
-            status: "wachtrij" | "actief" | "review" | "klaar" | "fout";
+            status: "nieuw";
         };
         /**
          * AnalyseOverzicht
-         * @description Samenvatting voor de analyselijst.
+         * @description Samenvatting voor de werkgebied-lijst.
          */
         AnalyseOverzicht: {
             /**
@@ -944,9 +806,9 @@ export interface components {
             naam: string;
             /**
              * Status
-             * @enum {string}
+             * @constant
              */
-            status: "wachtrij" | "actief" | "review" | "klaar" | "fout";
+            status: "nieuw";
         };
         /** AnnotatieDocument */
         AnnotatieDocument: {
@@ -1131,16 +993,6 @@ export interface components {
         AuditlogOut: {
             /** Items */
             items: components["schemas"]["AuditRegel"][];
-        };
-        /**
-         * BegripInvoer
-         * @description Eén begrip uit een eventuele bestaande begrippenlijst.
-         */
-        BegripInvoer: {
-            /** Definitie */
-            definitie?: string | null;
-            /** Naam */
-            naam: string;
         };
         /**
          * BeoordelingsReden
@@ -3278,7 +3130,7 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            202: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3363,104 +3215,6 @@ export interface operations {
             };
         };
     };
-    afwijzen_analyse_v1_projecten__analyse_id__afwijzen_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "X-User-Id"?: string | null;
-            };
-            path: {
-                analyse_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    akkoord_analyse_v1_projecten__analyse_id__akkoord_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "X-User-Id"?: string | null;
-            };
-            path: {
-                analyse_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    analyse_events_v1_projecten__analyse_id__events_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "X-User-Id"?: string | null;
-            };
-            path: {
-                analyse_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     lijst_llm_calls_v1_projecten__analyse_id__llm_calls_get: {
         parameters: {
             query?: never;
@@ -3482,76 +3236,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LlmCallRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    haal_rapport_v1_projecten__analyse_id__rapport_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "X-User-Id"?: string | null;
-            };
-            path: {
-                analyse_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    haal_rapport_md_v1_projecten__analyse_id__rapport_md_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "X-User-Id"?: string | null;
-            };
-            path: {
-                analyse_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { components } from "@/generated/types";
 
 type AnalyseAanmaken = components["schemas"]["AnalyseAanmaken"];
 type BronKeuze = components["schemas"]["BronKeuze"];
-type LlmProfielRead = components["schemas"]["LlmProfielRead"];
 
 // ─── Artikel-combobox ─────────────────────────────────────────────────────────
 
@@ -178,45 +177,17 @@ function BronRij({
 
 // ─── Hoofd-component ──────────────────────────────────────────────────────────
 
-export default function NieuweAnalysePagina() {
+export default function NieuwWerkgebiedPagina() {
   const router = useRouter();
-
-  const [profielen, setProfielen] = useState<LlmProfielRead[] | null>(null);
-  const [profielenFout, setProfielenFout] = useState(false);
 
   const [bronnen, setBronnen] = useState<BronKeuze[]>([
     { bwb_id: "", artikel: "", lid: null },
   ]);
   const [naam, setNaam] = useState("");
   const [omschrijving, setOmschrijving] = useState("");
-  const [analysefocus, setAnalysefocus] = useState("");
-  const [begrippenTekst, setBegrippenTekst] = useState("");
-  const [profiel, setProfiel] = useState("");
-  const [review, setReview] = useState(true);
   const [geprobeerd, setGeprobeerd] = useState(false);
   const [verzendenFout, setVerzendenFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
-
-  useEffect(() => {
-    async function laadProfielen() {
-      try {
-        const res = await fetch("/api/admin/profielen");
-        if (res.ok) {
-          const lijst = (await res.json()) as LlmProfielRead[];
-          setProfielen(lijst);
-          const standaard = lijst.find((p) => p.is_standaard) ?? lijst[0];
-          if (standaard) setProfiel(standaard.naam);
-        } else {
-          setProfielenFout(true);
-          setProfielen([]);
-        }
-      } catch {
-        setProfielenFout(true);
-        setProfielen([]);
-      }
-    }
-    void laadProfielen();
-  }, []);
 
   const heeftGeldigeBron = bronnen.some(
     (b) => b.bwb_id.trim().length > 0 && b.artikel.trim().length > 0,
@@ -245,10 +216,6 @@ export default function NieuweAnalysePagina() {
       naam: naam.trim() || null,
       bronnen: geldige,
       omschrijving: omschrijving.trim() || null,
-      analysefocus: analysefocus.trim() || null,
-      begrippenlijst: null,
-      model_profiel: profiel || null,
-      human_in_the_loop: review,
     };
 
     try {
@@ -275,11 +242,6 @@ export default function NieuweAnalysePagina() {
     }
   }
 
-  const begrippenRegels = begrippenTekst
-    .trim()
-    .split("\n")
-    .filter(Boolean).length;
-
   return (
     <div style={{ maxWidth: "40rem" }}>
       <button
@@ -287,7 +249,7 @@ export default function NieuweAnalysePagina() {
         style={{ fontSize: "0.8125rem", marginBottom: "1rem" }}
         onClick={() => router.push("/projecten")}
       >
-        ← Terug naar analyses
+        ← Terug naar werkgebieden
       </button>
 
       <h2
@@ -298,7 +260,7 @@ export default function NieuweAnalysePagina() {
           marginBottom: "0.25rem",
         }}
       >
-        Nieuwe analyse
+        Nieuw werkgebied
       </h2>
       <p
         style={{
@@ -307,9 +269,8 @@ export default function NieuweAnalysePagina() {
           marginBottom: "1.5rem",
         }}
       >
-        De orchestrator haalt de wettekst op via de wettenbank en doorloopt
-        activiteit 2 en 3. Met review aan pauzeert hij na elke activiteit voor
-        jouw akkoord.
+        Kies één of meer bronartikelen. Na aanmaken opent de werkplek voor
+        annotatie.
       </p>
 
       {verzendenFout && (
@@ -323,7 +284,6 @@ export default function NieuweAnalysePagina() {
           onSubmit={handleVerzenden}
           style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
         >
-          {/* Bronnen */}
           <div>
             <div
               style={{
@@ -379,49 +339,6 @@ export default function NieuweAnalysePagina() {
             </button>
           </div>
 
-          {/* Model-profiel */}
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
-              }}
-            >
-              <label className="field-label">Model-profiel</label>
-              <span style={{ fontSize: "0.75rem", color: "rgb(var(--link))" }}>
-                beheer via /beheer
-              </span>
-            </div>
-            {profielen === null ? (
-              <p style={{ fontSize: "0.8125rem", color: "rgb(var(--muted))" }}>
-                Laden…
-              </p>
-            ) : profielenFout || profielen.length === 0 ? (
-              <input
-                className="field-input"
-                type="text"
-                placeholder="Model-profiel naam"
-                value={profiel}
-                onChange={(e) => setProfiel(e.target.value)}
-              />
-            ) : (
-              <select
-                className="field-input"
-                value={profiel}
-                onChange={(e) => setProfiel(e.target.value)}
-              >
-                {profielen.map((p) => (
-                  <option key={p.naam} value={p.naam}>
-                    {p.naam}
-                    {p.is_standaard ? " (standaard)" : ""}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Naam werkgebied */}
           <div>
             <div
               style={{
@@ -445,7 +362,6 @@ export default function NieuweAnalysePagina() {
             />
           </div>
 
-          {/* Omschrijving */}
           <div>
             <div
               style={{
@@ -462,171 +378,13 @@ export default function NieuweAnalysePagina() {
             <textarea
               className="field-input"
               rows={2}
-              placeholder="Achtergrond bij deze analyse…"
+              placeholder="Achtergrond bij dit werkgebied…"
               value={omschrijving}
               onChange={(e) => setOmschrijving(e.target.value)}
               style={{ resize: "vertical", fontFamily: "inherit" }}
             />
           </div>
 
-          {/* Analysefocus */}
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
-              }}
-            >
-              <label className="field-label">Hoofdvraag / analysefocus</label>
-              <span style={{ fontSize: "0.75rem", color: "rgb(var(--muted))" }}>
-                optioneel
-              </span>
-            </div>
-            <textarea
-              className="field-input"
-              rows={2}
-              placeholder="Waar moet de analyse antwoord op geven?"
-              value={analysefocus}
-              onChange={(e) => setAnalysefocus(e.target.value)}
-              style={{ resize: "vertical", fontFamily: "inherit" }}
-            />
-          </div>
-
-          {/* Begrippenlijst (inklapbaar) */}
-          <details
-            style={{
-              border: "1px solid rgb(var(--line))",
-              borderRadius: "6px",
-              padding: "0.875rem",
-              background: "rgb(var(--surface))",
-            }}
-          >
-            <summary
-              style={{
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                color: "rgb(var(--ink))",
-              }}
-            >
-              Bestaande begrippenlijst{" "}
-              <span style={{ fontWeight: 400, color: "rgb(var(--muted))" }}>
-                (optioneel)
-              </span>
-              {begrippenRegels > 0 && (
-                <span
-                  style={{
-                    marginLeft: "0.5rem",
-                    fontFamily: "monospace",
-                    fontSize: "0.75rem",
-                    color: "rgb(var(--faint))",
-                  }}
-                >
-                  {begrippenRegels} regel{begrippenRegels === 1 ? "" : "s"}{" "}
-                  ingevoerd
-                </span>
-              )}
-            </summary>
-            <div
-              style={{
-                marginTop: "0.75rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-              }}
-            >
-              <p style={{ fontSize: "0.8125rem", color: "rgb(var(--muted))" }}>
-                Plak of upload een bestaande begrippenlijst (JSON, CSV of één
-                begrip per regel).
-              </p>
-              <textarea
-                className="field-input"
-                rows={4}
-                placeholder={
-                  "belastingplichtige; degene die aangifte moet doen\nbijdrage-inkomen"
-                }
-                value={begrippenTekst}
-                onChange={(e) => setBegrippenTekst(e.target.value)}
-                style={{
-                  resize: "vertical",
-                  fontFamily: "monospace",
-                  fontSize: "0.8125rem",
-                }}
-              />
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.8125rem",
-                    color: "rgb(var(--muted))",
-                    marginBottom: "0.25rem",
-                  }}
-                >
-                  Of upload een bestand (.csv, .json, .txt):
-                </label>
-                <input
-                  type="file"
-                  accept=".csv,.json,.txt"
-                  style={{ fontSize: "0.8125rem", color: "rgb(var(--ink))" }}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    const reader = new FileReader();
-                    reader.onload = () =>
-                      setBegrippenTekst(String(reader.result ?? ""));
-                    reader.readAsText(f);
-                  }}
-                />
-              </div>
-            </div>
-          </details>
-
-          {/* Human-in-the-loop */}
-          <label
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "0.75rem",
-              padding: "0.875rem",
-              border: "1px solid rgb(var(--line))",
-              borderRadius: "6px",
-              cursor: "pointer",
-              background: "rgb(var(--surface))",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={review}
-              onChange={(e) => setReview(e.target.checked)}
-              style={{ marginTop: "0.125rem", width: "1rem", height: "1rem" }}
-            />
-            <span>
-              <span
-                style={{
-                  fontSize: "0.875rem",
-                  fontWeight: 500,
-                  color: "rgb(var(--ink))",
-                  display: "block",
-                }}
-              >
-                Human-in-the-loop review
-              </span>
-              <span
-                style={{
-                  fontSize: "0.8125rem",
-                  color: "rgb(var(--muted))",
-                  display: "block",
-                  marginTop: "0.125rem",
-                }}
-              >
-                Pauzeer na activiteit 2 en 3 voor jouw beoordeling. Uit =
-                volautomatisch tot het rapport.
-              </span>
-            </span>
-          </label>
-
-          {/* Actieknoppen */}
           <div
             style={{ display: "flex", gap: "0.75rem", paddingTop: "0.5rem" }}
           >
@@ -636,7 +394,7 @@ export default function NieuweAnalysePagina() {
               style={{ fontWeight: 600 }}
               disabled={bezig}
             >
-              {bezig ? "Bezig…" : "Analyse starten"}
+              {bezig ? "Bezig…" : "Werkgebied aanmaken"}
             </button>
             <button
               className="btn btn-secondary"

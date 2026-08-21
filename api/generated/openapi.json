@@ -11,20 +11,14 @@
         "type": "string"
       },
       "AangemaaktAcceptatie": {
-        "description": "Directe bevestiging na aanmaken \u2014 202 Accepted, analyse loopt asynchroon.",
+        "description": "Directe bevestiging na aanmaken van een werkgebied.",
         "properties": {
           "id": {
             "title": "Id",
             "type": "string"
           },
           "status": {
-            "enum": [
-              "wachtrij",
-              "actief",
-              "review",
-              "klaar",
-              "fout"
-            ],
+            "const": "nieuw",
             "title": "Status",
             "type": "string"
           }
@@ -81,33 +75,8 @@
         "type": "object"
       },
       "AnalyseAanmaken": {
-        "description": "Wat een ingelogde gebruiker meestuurt bij het aanmaken van een analyse.",
+        "description": "Wat een ingelogde gebruiker meestuurt bij het aanmaken van een werkgebied.",
         "properties": {
-          "analysefocus": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Analysefocus"
-          },
-          "begrippenlijst": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/BegripInvoer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Begrippenlijst"
-          },
           "bronnen": {
             "items": {
               "$ref": "#/components/schemas/BronKeuze"
@@ -116,22 +85,6 @@
             "minItems": 1,
             "title": "Bronnen",
             "type": "array"
-          },
-          "human_in_the_loop": {
-            "default": true,
-            "title": "Human In The Loop",
-            "type": "boolean"
-          },
-          "model_profiel": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model Profiel"
           },
           "naam": {
             "anyOf": [
@@ -163,33 +116,8 @@
         "type": "object"
       },
       "AnalyseDetail": {
-        "description": "Volledige detailweergave van \u00e9\u00e9n analyse.",
+        "description": "Volledige detailweergave van \u00e9\u00e9n werkgebied.",
         "properties": {
-          "analysefocus": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Analysefocus"
-          },
-          "begrippenlijst": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/BegripInvoer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Begrippenlijst"
-          },
           "bijgewerkt": {
             "format": "date-time",
             "title": "Bijgewerkt",
@@ -202,46 +130,9 @@
             "title": "Bronnen",
             "type": "array"
           },
-          "foutmelding": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Foutmelding"
-          },
-          "huidige_fase": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Huidige Fase"
-          },
-          "human_in_the_loop": {
-            "title": "Human In The Loop",
-            "type": "boolean"
-          },
           "id": {
             "title": "Id",
             "type": "string"
-          },
-          "model_profiel": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model Profiel"
           },
           "naam": {
             "title": "Naam",
@@ -258,26 +149,8 @@
             ],
             "title": "Omschrijving"
           },
-          "rapport": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rapport"
-          },
           "status": {
-            "enum": [
-              "wachtrij",
-              "actief",
-              "review",
-              "klaar",
-              "fout"
-            ],
+            "const": "nieuw",
             "title": "Status",
             "type": "string"
           }
@@ -288,20 +161,13 @@
           "bronnen",
           "status",
           "bijgewerkt",
-          "omschrijving",
-          "analysefocus",
-          "model_profiel",
-          "human_in_the_loop",
-          "begrippenlijst",
-          "huidige_fase",
-          "foutmelding",
-          "rapport"
+          "omschrijving"
         ],
         "title": "AnalyseDetail",
         "type": "object"
       },
       "AnalyseOverzicht": {
-        "description": "Samenvatting voor de analyselijst.",
+        "description": "Samenvatting voor de werkgebied-lijst.",
         "properties": {
           "bijgewerkt": {
             "format": "date-time",
@@ -324,13 +190,7 @@
             "type": "string"
           },
           "status": {
-            "enum": [
-              "wachtrij",
-              "actief",
-              "review",
-              "klaar",
-              "fout"
-            ],
+            "const": "nieuw",
             "title": "Status",
             "type": "string"
           }
@@ -753,31 +613,6 @@
           "items"
         ],
         "title": "AuditlogOut",
-        "type": "object"
-      },
-      "BegripInvoer": {
-        "description": "E\u00e9n begrip uit een eventuele bestaande begrippenlijst.",
-        "properties": {
-          "definitie": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Definitie"
-          },
-          "naam": {
-            "title": "Naam",
-            "type": "string"
-          }
-        },
-        "required": [
-          "naam"
-        ],
-        "title": "BegripInvoer",
         "type": "object"
       },
       "BeoordelingsReden": {
@@ -5199,7 +5034,7 @@
     },
     "/v1/projecten": {
       "get": {
-        "description": "Geef alle analyses terug die de ingelogde gebruiker mag zien.",
+        "description": "Geef alle werkgebieden terug die de ingelogde gebruiker mag zien.",
         "operationId": "lijst_analyses_v1_projecten_get",
         "parameters": [
           {
@@ -5267,7 +5102,7 @@
         ]
       },
       "post": {
-        "description": "Maak een nieuwe analyse aan en start de achtergrond-job (202 Accepted).",
+        "description": "Maak een nieuw werkgebied aan.",
         "operationId": "maak_analyse_v1_projecten_post",
         "parameters": [
           {
@@ -5314,7 +5149,7 @@
           "required": true
         },
         "responses": {
-          "202": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -5343,7 +5178,7 @@
     },
     "/v1/projecten/{analyse_id}": {
       "delete": {
-        "description": "Verwijder een analyse (eigen of, voor een beheerder, elke analyse).",
+        "description": "Verwijder een werkgebied (eigen of, voor een beheerder, elke).",
         "operationId": "verwijder_analyse_v1_projecten__analyse_id__delete",
         "parameters": [
           {
@@ -5409,7 +5244,7 @@
         ]
       },
       "get": {
-        "description": "Geef het detail van \u00e9\u00e9n analyse terug.",
+        "description": "Geef het detail van \u00e9\u00e9n werkgebied terug.",
         "operationId": "detail_analyse_v1_projecten__analyse_id__get",
         "parameters": [
           {
@@ -5482,218 +5317,9 @@
         ]
       }
     },
-    "/v1/projecten/{analyse_id}/afwijzen": {
-      "post": {
-        "description": "Human-in-the-loop: wijs de analyse af na act2-review.\n\nZet de status op 'fout' zodat de background-job stopt.\nGeeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.",
-        "operationId": "afwijzen_analyse_v1_projecten__analyse_id__afwijzen_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "analyse_id",
-            "required": true,
-            "schema": {
-              "title": "Analyse Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-Id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-User-Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Afwijzen Analyse",
-        "tags": [
-          "projecten"
-        ]
-      }
-    },
-    "/v1/projecten/{analyse_id}/akkoord": {
-      "post": {
-        "description": "Human-in-the-loop: geef akkoord na act2-review.\n\nZet de status terug op 'actief' zodat de background-job doorgaat naar act3.\nGeeft 404 als de analyse niet bestaat, 409 als de analyse niet in 'review' staat.",
-        "operationId": "akkoord_analyse_v1_projecten__analyse_id__akkoord_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "analyse_id",
-            "required": true,
-            "schema": {
-              "title": "Analyse Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-Id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-User-Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Akkoord Analyse",
-        "tags": [
-          "projecten"
-        ]
-      }
-    },
-    "/v1/projecten/{analyse_id}/events": {
-      "get": {
-        "description": "SSE-stroom: stuurt status-updates tot de analyse terminaal is (klaar/fout).",
-        "operationId": "analyse_events_v1_projecten__analyse_id__events_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "analyse_id",
-            "required": true,
-            "schema": {
-              "title": "Analyse Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-Id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-User-Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Analyse Events",
-        "tags": [
-          "projecten"
-        ]
-      }
-    },
     "/v1/projecten/{analyse_id}/llm-calls": {
       "get": {
-        "description": "Geef alle vastgelegde LLM-calls voor een analyse terug (alleen beheerders).\n\nLege lijst als capture uitgeschakeld was of de analyse onbekend is \u2014 geen 404.",
+        "description": "Geef alle vastgelegde LLM-calls voor een werkgebied terug (alleen beheerders).\n\nLege lijst als capture uitgeschakeld was of het werkgebied onbekend is \u2014 geen 404.",
         "operationId": "lijst_llm_calls_v1_projecten__analyse_id__llm_calls_get",
         "parameters": [
           {
@@ -5765,156 +5391,6 @@
           }
         },
         "summary": "Lijst Llm Calls",
-        "tags": [
-          "projecten"
-        ]
-      }
-    },
-    "/v1/projecten/{analyse_id}/rapport": {
-      "get": {
-        "description": "Geef het rapport als JSON terug.\n\n404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.",
-        "operationId": "haal_rapport_v1_projecten__analyse_id__rapport_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "analyse_id",
-            "required": true,
-            "schema": {
-              "title": "Analyse Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-Id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-User-Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Haal Rapport V1 Projecten  Analyse Id  Rapport Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Haal Rapport",
-        "tags": [
-          "projecten"
-        ]
-      }
-    },
-    "/v1/projecten/{analyse_id}/rapport.md": {
-      "get": {
-        "description": "Geef het rapport als Markdown-download.\n\n404 als de analyse niet bestaat; 409 als het rapport nog niet beschikbaar is.\nContent-Disposition: attachment; filename=\"rapport-{analyse_id}.md\"",
-        "operationId": "haal_rapport_md_v1_projecten__analyse_id__rapport_md_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "analyse_id",
-            "required": true,
-            "schema": {
-              "title": "Analyse Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-Id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-User-Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Haal Rapport Md",
         "tags": [
           "projecten"
         ]
