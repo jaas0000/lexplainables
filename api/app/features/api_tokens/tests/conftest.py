@@ -13,8 +13,6 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine
 
 import app.db as db_module
 from app.features.api_tokens.models import metadata
@@ -22,19 +20,13 @@ from app.features.api_tokens.router import get_store
 from app.features.api_tokens.store import SqlAlchemyApiTokenStore
 from app.main import app
 from app.shared.auth import huidige_beheerder
-from conftest import TEST_BEHEERDER
+from conftest import TEST_BEHEERDER, maak_test_engine
 
 
 @pytest.fixture
 def client(tmp_path) -> Iterator[TestClient]:
     """Standaard fixture — huidige_beheerder en get_store zijn geoverrideerd."""
-    db_pad = tmp_path / "test.db"
-
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+    async_engine = maak_test_engine(metadata, tmp_path=tmp_path)
     store = SqlAlchemyApiTokenStore(async_engine)
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[huidige_beheerder] = lambda: TEST_BEHEERDER
@@ -53,13 +45,7 @@ def auth_client(tmp_path, monkeypatch) -> Iterator[tuple[TestClient, SqlAlchemyA
     `db._engine` wordt gepatchet zodat `vereist_api_token` dezelfde engine gebruikt als de
     test-store. API_TOKEN wordt leeggemaakt zodat de statische check niet slaagt.
     """
-    db_pad = tmp_path / "auth_test.db"
-
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+    async_engine = maak_test_engine(metadata, tmp_path=tmp_path)
     store = SqlAlchemyApiTokenStore(async_engine)
 
     # Zorg dat get_store in de router ook de test-engine gebruikt (voor de token-aanmaak via API).

@@ -16,12 +16,44 @@ on:
 
 jobs:
   test-api:
+    # Draait de test-suite tegen beide dialecten (project-ADR-0003). De SQLite-run gebruikt de
+    # helpers uit `api/conftest.py` (kortlevende DB per test); de Postgres-run zet
+    # `TEST_DATABASE_URL(_SYNC)` waarna de helpers een gedeelde Postgres met per-test-reset
+    # (`drop_all → create_all`) gebruiken. Beide moeten groen — zo faalt hier een SQLite-only
+    # runtime-assumptie, niet pas bij een echte deploy.
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dialect: sqlite
+            test_url_sync: ""
+            test_url: ""
+          - dialect: postgres
+            test_url_sync: "postgresql://lex:lex@localhost:5432/lex"
+            test_url: "postgresql+asyncpg://lex:lex@localhost:5432/lex"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lex
+          POSTGRES_PASSWORD: lex
+          POSTGRES_DB: lex
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U lex -d lex"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
-      - name: Tests
+      - name: Tests (${{ matrix.dialect }})
         working-directory: api
+        env:
+          TEST_DATABASE_URL_SYNC: ${{ matrix.test_url_sync }}
+          TEST_DATABASE_URL: ${{ matrix.test_url }}
         run: |
           uv sync
           uv run pytest -q

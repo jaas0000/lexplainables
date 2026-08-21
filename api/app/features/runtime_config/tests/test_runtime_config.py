@@ -10,15 +10,15 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.features.runtime_config.models import metadata
 from app.features.runtime_config.router import get_store
 from app.features.runtime_config.store import RuntimeConfigStore, _cache_leeg
 from app.main import app
 from app.shared.auth import huidige_beheerder
-from conftest import TEST_BEHEERDER
+from conftest import TEST_BEHEERDER, maak_test_engine, sync_engine_voor
 
 
 @pytest.fixture(autouse=True)
@@ -30,14 +30,12 @@ def wis_cache():
 
 
 @pytest.fixture
-def client(tmp_path) -> Iterator[TestClient]:
-    db_pad = tmp_path / "test.db"
+def async_engine(tmp_path) -> AsyncEngine:
+    return maak_test_engine(metadata, tmp_path=tmp_path)
 
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    metadata.create_all(sync_engine)
-    sync_engine.dispose()
 
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+@pytest.fixture
+def client(async_engine: AsyncEngine) -> Iterator[TestClient]:
     store = RuntimeConfigStore(async_engine)
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[huidige_beheerder] = lambda: TEST_BEHEERDER
@@ -84,24 +82,33 @@ def test_schrijf_en_lees_capture_llm_calls_uit(client):
 # --- TTL-cache -------------------------------------------------------------------
 
 
-def test_ttl_cache_geeft_zelfde_object_terug_zonder_db_hit(client, tmp_path):
+def test_ttl_cache_geeft_zelfde_object_terug_zonder_db_hit(client, async_engine):
     """Na een GET is de cache gevuld; een tweede GET raakt de DB niet (module-niveau cache)."""
     # Vul de cache via de eerste GET.
     resp1 = client.get("/v1/admin/instellingen")
     assert resp1.status_code == 200
 
-    # Schrijf direct in de DB via een synchrone engine, maar wis de cache NIET.
-    # De cache is gevuld → GET geeft nog steeds de gecachte waarde (False) terug.
-    import sqlite3
-
-    db_pad = tmp_path / "test.db"
-    con = sqlite3.connect(str(db_pad))
-    con.execute(
-        "INSERT OR REPLACE INTO app_instellingen (sleutel, waarde, bijgewerkt) "
-        "VALUES ('capture_llm_calls', 'true', '2026-01-01T00:00:00+00:00')"
-    )
-    con.commit()
-    con.close()
+    # Schrijf direct in de DB via een synchrone engine (dialect-agnostisch — update-dan-insert
+    # in plaats van INSERT OR REPLACE zodat het op zowel SQLite als Postgres werkt), maar wis
+    # de cache NIET. De cache is gevuld → GET geeft nog steeds de gecachte waarde (False).
+    sync = sync_engine_voor(async_engine)
+    with sync.begin() as conn:
+        result = conn.execute(
+            text(
+                "UPDATE app_instellingen SET waarde = :waarde, bijgewerkt = :bijgewerkt "
+                "WHERE sleutel = 'capture_llm_calls'"
+            ),
+            {"waarde": "true", "bijgewerkt": "2026-01-01T00:00:00+00:00"},
+        )
+        if result.rowcount == 0:
+            conn.execute(
+                text(
+                    "INSERT INTO app_instellingen (sleutel, waarde, bijgewerkt) "
+                    "VALUES ('capture_llm_calls', :waarde, :bijgewerkt)"
+                ),
+                {"waarde": "true", "bijgewerkt": "2026-01-01T00:00:00+00:00"},
+            )
+    sync.dispose()
 
     # Cache nog actief → nog steeds False.
     resp2 = client.get("/v1/admin/instellingen")
@@ -140,20 +147,12 @@ def test_zonder_auth_geeft_401(monkeypatch, tmp_path):
     monkeypatch.setenv("API_TOKEN", "test-token-voor-auth-check")
     importlib.reload(auth_module)
 
-    from sqlalchemy import create_engine
-    from sqlalchemy.ext.asyncio import create_async_engine
-
     from app.features.runtime_config.models import metadata
     from app.features.runtime_config.router import get_store
     from app.features.runtime_config.store import RuntimeConfigStore
     from app.main import app
 
-    db_pad = tmp_path / "auth_test.db"
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+    async_engine = maak_test_engine(metadata, tmp_path=tmp_path)
     store = RuntimeConfigStore(async_engine)
     app.dependency_overrides[get_store] = lambda: store
     # Geen huidige_beheerder-override → echte auth-check actief.

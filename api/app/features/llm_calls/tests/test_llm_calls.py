@@ -17,8 +17,7 @@ from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, insert
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import insert
 
 from app.features.llm_calls.dependencies import get_llm_calls_store
 from app.features.llm_calls.models import llm_calls
@@ -29,7 +28,7 @@ from app.features.projecten.router import get_store
 from app.features.projecten.store import SqlAlchemyAnalyseStore
 from app.main import app
 from app.shared.auth import huidige_beheerder
-from conftest import TEST_BEHEERDER
+from conftest import TEST_BEHEERDER, maak_test_engine, sync_engine_voor
 
 GELDIGE_BRON = {"bwb_id": "BWBR0011823", "artikel": "9", "lid": "1"}
 
@@ -51,20 +50,21 @@ def _llm_call_rij(analyse_id: str, activiteit: str = "act2", **overrides) -> dic
     }
 
 
-def _maak_engines(db_pad):
-    """Geeft (sync_engine, store, llm_store) na aanmaken van het schema."""
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    projecten_metadata.create_all(sync_engine)
-    llm_calls_metadata.create_all(sync_engine)
-
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
-    return sync_engine, SqlAlchemyAnalyseStore(async_engine), SqlAlchemyLlmCallsStore(async_engine)
+def _maak_stores(tmp_path):
+    """Zet async engine op met beide metadata's; geef stores + sync-engine voor seeding terug."""
+    async_engine = maak_test_engine(projecten_metadata, llm_calls_metadata, tmp_path=tmp_path)
+    sync_engine = sync_engine_voor(async_engine)
+    return (
+        sync_engine,
+        SqlAlchemyAnalyseStore(async_engine),
+        SqlAlchemyLlmCallsStore(async_engine),
+    )
 
 
 @pytest.fixture
 def client_en_sync(tmp_path) -> Iterator[tuple[TestClient, object]]:
     """Fixture met TestClient + synchrone engine voor seeding van llm_calls."""
-    sync_engine, store, llm_store = _maak_engines(tmp_path / "test_llm.db")
+    sync_engine, store, llm_store = _maak_stores(tmp_path)
 
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_llm_calls_store] = lambda: llm_store
@@ -82,8 +82,8 @@ def client_en_sync(tmp_path) -> Iterator[tuple[TestClient, object]]:
 @pytest.fixture
 def client_zonder_auth(tmp_path) -> Iterator[TestClient]:
     """Fixture zonder auth-override — gebruikt voor de beveiligingstest."""
-    sync_engine, store, llm_store = _maak_engines(tmp_path / "test_noauth.db")
-    sync_engine.dispose()  # alleen nodig voor schema-aanmaak, niet voor seeding
+    sync_engine, store, llm_store = _maak_stores(tmp_path)
+    sync_engine.dispose()  # geen seeding nodig hier
 
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_llm_calls_store] = lambda: llm_store
