@@ -134,9 +134,15 @@ def parse_docstring(text: str, feature_naam: str) -> Docstring:
             single[huidig_single].append(stripped)
             continue
 
-        if huidig_list and stripped.startswith("- "):
-            lists[huidig_list].append(stripped[2:].strip())
-            continue
+        if huidig_list:
+            if stripped.startswith("- "):
+                lists[huidig_list].append(stripped[2:].strip())
+                continue
+            # Vervolgregel op vorige bullet (voor lange list-items die op meerdere
+            # regels staan zodat ze onder de 100-char regel-lengte blijven).
+            if lists[huidig_list]:
+                lists[huidig_list][-1] = f"{lists[huidig_list][-1]} {stripped}"
+                continue
 
     ontbrekend = [
         n for n in VERPLICHTE_SECTIES_SINGLE if not single[n]

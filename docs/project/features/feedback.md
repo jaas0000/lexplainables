@@ -72,4 +72,4 @@ class FeedbackStore(Protocol):
 - ADR-0001 (vertical slicing): eigen tabel `feedback_leesbewijzen` in plaats van kolom op users.
 - ADR-0007 (store-abstractie): router leunt op een Protocol, tests draaien tegen de echte SQL-store.
 - ADR-0011 (schema-eenheid + expliciete mapping): SQLAlchemy Core + Pydantic + `feedback_uit_rij` op één plek.
-- Story 001 §Schemabeslissing: `Literal["verbeteridee",...]` i.p.v. string+regex — genereert een echte enum in OpenAPI.
+- Story 001 §Schemabeslissing: `Literal["verbeteridee", ...]` i.p.v. string+regex — genereert een echte enum in OpenAPI.
