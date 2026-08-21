@@ -279,6 +279,7 @@ async def haal_gebruiker(engine: AsyncEngine, gebruikersnaam: str) -> MijnProfie
         naam=gebruiker.gebruikersnaam,
         gebruikersnaam=gebruiker.gebruikersnaam,
         rol=gebruiker.rol,
+        actief=gebruiker.actief,
         totp_ingeschakeld=gebruiker.totp_ingeschakeld,
     )
 

@@ -113,6 +113,10 @@ jobs:
       # Fernet-key voor test-versleuteling (LLM-profielen, TOTP-secrets). Willekeurige
       # base64-32-byte-key — geldig maar niet bruikbaar buiten deze CI-run.
       FERNET_KEY: "sPQtLXlYFB2Zn9lVJv1wTIY_MYh_gBpvMh_p7hUpiL8="
+      # Korte TTL voor de Auth.js live-rol-check (fase 2b.3): de e2e-test verwacht dat de
+      # sessie binnen ~200ms na deactivering ongeldig wordt. In productie: default 300000
+      # (5 minuten).
+      SESSION_CHECK_TTL_MS: "100"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3

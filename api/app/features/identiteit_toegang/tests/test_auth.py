@@ -209,7 +209,19 @@ async def test_haal_gebruiker_profiel(db_engine):
     assert profiel.gebruikersnaam == "j.de.vries"
     assert profiel.naam == "j.de.vries"
     assert profiel.rol == "analist"
+    assert profiel.actief is True
     assert profiel.totp_ingeschakeld is False
+
+
+@pytest.mark.asyncio
+async def test_mijnprofiel_bevat_actief_veld_voor_live_rol_check(db_engine):
+    """Fase 2b.3: `MijnProfiel` heeft een expliciet `actief`-veld zodat de Auth.js JWT-refresh
+    de status kan lezen (voor een inactieve gebruiker retourneert de endpoint zelf 401)."""
+    await maak_gebruiker(db_engine, "actief.beheerder", "geheim123", "beheerder")
+    profiel = await haal_gebruiker(db_engine, "actief.beheerder")
+    # Contract-check: het veld staat er, met `bool`-type.
+    assert "actief" in profiel.model_dump()
+    assert isinstance(profiel.actief, bool)
 
 
 @pytest.mark.asyncio

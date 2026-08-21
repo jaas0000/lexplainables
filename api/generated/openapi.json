@@ -1769,8 +1769,12 @@
         "type": "object"
       },
       "MijnProfiel": {
-        "description": "Eigen accountgegevens \u2014 teruggegeven door GET /v1/auth/me.",
+        "description": "Eigen accountgegevens \u2014 teruggegeven door GET /v1/auth/me.\n\n`actief` is er expliciet zodat een consument (bijv. de frontend Auth.js live-rol-check,\nfase 2b.3) na een periodieke fetch direct kan zien of het account nog geldig is. De\nendpoint retourneert 401 op een inactieve gebruiker, dus in de praktijk komt hier alleen\n`actief=true` binnen \u2014 het veld is de expliciete tegenpool van die 401.",
         "properties": {
+          "actief": {
+            "title": "Actief",
+            "type": "boolean"
+          },
           "gebruikersnaam": {
             "title": "Gebruikersnaam",
             "type": "string"
@@ -1792,6 +1796,7 @@
           "naam",
           "gebruikersnaam",
           "rol",
+          "actief",
           "totp_ingeschakeld"
         ],
         "title": "MijnProfiel",
