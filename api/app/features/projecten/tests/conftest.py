@@ -11,34 +11,32 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.features.llm_calls.dependencies import get_llm_calls_store
+from app.features.llm_calls.models import metadata as llm_calls_metadata
 from app.features.llm_calls.store import SqlAlchemyLlmCallsStore
 from app.features.projecten.models import metadata
 from app.features.projecten.router import get_store
 from app.features.projecten.store import SqlAlchemyAnalyseStore
 from app.main import app
 from app.shared.auth import huidige_beheerder
-from conftest import TEST_BEHEERDER
+from conftest import TEST_BEHEERDER, maak_test_engine
 
 
 @pytest.fixture
-def store(tmp_path) -> SqlAlchemyAnalyseStore:
-    """Levert een SqlAlchemyAnalyseStore op een kortlevende SQLite-database."""
-    db_pad = tmp_path / "test.db"
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    metadata.create_all(sync_engine)
-    sync_engine.dispose()
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+def async_engine(tmp_path) -> AsyncEngine:
+    """Async engine met projecten- én llm_calls-schema (dezelfde DB, beide tabellen nodig)."""
+    return maak_test_engine(metadata, llm_calls_metadata, tmp_path=tmp_path)
+
+
+@pytest.fixture
+def store(async_engine: AsyncEngine) -> SqlAlchemyAnalyseStore:
     return SqlAlchemyAnalyseStore(async_engine)
 
 
 @pytest.fixture
-def client(store: SqlAlchemyAnalyseStore, tmp_path) -> Iterator[TestClient]:
-    db_pad = tmp_path / "test.db"
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+def client(store: SqlAlchemyAnalyseStore, async_engine: AsyncEngine) -> Iterator[TestClient]:
     llm_store = SqlAlchemyLlmCallsStore(async_engine)
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_llm_calls_store] = lambda: llm_store

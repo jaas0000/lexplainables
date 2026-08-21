@@ -14,8 +14,6 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.future import select
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -32,6 +30,7 @@ from app.features.identiteit_toegang.store import (
     wijzig_eigen_wachtwoord,
 )
 from app.main import app
+from conftest import maak_test_engine
 
 TEST_API_TOKEN = "test-api-token"
 
@@ -43,12 +42,7 @@ def stel_api_token_in(monkeypatch):
 
 @pytest.fixture
 def client(tmp_path) -> TestClient:
-    db_pad = tmp_path / "test.db"
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    SQLModel.metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+    async_engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
     app.dependency_overrides[get_engine] = lambda: async_engine
 
     with TestClient(app) as c:
@@ -58,10 +52,8 @@ def client(tmp_path) -> TestClient:
 
 
 @pytest.fixture
-async def db_engine():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+async def db_engine(tmp_path):
+    engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
     yield engine
     await engine.dispose()
 

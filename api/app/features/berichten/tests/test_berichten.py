@@ -5,9 +5,26 @@ docs/stories/002-berichten-lezen-en-beheren.md end-to-end gedekt zijn."""
 
 from __future__ import annotations
 
-import sqlite3
+import asyncio
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 GEBRUIKER = {"X-User-Id": "analist-1"}
+
+
+def _tel_leesbewijzen(async_engine: AsyncEngine, bericht_id: int) -> int:
+    """Dialect-agnostische peek: hoeveel leesbewijzen bestaan er voor dit bericht?"""
+
+    async def _tel() -> int:
+        async with async_engine.connect() as conn:
+            resultaat = await conn.scalar(
+                text("SELECT COUNT(*) FROM bericht_leesbewijzen WHERE bericht_id = :id"),
+                {"id": bericht_id},
+            )
+            return int(resultaat or 0)
+
+    return asyncio.run(_tel())
 
 
 def _maak(client, titel: str = "Nieuwe functie", type: str = "update") -> dict:
@@ -178,27 +195,17 @@ def test_lees_alles_is_idempotent(client):
     assert aantal["aantal"] == 0
 
 
-def test_verwijderen_cascadeert_leesbewijzen(client, db_pad):
+def test_verwijderen_cascadeert_leesbewijzen(client, async_engine):
     bericht = _maak_en_publiceer(client, "Te verwijderen bericht")
     client.post("/v1/berichten/lees-alles", headers=GEBRUIKER)
 
     # Er staat nu een leesbewijs voor dit bericht.
-    conn = sqlite3.connect(db_pad)
-    voor = conn.execute(
-        "SELECT COUNT(*) FROM bericht_leesbewijzen WHERE bericht_id = ?", (bericht["id"],)
-    ).fetchone()[0]
-    conn.close()
-    assert voor == 1
+    assert _tel_leesbewijzen(async_engine, bericht["id"]) == 1
 
     response = client.delete(f"/v1/admin/berichten/{bericht['id']}", headers={})
     assert response.status_code == 204
 
-    conn = sqlite3.connect(db_pad)
-    na = conn.execute(
-        "SELECT COUNT(*) FROM bericht_leesbewijzen WHERE bericht_id = ?", (bericht["id"],)
-    ).fetchone()[0]
-    conn.close()
-    assert na == 0
+    assert _tel_leesbewijzen(async_engine, bericht["id"]) == 0
 
     admin_lijst = client.get("/v1/admin/berichten", headers={}).json()
     assert admin_lijst["totaal"] == 0

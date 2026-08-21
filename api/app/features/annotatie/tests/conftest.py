@@ -10,35 +10,24 @@ de TestClient uitvoert.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.features.annotatie.models import metadata
 from app.features.annotatie.router import get_store
 from app.features.annotatie.store import SqlAlchemyAnnotatieStore
 from app.main import app
 from app.shared.auth import huidige_gebruiker
+from conftest import maak_test_engine
 
 GEBRUIKER_A = "analist-A"
 GEBRUIKER_B = "analist-B"
 
 
 @pytest.fixture
-def db_pad(tmp_path: Path) -> Path:
-    return tmp_path / "test_annotatie.db"
-
-
-@pytest.fixture
-def client(db_pad: Path) -> Iterator[TestClient]:
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+def client(tmp_path) -> Iterator[TestClient]:
+    async_engine = maak_test_engine(metadata, tmp_path=tmp_path)
     store = SqlAlchemyAnnotatieStore(async_engine)
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[huidige_gebruiker] = lambda: GEBRUIKER_A

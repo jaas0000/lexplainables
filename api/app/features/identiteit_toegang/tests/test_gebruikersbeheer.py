@@ -7,12 +7,9 @@ verwijderen, bescherming laatste beheerder.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
 from app.db import get_engine
@@ -29,6 +26,7 @@ from app.features.identiteit_toegang.store import (
 )
 from app.main import app
 from app.shared.auth import GebruikerContext, huidige_beheerder
+from conftest import maak_test_engine
 
 TEST_API_TOKEN = "test-token-014"
 TEST_BEHEERDER = GebruikerContext(gebruikersnaam="beheerder-test", rol="beheerder")
@@ -40,28 +38,17 @@ def stel_api_token_in(monkeypatch):
 
 
 @pytest.fixture
-async def db_engine():
-    """Kortlevende in-memory SQLite-engine voor store-laag tests."""
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+async def db_engine(tmp_path):
+    """Kortlevende engine voor store-laag tests."""
+    engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
     yield engine
     await engine.dispose()
 
 
 @pytest.fixture
-def db_pad(tmp_path) -> Path:
-    return tmp_path / "test.db"
-
-
-@pytest.fixture
-def client(db_pad) -> Iterator[TestClient]:
-    """HTTP-client met file-based SQLite en auth-override."""
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    SQLModel.metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+def client(tmp_path) -> Iterator[TestClient]:
+    """HTTP-client met een dialect-agnostische engine en auth-override."""
+    async_engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
     app.dependency_overrides[get_engine] = lambda: async_engine
     app.dependency_overrides[huidige_beheerder] = lambda: TEST_BEHEERDER
 

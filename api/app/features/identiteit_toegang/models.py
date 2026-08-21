@@ -6,6 +6,7 @@ import re
 from datetime import UTC, datetime
 
 from pydantic import field_validator
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
 _GEBRUIKERSNAAM_RE = re.compile(r"^[a-z0-9._-]{3,64}$")
@@ -22,7 +23,14 @@ class Gebruiker(GebruikerBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     wachtwoord_hash: str
     email: str = Field(default="", max_length=320)
-    aangemaakt_op: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # DateTime(timezone=True) i.p.v. SQLModel's default `DateTime`: het model schrijft een
+    # tz-aware waarde (`datetime.now(UTC)`), en asyncpg weigert die op een naive-column
+    # ("can't subtract offset-naive and offset-aware datetimes"). SQLite is lax hierop, dus
+    # kwam dat pas aan het licht toen de test-matrix Postgres in het spel bracht.
+    aangemaakt_op: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
 
 class SetupStatus(SQLModel):

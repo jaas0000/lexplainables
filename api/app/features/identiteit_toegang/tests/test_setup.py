@@ -13,18 +13,17 @@ Gedrag getest:
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
-from pathlib import Path
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlmodel import SQLModel
 
 from app.db import get_engine
 from app.features.identiteit_toegang.store import maak_gebruiker, tabel_leeg
 from app.main import app
+from conftest import maak_test_engine
 
 TEST_API_TOKEN = "test-api-token"
 HEADERS = {"Authorization": f"Bearer {TEST_API_TOKEN}"}
@@ -35,30 +34,18 @@ def stel_api_token_in(monkeypatch):
     monkeypatch.setattr("app.shared.auth.API_TOKEN", TEST_API_TOKEN)
 
 
-@pytest.fixture
-def db_pad(tmp_path) -> Path:
-    return tmp_path / "test.db"
-
-
 @pytest_asyncio.fixture
-async def async_engine(db_pad) -> AsyncIterator[AsyncEngine]:
-    """Kortlevende async SQLite-engine met het volledige schema aangemaakt."""
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    SQLModel.metadata.create_all(sync_engine)
-    sync_engine.dispose()
-    engine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+async def async_engine(tmp_path) -> AsyncIterator[AsyncEngine]:
+    """Kortlevende engine met het volledige SQLModel-schema aangemaakt."""
+    engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
     yield engine
     await engine.dispose()
 
 
 @pytest.fixture
-def client(db_pad) -> Iterator[TestClient]:
-    """Elke test krijgt een eigen, lege SQLite-database."""
-    sync_engine = create_engine(f"sqlite:///{db_pad}")
-    SQLModel.metadata.create_all(sync_engine)
-    sync_engine.dispose()
-
-    async_eng: AsyncEngine = create_async_engine(f"sqlite+aiosqlite:///{db_pad}")
+def client(tmp_path) -> Iterator[TestClient]:
+    """Elke test krijgt een eigen, lege database."""
+    async_eng = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
     app.dependency_overrides[get_engine] = lambda: async_eng
 
     with TestClient(app) as test_client:
