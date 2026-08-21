@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.features.berichten.models import metadata as berichten_metadata  # noqa: E402
 from app.features.feedback.models import metadata as feedback_metadata  # noqa: E402
 from app.features.llm_calls.models import metadata as llm_calls_metadata  # noqa: E402
+from app.shared.jobs.models import metadata as jobs_metadata  # noqa: E402
 
 config = context.config
 
@@ -37,7 +38,7 @@ database_url = os.environ.get("DATABASE_URL_SYNC")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 
-target_metadata = [feedback_metadata, berichten_metadata, llm_calls_metadata]
+target_metadata = [feedback_metadata, berichten_metadata, llm_calls_metadata, jobs_metadata]
 
 
 def run_migrations_offline() -> None:
