@@ -27,6 +27,7 @@ from .features.runtime_config.router import admin_router as runtime_config_admin
 from .features.wetcatalogus.router import admin_router as wetcatalogus_admin_router
 from .features.wetcatalogus.router import router as wetcatalogus_router
 from .shared.jobs.store import PostgresJobStore
+from .shared.llm import throttle as llm_throttle
 
 logger = logging.getLogger("app.reaper")
 
@@ -54,6 +55,10 @@ async def _reaper_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    # Proces-globale LLM-concurrency-rem uit env — voorkomt zwerm-429's bij veel gelijktijdige
+    # analyses (project-ADR-0005, shared/llm/throttle.py). 0 = uit.
+    llm_throttle.configure(int(os.environ.get("LLM_MAX_CONCURRENCY", "4")))
+
     reaper_task = asyncio.create_task(_reaper_loop())
     try:
         yield
