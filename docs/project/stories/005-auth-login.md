@@ -45,7 +45,7 @@ zonder code-aanpassingen in de API's.
 **`GebruikerContext` (intern Pydantic-model, niet als API-respons):**
 ```python
 class GebruikerContext(BaseModel):
-    gebruikersnaam: str   # Keycloak preferred_username
+    gebruikersnaam: str  # Keycloak preferred_username
     rol: Literal["beheerder", "analist"]
 ```
 

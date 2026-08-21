@@ -21,7 +21,7 @@ import ast
 import difflib
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -144,9 +144,7 @@ def parse_docstring(text: str, feature_naam: str) -> Docstring:
                 lists[huidig_list][-1] = f"{lists[huidig_list][-1]} {stripped}"
                 continue
 
-    ontbrekend = [
-        n for n in VERPLICHTE_SECTIES_SINGLE if not single[n]
-    ] + [
+    ontbrekend = [n for n in VERPLICHTE_SECTIES_SINGLE if not single[n]] + [
         n for n in VERPLICHTE_SECTIES_LIST if not lists[n]
     ]
     if ontbrekend:
@@ -245,7 +243,11 @@ def parse_tabellen(pad: Path) -> list[Tabel]:
 
 
 def _parse_kolom(call: ast.Call) -> Kolom:
-    naam = call.args[0].value if call.args and isinstance(call.args[0], ast.Constant) else "?"
+    naam = (
+        call.args[0].value
+        if call.args and isinstance(call.args[0], ast.Constant)
+        else "?"
+    )
     type_str = _naam_van(call.args[1]) if len(call.args) > 1 else "?"
     eigenschappen: list[str] = []
     nullable_true = False
@@ -315,7 +317,11 @@ def parse_endpoints(pad: Path) -> list[Endpoint]:
                 continue
             router_naam = deco.func.value.id
             prefix = prefixen.get(router_naam, "")
-            sub = deco.args[0].value if deco.args and isinstance(deco.args[0], ast.Constant) else ""
+            sub = (
+                deco.args[0].value
+                if deco.args and isinstance(deco.args[0], ast.Constant)
+                else ""
+            )
             pad_volledig = (prefix + sub) or "/"
 
             response_model: str | None = None
@@ -344,7 +350,7 @@ def _auth_van_signatuur(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> str | Non
             if default.args and isinstance(default.args[0], ast.Name):
                 dep_naam = default.args[0].id
                 if dep_naam.startswith("huidige_"):
-                    return dep_naam[len("huidige_"):]
+                    return dep_naam[len("huidige_") :]
     return None
 
 
@@ -398,7 +404,7 @@ def parse_testnamen(pad: Path) -> list[str]:
 
 
 def testnaam_naar_zin(naam: str) -> str:
-    zonder_prefix = naam[len("test_"):]
+    zonder_prefix = naam[len("test_") :]
     zin = zonder_prefix.replace("_", " ")
     return zin[0].upper() + zin[1:] + "." if zin else ""
 
@@ -500,10 +506,15 @@ def _feature_dirs(alleen: str | None) -> list[Path]:
     if alleen:
         d = FEATURES_DIR / alleen
         if not d.is_dir():
-            print(f"Feature '{alleen}' niet gevonden onder {FEATURES_DIR}", file=sys.stderr)
+            print(
+                f"Feature '{alleen}' niet gevonden onder {FEATURES_DIR}",
+                file=sys.stderr,
+            )
             sys.exit(2)
         return [d]
-    return sorted([d for d in FEATURES_DIR.iterdir() if d.is_dir() and not d.name.startswith("_")])
+    return sorted(
+        [d for d in FEATURES_DIR.iterdir() if d.is_dir() and not d.name.startswith("_")]
+    )
 
 
 def cmd_generate(alleen: str | None) -> int:
@@ -540,11 +551,17 @@ def cmd_check() -> int:
             )
             diffs.append(f"\n{diff}")
     if docstring_fouten:
-        print("Ontbrekende of onvolledige module-docstrings (feature-docs skill regel 1):", file=sys.stderr)
+        print(
+            "Ontbrekende of onvolledige module-docstrings (feature-docs skill regel 1):",
+            file=sys.stderr,
+        )
         for fout in docstring_fouten:
             print(f"  - {fout}", file=sys.stderr)
     if diffs:
-        print("Feature-docs niet actueel — draai `python scripts/docs/genereer-feature-docs.py generate`:", file=sys.stderr)
+        print(
+            "Feature-docs niet actueel — draai `python scripts/docs/genereer-feature-docs.py generate`:",
+            file=sys.stderr,
+        )
         for d in diffs:
             print(d, file=sys.stderr)
     if docstring_fouten or diffs:

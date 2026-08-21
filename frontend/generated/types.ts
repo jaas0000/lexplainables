@@ -439,6 +439,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/2fa/activeer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activeer Totp Koppeling
+         * @description Bevestig 2FA-koppeling met een geldige code uit de authenticator-app.
+         */
+        post: operations["activeer_totp_koppeling_v1_auth_2fa_activeer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/2fa/begin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Totp Koppeling
+         * @description Start een 2FA-koppeling — genereert een nieuw secret en geeft de `otpauth://`-URI
+         *     terug (die de frontend als QR-code toont).
+         */
+        post: operations["start_totp_koppeling_v1_auth_2fa_begin_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/2fa/uitschakel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Uitschakel Totp Koppeling
+         * @description Schakel 2FA uit — vereist een geldige lopende code zodat een dief met sessie-toegang
+         *     2FA niet stilzwijgend kan opheffen.
+         */
+        post: operations["uitschakel_totp_koppeling_v1_auth_2fa_uitschakel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/me": {
         parameters: {
             query?: never;
@@ -1508,6 +1570,22 @@ export interface components {
             /** Tijdelijk Wachtwoord */
             tijdelijk_wachtwoord: string;
         };
+        /**
+         * TotpBeginResultaat
+         * @description Retour van POST /v1/auth/2fa/begin — de `otpauth://`-URI voor de QR-code.
+         */
+        TotpBeginResultaat: {
+            /** Otpauth Uri */
+            otpauth_uri: string;
+        };
+        /**
+         * TotpCodeVerzoek
+         * @description Body van POST /v1/auth/2fa/activeer en /uitschakel.
+         */
+        TotpCodeVerzoek: {
+            /** Totp */
+            totp: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -1525,11 +1603,18 @@ export interface components {
         VerifyRequest: {
             /** Gebruikersnaam */
             gebruikersnaam: string;
+            /** Totp */
+            totp?: string | null;
             /** Wachtwoord */
             wachtwoord: string;
         };
         /** VerifyResult */
         VerifyResult: {
+            /**
+             * Code
+             * @default
+             */
+            code: string;
             /**
              * Gebruikersnaam
              * @default
@@ -2772,6 +2857,106 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AnnotatieDocument"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activeer_totp_koppeling_v1_auth_2fa_activeer_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpCodeVerzoek"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_totp_koppeling_v1_auth_2fa_begin_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TotpBeginResultaat"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    uitschakel_totp_koppeling_v1_auth_2fa_uitschakel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpCodeVerzoek"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

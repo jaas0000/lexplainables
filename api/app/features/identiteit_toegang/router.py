@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.db import get_engine
 from app.shared.auth import GebruikerContext, huidige_beheerder, vereist_api_token
+from app.shared.crypto import CryptoFout
 from app.shared.rate_limit import probeer_toestaan
 
 from .models import (
@@ -23,6 +24,8 @@ from .models import (
     SetupStatus,
     SetupVerzoek,
     TijdelijkWachtwoord,
+    TotpBeginResultaat,
+    TotpCodeVerzoek,
     VerifyRequest,
     VerifyResult,
     WachtwoordWijzigenVerzoek,
@@ -34,13 +37,17 @@ from .store import (
     GebruikerNietGevonden,
     GebruikersnaamAlInGebruik,
     LaatsteBeheerder,
+    TotpFout,
     WachtwoordOnjuist,
+    activeer_totp,
+    begin_totp_koppeling,
     haal_gebruiker,
     lijst_gebruikers,
     maak_eerste_beheerder,
     maak_gebruiker_admin,
     reset_wachtwoord,
     tabel_leeg,
+    uitschakel_totp,
     verifieer_credentials,
     verwijder_gebruiker,
     wijzig_eigen_wachtwoord,
@@ -97,7 +104,80 @@ async def verify(request: VerifyRequest, engine=Depends(get_engine)) -> VerifyRe
             detail="Te veel inlogpogingen; probeer later opnieuw.",
             headers={"Retry-After": str(int(_LOGIN_WINDOW))},
         )
-    return await verifieer_credentials(engine, request.gebruikersnaam, request.wachtwoord)
+    return await verifieer_credentials(
+        engine, request.gebruikersnaam, request.wachtwoord, request.totp
+    )
+
+
+@router.post(
+    "/2fa/begin",
+    response_model=TotpBeginResultaat,
+    dependencies=[Depends(vereist_api_token)],
+)
+async def start_totp_koppeling(
+    gebruiker: GebruikerContext = Depends(huidige_beheerder),
+    engine=Depends(get_engine),
+) -> TotpBeginResultaat:
+    """Start een 2FA-koppeling — genereert een nieuw secret en geeft de `otpauth://`-URI
+    terug (die de frontend als QR-code toont)."""
+    try:
+        uri = await begin_totp_koppeling(engine, gebruiker.gebruikersnaam)
+    except CryptoFout as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geen FERNET_KEY geconfigureerd; 2FA kan niet worden opgeslagen.",
+        ) from exc
+    except GebruikerNietActief as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account niet (meer) actief.",
+        ) from exc
+    return TotpBeginResultaat(otpauth_uri=uri)
+
+
+@router.post(
+    "/2fa/activeer",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(vereist_api_token)],
+)
+async def activeer_totp_koppeling(
+    body: TotpCodeVerzoek,
+    gebruiker: GebruikerContext = Depends(huidige_beheerder),
+    engine=Depends(get_engine),
+) -> None:
+    """Bevestig 2FA-koppeling met een geldige code uit de authenticator-app."""
+    try:
+        await activeer_totp(engine, gebruiker.gebruikersnaam, body.totp)
+    except GebruikerNietActief as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account niet (meer) actief.",
+        ) from exc
+    except TotpFout as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post(
+    "/2fa/uitschakel",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(vereist_api_token)],
+)
+async def uitschakel_totp_koppeling(
+    body: TotpCodeVerzoek,
+    gebruiker: GebruikerContext = Depends(huidige_beheerder),
+    engine=Depends(get_engine),
+) -> None:
+    """Schakel 2FA uit — vereist een geldige lopende code zodat een dief met sessie-toegang
+    2FA niet stilzwijgend kan opheffen."""
+    try:
+        await uitschakel_totp(engine, gebruiker.gebruikersnaam, body.totp)
+    except GebruikerNietActief as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account niet (meer) actief.",
+        ) from exc
+    except TotpFout as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 @router.get("/me", response_model=MijnProfiel)
