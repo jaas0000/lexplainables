@@ -14,11 +14,15 @@ export function LoginFormulier() {
   const [bezig, setBezig] = useState(false);
 
   async function verstuur(totpCode?: string) {
+    // `signIn` serialiseert `undefined` waarden naar de string "undefined" (NextAuth v5
+    // gebruikt URLSearchParams onder de motorkap); daarom voegen we `totp` alleen toe als
+    // er echt een code is. Anders krijgt de api `totp: "undefined"` en denkt 'ie een
+    // ongeldige code te zien i.p.v. een ontbrekende.
     const res = await signIn("credentials", {
       redirect: false,
       gebruikersnaam,
       wachtwoord,
-      totp: totpCode,
+      ...(totpCode ? { totp: totpCode } : {}),
     });
     // Auth.js v5 zet zowel `error` (klasse-naam) als `code` (attribute); afhankelijk van
     // de versie kan onze `code = "TotpRequired"` in het ene of het andere veld zitten.
