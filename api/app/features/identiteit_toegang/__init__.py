@@ -1,13 +1,14 @@
 """Identiteit en toegang.
 
 Wat: gebruikersbeheer (aanmaken/bewerken/verwijderen door beheerder), inloggen (verify via
-bcrypt), eigen profiel bekijken en wachtwoord wijzigen, plus eerste-beheerder-setup als de
+bcrypt), eigen profiel bekijken (incl. `actief`-vlag voor de Auth.js live-rol-check) en
+wachtwoord wijzigen, plus TOTP-2FA (story 017) en eerste-beheerder-setup als de
 gebruikers-tabel leeg is.
-Waarom: eigen domein voor identiteit — auth-verify, rol-check, wachtwoord-flow horen op één
-plek en zijn wat andere features via `shared/auth.py` gebruiken; hier zit de bron.
-Grens: geen sessie-management (Auth.js in de frontend doet dat); het API-token voor externe
-integratie hoort bij `api_tokens`, niet hier; 2FA/TOTP staat gepland (story 017) maar zit
-hier nog niet.
+Waarom: eigen domein voor identiteit — auth-verify, rol-check, wachtwoord-flow, 2FA horen op
+één plek en zijn wat andere features via `shared/auth.py` gebruiken; hier zit de bron.
+Grens: sessie-cookies zelf leven in Auth.js (frontend); die roept `GET /v1/auth/me` periodiek
+aan (fase 2b.3 live-rol-check) voor rol-updates en deactivering. Het API-token voor externe
+integratie hoort bij `api_tokens`, niet hier.
 
 Tabellen:
   - gebruikers: id + gebruikersnaam (uniek) + wachtwoord_hash (bcrypt) + email + rol
@@ -21,6 +22,9 @@ Beslissingen:
     en levert gebruikersinfo terug voor Auth.js session.
   - Story 014 §Laatste beheerder: laatste actieve beheerder kan niet verwijderd of
     gedegradeerd — `LaatsteBeheerder`-exception → 409.
+  - Fase 2b.3 §Live-rol-check: `MijnProfiel` bevat `actief` — Auth.js JWT ververst z'n
+    rol/actief-cache periodiek via `GET /v1/auth/me`; 401 op deze route betekent voor de
+    frontend "sessie ongeldig, uitloggen".
 
 Interacties:
   - shared/auth.py: `huidige_gebruiker`, `huidige_beheerder`, `vereist_api_token` bouwen op

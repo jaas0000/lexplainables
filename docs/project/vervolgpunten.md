@@ -4,21 +4,18 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
-## Fase 2 story 5 — 2FA e2e-test tijdelijk geskipped
+## Fase 2 story 5 — 2FA e2e-test ✅ opgelost in fase 2b.2 (PR #48)
 
-- **`frontend/tests/e2e/2fa.spec.ts`** is `test.skip()` — de tweede-scherm-transitie na een
-  totp_required-response faalt zonder een duidelijke JS-console-fout. API-log toont dat
-  `activeer` (204) en `verify` (200) beide werken. Waarschijnlijk zit het probleem in de
-  interactie tussen Auth.js v5's `CredentialsSignin`-subclass-propagation en onze
-  `LoginFormulier`-detectielogica.
-- **Backend is volledig gedekt** door 11 api-unit-tests (`test_2fa.py`) — story-scope is
-  compleet, alleen deze specifieke e2e-flow ontbreekt.
-- **Om te fixen** zijn Playwright HTML-report artifacts of `page.on('pageerror')`-logging
-  nodig om te zien wat de browser krijgt. Screenshot-on-failure is nu niet geactiveerd in
-  `playwright.config.ts`.
-- **Ook: live-rol-check** — Auth.js `authorize` slaat rol vast in JWT bij login; een
-  gedeactiveerde gebruiker kan tot sessieverloop actief blijven (12u). ~5min TTL-check
-  toevoegen zoals wetsanalyse-ai `getAccountStatus` doet. Story 4 (Auth.js) noemde dit al.
+Root cause: `signIn(..., { totp: undefined })` serialiseerde `undefined` naar de string
+`"undefined"`; api zag dat als een ongeldige code i.p.v. ontbrekende. Fix: spread-guard in
+`LoginFormulier.tsx`. Tweede probleem was `TotpRequired`-subclass die niet stabiel
+overrulde onder Turbopack — vervangen door `new CredentialsSignin(); err.code = "TotpRequired"`.
+Playwright artifacts on-failure (screenshot + trace + video) staan sinds PR #47 aan.
+
+## Fase 2 story 4 — Auth.js live-rol-check ✅ opgelost in fase 2b.3
+
+JWT-callback ververst rol/actief-status via `GET /v1/auth/me` elke `SESSION_CHECK_TTL_MS`
+(default 5 min). 401 of `actief=false` maakt de sessie ongeldig.
 
 ---
 

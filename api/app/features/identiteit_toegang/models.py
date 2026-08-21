@@ -114,11 +114,18 @@ class TotpCodeVerzoek(SQLModel):
 
 
 class MijnProfiel(SQLModel):
-    """Eigen accountgegevens — teruggegeven door GET /v1/auth/me."""
+    """Eigen accountgegevens — teruggegeven door GET /v1/auth/me.
+
+    `actief` is er expliciet zodat een consument (bijv. de frontend Auth.js live-rol-check,
+    fase 2b.3) na een periodieke fetch direct kan zien of het account nog geldig is. De
+    endpoint retourneert 401 op een inactieve gebruiker, dus in de praktijk komt hier alleen
+    `actief=true` binnen — het veld is de expliciete tegenpool van die 401.
+    """
 
     naam: str
     gebruikersnaam: str
     rol: str
+    actief: bool
     totp_ingeschakeld: bool
 
 
