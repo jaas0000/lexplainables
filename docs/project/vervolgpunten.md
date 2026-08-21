@@ -4,6 +4,24 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## Fase 2 story 5 — 2FA e2e-test tijdelijk geskipped
+
+- **`frontend/tests/e2e/2fa.spec.ts`** is `test.skip()` — de tweede-scherm-transitie na een
+  totp_required-response faalt zonder een duidelijke JS-console-fout. API-log toont dat
+  `activeer` (204) en `verify` (200) beide werken. Waarschijnlijk zit het probleem in de
+  interactie tussen Auth.js v5's `CredentialsSignin`-subclass-propagation en onze
+  `LoginFormulier`-detectielogica.
+- **Backend is volledig gedekt** door 11 api-unit-tests (`test_2fa.py`) — story-scope is
+  compleet, alleen deze specifieke e2e-flow ontbreekt.
+- **Om te fixen** zijn Playwright HTML-report artifacts of `page.on('pageerror')`-logging
+  nodig om te zien wat de browser krijgt. Screenshot-on-failure is nu niet geactiveerd in
+  `playwright.config.ts`.
+- **Ook: live-rol-check** — Auth.js `authorize` slaat rol vast in JWT bij login; een
+  gedeactiveerde gebruiker kan tot sessieverloop actief blijven (12u). ~5min TTL-check
+  toevoegen zoals wetsanalyse-ai `getAccountStatus` doet. Story 4 (Auth.js) noemde dit al.
+
+---
+
 ## Simplify-sweep story 005 — auth-login
 
 - **Onbenutte BFF-route `app/api/auth/setup-status/route.ts`**: mogelijk dead code — de frontend gebruikt alleen `haalSetupStatus` (server-side). Onderzoeken en verwijderen indien nergens meer bereikt. Gevonden tijdens simplify-sweep (story 005, PR #32); buiten simplify-scope want gedragsverandering.

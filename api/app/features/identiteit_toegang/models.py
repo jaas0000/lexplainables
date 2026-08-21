@@ -31,6 +31,10 @@ class Gebruiker(GebruikerBase, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+    # Story 017 (migratie 0014). Secret staat versleuteld (Fernet, ADR-0003 via
+    # `shared/crypto.encrypt`); ingeschakeld pas True ná een succesvolle activate-check.
+    totp_secret_enc: str | None = Field(default=None)
+    totp_ingeschakeld: bool = Field(default=False)
 
 
 class SetupStatus(SQLModel):
@@ -85,12 +89,28 @@ class TijdelijkWachtwoord(SQLModel):
 class VerifyRequest(SQLModel):
     gebruikersnaam: str
     wachtwoord: str
+    totp: str | None = Field(default=None, max_length=16)
 
 
 class VerifyResult(SQLModel):
     ok: bool
     gebruikersnaam: str = ""
     rol: str = ""
+    # `""` bij ok=True, `"invalid"` bij foute credentials/TOTP, `"totp_required"` als het
+    # wachtwoord klopt maar 2FA aan staat zonder meegestuurde `totp`.
+    code: str = ""
+
+
+class TotpBeginResultaat(SQLModel):
+    """Retour van POST /v1/auth/2fa/begin — de `otpauth://`-URI voor de QR-code."""
+
+    otpauth_uri: str
+
+
+class TotpCodeVerzoek(SQLModel):
+    """Body van POST /v1/auth/2fa/activeer en /uitschakel."""
+
+    totp: str = Field(min_length=6, max_length=16)
 
 
 class MijnProfiel(SQLModel):

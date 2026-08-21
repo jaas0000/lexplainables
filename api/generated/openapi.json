@@ -1895,6 +1895,36 @@
         "title": "TijdelijkWachtwoord",
         "type": "object"
       },
+      "TotpBeginResultaat": {
+        "description": "Retour van POST /v1/auth/2fa/begin \u2014 de `otpauth://`-URI voor de QR-code.",
+        "properties": {
+          "otpauth_uri": {
+            "title": "Otpauth Uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "otpauth_uri"
+        ],
+        "title": "TotpBeginResultaat",
+        "type": "object"
+      },
+      "TotpCodeVerzoek": {
+        "description": "Body van POST /v1/auth/2fa/activeer en /uitschakel.",
+        "properties": {
+          "totp": {
+            "maxLength": 16,
+            "minLength": 6,
+            "title": "Totp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "totp"
+        ],
+        "title": "TotpCodeVerzoek",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -1941,6 +1971,18 @@
             "title": "Gebruikersnaam",
             "type": "string"
           },
+          "totp": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totp"
+          },
           "wachtwoord": {
             "title": "Wachtwoord",
             "type": "string"
@@ -1955,6 +1997,11 @@
       },
       "VerifyResult": {
         "properties": {
+          "code": {
+            "default": "",
+            "title": "Code",
+            "type": "string"
+          },
           "gebruikersnaam": {
             "default": "",
             "title": "Gebruikersnaam",
@@ -4521,6 +4568,210 @@
         "summary": "Registreer Beslissing",
         "tags": [
           "annotatie"
+        ]
+      }
+    },
+    "/v1/auth/2fa/activeer": {
+      "post": {
+        "description": "Bevestig 2FA-koppeling met een geldige code uit de authenticator-app.",
+        "operationId": "activeer_totp_koppeling_v1_auth_2fa_activeer_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpCodeVerzoek"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activeer Totp Koppeling",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/2fa/begin": {
+      "post": {
+        "description": "Start een 2FA-koppeling \u2014 genereert een nieuw secret en geeft de `otpauth://`-URI\nterug (die de frontend als QR-code toont).",
+        "operationId": "start_totp_koppeling_v1_auth_2fa_begin_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpBeginResultaat"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Totp Koppeling",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/2fa/uitschakel": {
+      "post": {
+        "description": "Schakel 2FA uit \u2014 vereist een geldige lopende code zodat een dief met sessie-toegang\n2FA niet stilzwijgend kan opheffen.",
+        "operationId": "uitschakel_totp_koppeling_v1_auth_2fa_uitschakel_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpCodeVerzoek"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Uitschakel Totp Koppeling",
+        "tags": [
+          "auth"
         ]
       }
     },

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import secrets
+from urllib.parse import quote
 
 import bcrypt
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.future import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.shared import crypto
 
 from .models import (
     Gebruiker,
@@ -45,6 +48,10 @@ class GebruikerNietActief(LookupError):
 
 class WachtwoordOnjuist(ValueError):
     """Huidig wachtwoord klopt niet."""
+
+
+class TotpFout(Exception):
+    """TOTP-code ongeldig of TOTP-setup ongeldig (bv. geen pending secret)."""
 
 
 def _naar_read(g: Gebruiker) -> GebruikerRead:
@@ -102,7 +109,7 @@ async def maak_eerste_beheerder(
 
 
 async def verifieer_credentials(
-    engine: AsyncEngine, gebruikersnaam: str, wachtwoord: str
+    engine: AsyncEngine, gebruikersnaam: str, wachtwoord: str, totp: str | None = None
 ) -> VerifyResult:
     async with AsyncSession(engine) as sess:
         result = await sess.execute(
@@ -113,12 +120,110 @@ async def verifieer_credentials(
     if gebruiker is None or not gebruiker.actief:
         # Altijd bcrypt-vergelijking uitvoeren om timing-oracle te voorkomen.
         bcrypt.checkpw(wachtwoord.encode(), _DUMMY_HASH)
-        return VerifyResult(ok=False)
+        return VerifyResult(ok=False, code="invalid")
 
     if not bcrypt.checkpw(wachtwoord.encode(), gebruiker.wachtwoord_hash.encode()):
-        return VerifyResult(ok=False)
+        return VerifyResult(ok=False, code="invalid")
+
+    # Wachtwoord klopt. Als 2FA aan staat moet ook `totp` matchen. Zonder meegestuurde totp
+    # signaleren we `totp_required` zodat de BFF het tweede scherm kan tonen; met verkeerde
+    # totp maskeren we het als `invalid` om de status niet via de foutmelding te lekken.
+    if gebruiker.totp_ingeschakeld:
+        if not totp:
+            return VerifyResult(ok=False, code="totp_required")
+        if not _totp_geldig(gebruiker.totp_secret_enc, totp):
+            return VerifyResult(ok=False, code="invalid")
 
     return VerifyResult(ok=True, gebruikersnaam=gebruiker.gebruikersnaam, rol=gebruiker.rol)
+
+
+# ---- 2FA / TOTP -----------------------------------------------------------
+
+
+_TOTP_ISSUER = "lexplainables"
+
+
+def _totp_geldig(secret_enc: str | None, code: str) -> bool:
+    """Verifieer een TOTP-code tegen een versleuteld secret. `valid_window=1` geeft ±30s
+    tolerantie voor clock-skew tussen server en authenticator-app."""
+    import pyotp
+
+    if not secret_enc:
+        return False
+    try:
+        secret = crypto.decrypt(secret_enc)
+    except crypto.CryptoFout:
+        return False
+    return pyotp.TOTP(secret).verify(code, valid_window=1)
+
+
+async def begin_totp_koppeling(engine: AsyncEngine, gebruikersnaam: str) -> str:
+    """Genereer een nieuw TOTP-secret voor deze gebruiker en retourneer de `otpauth://`-URI.
+
+    Bestaande secret wordt overschreven — als de gebruiker een half-afgemaakte koppeling
+    heeft laten liggen, begint hij met deze aanroep vers. `totp_ingeschakeld` blijft
+    onaangeroerd (die zet pas `activeer` op True), zodat een tweede `begin`-aanroep op een
+    actief-2FA-account de bestaande koppeling niet stilzwijgend vervangt zonder pass-check.
+    """
+    import pyotp
+
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        gebruiker = result.scalar_one_or_none()
+        if gebruiker is None or not gebruiker.actief:
+            raise GebruikerNietActief(gebruikersnaam)
+
+        secret = pyotp.random_base32()
+        # `crypto.encrypt` gooit CryptoFout als FERNET_KEY ontbreekt — de router mapt dat
+        # naar HTTP 400 zoals de story vereist.
+        gebruiker.totp_secret_enc = crypto.encrypt(secret)
+        sess.add(gebruiker)
+        await sess.commit()
+
+    # Bouw de URI conform de otpauth-spec: otpauth://totp/<issuer>:<label>?secret=...&issuer=...
+    label = quote(f"{_TOTP_ISSUER}:{gebruikersnaam}", safe="")
+    return f"otpauth://totp/{label}?secret={secret}&issuer={quote(_TOTP_ISSUER)}"
+
+
+async def activeer_totp(engine: AsyncEngine, gebruikersnaam: str, code: str) -> None:
+    """Bevestig de koppeling: als `code` klopt tegen het pending secret, zet
+    `totp_ingeschakeld=True`."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        gebruiker = result.scalar_one_or_none()
+        if gebruiker is None or not gebruiker.actief:
+            raise GebruikerNietActief(gebruikersnaam)
+        if not gebruiker.totp_secret_enc:
+            raise TotpFout("Geen 2FA-setup in uitvoering.")
+        if not _totp_geldig(gebruiker.totp_secret_enc, code):
+            raise TotpFout("Ongeldige TOTP-code.")
+
+        gebruiker.totp_ingeschakeld = True
+        sess.add(gebruiker)
+        await sess.commit()
+
+
+async def uitschakel_totp(engine: AsyncEngine, gebruikersnaam: str, code: str) -> None:
+    """Schakel 2FA uit — vereist een geldige lopende code (zonder die check zou een dief die
+    net toegang tot de sessie heeft, 2FA kunnen uitzetten en zo de tweede factor slopen)."""
+    async with AsyncSession(engine) as sess:
+        result = await sess.execute(
+            select(Gebruiker).where(Gebruiker.gebruikersnaam == gebruikersnaam)
+        )
+        gebruiker = result.scalar_one_or_none()
+        if gebruiker is None or not gebruiker.actief:
+            raise GebruikerNietActief(gebruikersnaam)
+        if not gebruiker.totp_ingeschakeld or not _totp_geldig(gebruiker.totp_secret_enc, code):
+            raise TotpFout("Ongeldige TOTP-code.")
+
+        gebruiker.totp_secret_enc = None
+        gebruiker.totp_ingeschakeld = False
+        sess.add(gebruiker)
+        await sess.commit()
 
 
 async def maak_gebruiker(
@@ -174,7 +279,7 @@ async def haal_gebruiker(engine: AsyncEngine, gebruikersnaam: str) -> MijnProfie
         naam=gebruiker.gebruikersnaam,
         gebruikersnaam=gebruiker.gebruikersnaam,
         rol=gebruiker.rol,
-        totp_ingeschakeld=False,
+        totp_ingeschakeld=gebruiker.totp_ingeschakeld,
     )
 
 

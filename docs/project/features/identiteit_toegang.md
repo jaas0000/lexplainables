@@ -13,6 +13,9 @@ gebruikersbeheer (aanmaken/bewerken/verwijderen door beheerder), inloggen (verif
 | `GET` | `/auth/setup-status` | — | `SetupStatus` |
 | `POST` | `/auth/setup` | — | `GebruikerInfo` |
 | `POST` | `/auth/verify` | — | `VerifyResult` |
+| `POST` | `/auth/2fa/begin` | beheerder | `TotpBeginResultaat` |
+| `POST` | `/auth/2fa/activeer` | beheerder | — |
+| `POST` | `/auth/2fa/uitschakel` | beheerder | — |
 | `GET` | `/auth/me` | beheerder | `MijnProfiel` |
 | `POST` | `/auth/wijzig-wachtwoord` | beheerder | — |
 | `GET` | `/admin/gebruikers` | beheerder | `list[GebruikerRead]` |
@@ -28,6 +31,18 @@ gebruikersbeheer (aanmaken/bewerken/verwijderen door beheerder), inloggen (verif
 
 ## Getest gedrag
 
+- Begin totp koppeling maakt secret en uri.
+- Begin zonder fernet key gooit cryptofout.
+- Activeer totp met goede code zet vlag.
+- Activeer totp met foute code raist.
+- Activeer zonder pending setup raist.
+- Uitschakel totp wist secret en vlag.
+- Uitschakel totp met foute code raist.
+- Verifieer credentials totp required zonder totp.
+- Verifieer credentials met correcte totp slaagt.
+- Verifieer credentials met verkeerde totp geeft invalid.
+- Begin via http zonder sessie geeft 401.
+- Begin zonder fernet key geeft 400.
 - Admin gebruikers zonder token geeft 401.
 - Admin gebruikers met fout token geeft 401.
 - Admin gebruikers zonder user id geeft 401.

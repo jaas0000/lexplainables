@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { components } from "@/generated/types";
+import { TweeFactorPaneel } from "@/components/auth/TweeFactorPaneel";
 
 type MijnProfiel = components["schemas"]["MijnProfiel"];
 
@@ -290,60 +291,8 @@ export default function AccountPagina() {
         </form>
       </section>
 
-      {/* Sectie 3: Tweestapsverificatie (2FA) — vooruitblik story 017 */}
-      <section
-        className="card"
-        style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "0.5rem",
-          }}
-        >
-          <h2 style={{ fontSize: "1rem", fontWeight: 600 }}>
-            Tweestapsverificatie (2FA)
-          </h2>
-          <span className="badge badge-concept" style={{ fontSize: "0.7rem" }}>
-            Nog niet actief
-          </span>
-        </div>
-        <p style={{ fontSize: "0.875rem", color: "rgb(var(--muted))" }}>
-          Tweestapsverificatie voegt een extra beveiligingslaag toe aan uw
-          account. Na het inloggen vraagt het systeem om een tijdelijke code uit
-          uw authenticator-app.
-        </p>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "1rem",
-            flexWrap: "wrap",
-          }}
-        >
-          <span style={{ fontSize: "0.875rem", color: "rgb(var(--faint))" }}>
-            Status:{" "}
-            <strong style={{ color: "rgb(var(--ink))" }}>
-              Niet ingeschakeld
-            </strong>
-          </span>
-          <button
-            className="btn btn-secondary"
-            disabled
-            title="2FA-activering is beschikbaar in story 017"
-            style={{ opacity: 0.45, cursor: "not-allowed" }}
-          >
-            Activeer 2FA
-          </button>
-        </div>
-        <p style={{ fontSize: "0.75rem", color: "rgb(var(--faint))" }}>
-          Activatie via instellingen — beschikbaar in een volgende versie (story
-          017).
-        </p>
-      </section>
+      {/* Sectie 3: Tweestapsverificatie (2FA) — story 017 */}
+      {profiel && <TweeFactorPaneel ingeschakeld={profiel.totp_ingeschakeld} />}
     </div>
   );
 }
