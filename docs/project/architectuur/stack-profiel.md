@@ -81,11 +81,43 @@ database-setup (huidige `db.py`) — beide bevatten nu domeinkennis (tabellen, r
 naar de feature-mappen hoort te verhuizen. `architectuur-audit` regel 3 bewaakt dat ze dun
 blijven na de herindeling.
 
+## Database
+
+**PostgreSQL in productie én CI, SQLite blijft voor lokale tests** — zie
+[ADR-0003](adr/0003-postgresql-productie-sqlite-tests.md). Driver: `asyncpg` voor Postgres,
+`aiosqlite` voor SQLite. Dialect-specifieke SQL vermijden; waar nodig een update-dan-insert
+patroon dat op beide werkt.
+
 ## Migraties
 
 Alembic, zoals werkwijze-ADR-0005 — één migratiehistorie per service met een eigen database
-(`api`, en `wettenbank-mcp` indien die een eigen database krijgt). Vervangt de huidige
+(`api`, en `wettenbank-mcp` indien die een eigen database krijgt). CI (`check-migraties`)
+draait upgrade+downgrade op beide dialecten. Vervangt de huidige
 `reconcile_schema()`-functie in `api`.
+
+## Auth
+
+**Auth.js in de frontend** voor sessies + CSRF + guards, api blijft identiteitsbron — zie
+[ADR-0004](adr/0004-authjs-frontend-sessies.md). Vervangt ADR-0002 (Keycloak). Gebruikersbeheer
+en rol-check in `api/app/features/identiteit_toegang/` + `shared/auth.py`.
+
+## LLM-toegangslaag
+
+**Litellm via een dunne shim onder `api/app/shared/llm/`** met vier verantwoordelijkheden:
+LLMPort (abstractie), throttle (semafoor), retry (transient errors), capture (naar
+`llm_calls`-tabel op runtime-toggle) — zie
+[ADR-0005](adr/0005-litellm-adapter-capture-throttle-retry.md).
+
+## Observability
+
+**OpenTelemetry per service** — traces, metrics, logs via OTLP. Endpoint via env-variabelen;
+geen endpoint = no-op. Observability-stack (Grafana + Prometheus + Loki + Tempo) is aparte
+deploy — zie [ADR-0006](adr/0006-opentelemetry-baseline.md).
+
+## Rate limiting
+
+**Als `shared/`-module** binnen `api` (per client-ID + endpoint-klasse). Wordt in fase 2 van de
+migratie ingericht op basis van wetsanalyse-ai's `ratelimit.py`.
 
 ## Frontend(s)
 
@@ -98,3 +130,10 @@ Twee, zoals vastgelegd in de Topologie hierboven: `frontend/` (hoofdwebapp) en `
 Zoals werkwijze-ADR-0003: `ruff` voor Python-services (`api`, `graph-qa`), `eslint` + `prettier`
 voor TypeScript-services (`frontend`, `frontend-chat`, `wettenbank-mcp`). CI-checknamen volgen
 het sjabloon uit werkwijze-ADR-0016 zodra de daadwerkelijke workflows per service bestaan.
+
+## Deploy
+
+**Twee targets uit dezelfde images**: Azure Container Apps (cloud, primair) en Portainer
+(on-premise, secundair) — zie [ADR-0007](adr/0007-deploy-azure-container-apps-portainer.md).
+Bicep voor Azure (`main.bicep` in de repo-root), `deploy/compose/` voor Portainer-stacks. CI
+pusht images naar GHCR; beide targets pullen daaruit.

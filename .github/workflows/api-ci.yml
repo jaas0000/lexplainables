@@ -42,16 +42,41 @@ jobs:
 
   check-migraties:
     # Alembic is verplicht zodra een service een productiedatabase heeft (werkwijze-ADR-0005).
-    # Draai de volledige historie heen én terug tegen een schone SQLite-db, zodat een migratie
-    # die niet cleanroom toepasbaar is hier faalt, niet pas bij een echte deploy.
+    # Draai de volledige historie heen én terug tegen beide dialecten (project-ADR-0003:
+    # Postgres in productie, SQLite in tests). Elke migratie moet cleanroom toepasbaar zijn op
+    # allebei — anders faalt hier, niet pas bij een echte deploy.
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dialect: sqlite
+            url_sync: "sqlite:///./ci-migratie-check.db"
+          - dialect: postgres
+            url_sync: "postgresql://lex:lex@localhost:5432/lex"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lex
+          POSTGRES_PASSWORD: lex
+          POSTGRES_DB: lex
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U lex -d lex"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
-      - name: alembic upgrade + downgrade
+      - name: alembic upgrade + downgrade (${{ matrix.dialect }})
         working-directory: api
         env:
-          DATABASE_URL: "sqlite+aiosqlite:///./ci-migratie-check.db"
+          # env.py leest DATABASE_URL_SYNC (sync driver — psycopg2 voor Postgres, plain sqlite
+          # voor SQLite) — zie api/alembic/env.py.
+          DATABASE_URL_SYNC: ${{ matrix.url_sync }}
         run: |
           uv sync
           uv run alembic upgrade head
