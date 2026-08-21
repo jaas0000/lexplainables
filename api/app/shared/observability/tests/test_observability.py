@@ -58,10 +58,12 @@ def test_setup_met_endpoint_zonder_extra_logt_warning_en_gaat_door(monkeypatch, 
     """Endpoint gezet maar OTel-extra ontbreekt → warning, geen crash. Op de test-runner
     zal `_OTEL_API` doorgaans False zijn (geen otel-dep), dus dit pad wordt echt getest."""
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
-    # De `setup` uit `__init__.py` is de FUNCTIE — voor `_OTEL_API` moeten we het echte
-    # module-object hebben. `from ... import ... as` op een submodule met een naam-conflict
-    # met de gere-exporteerde functie werkt niet; expliciete `import ... as` wél.
-    import app.shared.observability.setup as setup_module
+    # `__init__.py` re-exporteert een functie `setup` met dezelfde naam als de submodule —
+    # daardoor is `app.shared.observability.setup` de functie, niet de module. `importlib`
+    # levert de submodule ondubbelzinnig.
+    import importlib
+
+    setup_module = importlib.import_module("app.shared.observability.setup")
 
     if setup_module._OTEL_API:
         pytest.skip(
