@@ -1,0 +1,31 @@
+name: feature-docs-ci
+
+# Project-brede check, geen service-CI (werkwijze feature-docs skill regel 4):
+# `docs/project/features/` is een repo-artefact op basis van elke Python-service met
+# `features/`-mappen. Deze workflow faalt op een feature zonder module-docstring én op drift
+# tussen code en gegenereerde doc.
+on:
+  pull_request:
+    paths:
+      - "api/app/features/**"
+      - "docs/project/features/**"
+      - "scripts/docs/genereer-feature-docs.py"
+      - ".github/workflows/feature-docs-ci.yml"
+  push:
+    branches: [master, main]
+    paths:
+      - "api/app/features/**"
+      - "docs/project/features/**"
+      - "scripts/docs/genereer-feature-docs.py"
+      - ".github/workflows/feature-docs-ci.yml"
+
+jobs:
+  check-feature-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: genereer-feature-docs check
+        run: python scripts/docs/genereer-feature-docs.py check
