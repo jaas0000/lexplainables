@@ -84,8 +84,14 @@ regel 3 leest daaruit.
   mechanische dependency-bump met CI groen). Zie `pr-triage` regel 2a/4/5 voor de exacte
   stappen bij het mergen.
 
-- **Simplify bij feature-bouwen:** ja <!-- ja | nee -->
-  `ja` — `feature-bouwen` regel 9 draait `/simplify` vóór elke aflevering.
+- **Simplify bij feature-bouwen:** nee <!-- ja | nee -->
+  `nee` — tijdens de wetsanalyse-migratie (zie `docs/project/migratie-wetsanalyse.md`)
+  slaan we simplify standaard over. Reden: retrocatief simplify op fase 0-2 (PR #45) leverde
+  in verhouding weinig substantie op (~2.5M tokens voor −13 lines, 1 echte dedup). De
+  werkwijze aanvaardt dit expliciet — `feature-bouwen` regel 9 zet dan zelf
+  `Simplify: overgeslagen (instelling staat op nee)` in het commit-/PR-bericht, zodat de
+  keuze zichtbaar blijft en niet stilzwijgend wordt genegeerd. Zet weer op `ja` als de
+  refactor voorbij is en er stabielere feature-ontwikkeling start.
 
 ## Docs-structuur
 
