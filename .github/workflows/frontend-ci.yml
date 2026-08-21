@@ -110,6 +110,9 @@ jobs:
       # als seed-beheerder — met de default (10/60s) raakt dat het plafond binnen de eerste
       # workers. In productie blijft de rem aan (default in de code).
       LOGIN_RATE_LIMIT_MAX: "0"
+      # Fernet-key voor test-versleuteling (LLM-profielen, TOTP-secrets). Willekeurige
+      # base64-32-byte-key — geldig maar niet bruikbaar buiten deze CI-run.
+      FERNET_KEY: "sPQtLXlYFB2Zn9lVJv1wTIY_MYh_gBpvMh_p7hUpiL8="
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
