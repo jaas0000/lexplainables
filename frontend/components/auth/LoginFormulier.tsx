@@ -20,7 +20,14 @@ export function LoginFormulier() {
       wachtwoord,
       totp: totpCode,
     });
-    if (res?.error === "TotpRequired") {
+    // Auth.js v5 zet zowel `error` (klasse-naam) als `code` (attribute); afhankelijk van
+    // de versie kan onze `code = "TotpRequired"` in het ene of het andere veld zitten.
+    // Beide controleren maakt de detectie robuust.
+    const errorAny = res as { error?: string; code?: string } | undefined;
+    if (
+      errorAny?.error === "TotpRequired" ||
+      errorAny?.code === "TotpRequired"
+    ) {
       // Wachtwoord klopt maar 2FA aan → toon tweede scherm.
       setTotpVereist(true);
       setFout(null);
