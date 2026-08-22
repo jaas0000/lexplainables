@@ -2,10 +2,11 @@
 
 `build_ontology` levert de schema-graaf die naast de instance-data wordt geladen (eigen named
 graph). Scoped tot de entiteiten die dit project parset (Regeling, Structuurdeel, Artikel, Lid,
-Onderdeel, Illustratie, Verwijzing) plus de WTI-verrijking (Organisatie, grondslag-/
-wetsfamilie-relaties, story 030) en artikel/lid/onderdeel-verrijking (provenance, voetnoten,
-definities, illustraties, story 031) — divisies, bijlagen en ondertekenaars volgen zodra hun
-parser-onderdeel bestaat (zie docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope).
+Onderdeel, Illustratie, Ondertekenaar, Verwijzing) plus de WTI-verrijking (Organisatie,
+grondslag-/wetsfamilie-relaties, story 030), artikel/lid/onderdeel-verrijking (provenance,
+voetnoten, definities, illustraties, story 031) en wet-brondata/aanhef/considerans/
+ondertekenaars (story 032) — divisies en bijlagen volgen zodra hun parser-onderdeel bestaat (zie
+docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope).
 """
 
 from __future__ import annotations
@@ -70,6 +71,11 @@ _KLASSEN: dict[str, tuple[str, str, tuple[str | URIRef, ...]]] = {
         "Afbeelding (uit <plaatje>/<illustratie>) binnen een tekstdrager.",
         (),
     ),
+    "Ondertekenaar": (
+        "Ondertekenaar",
+        "Persoon die de regeling heeft ondertekend (functie + naam).",
+        (FOAF.Agent,),
+    ),
 }
 
 # Objectproperty -> (label, toelichting, superproperties, rdfs:range of None).
@@ -86,6 +92,12 @@ _OBJECT_PROPS: dict[str, tuple[str, str, tuple[URIRef, ...], str | None]] = {
         "Tekstdrager bevat een afbeelding.",
         (),
         "Illustratie",
+    ),
+    "ondertekendDoor": (
+        "ondertekend door",
+        "Regeling is ondertekend door deze persoon.",
+        (ELI.passed_by,),
+        "Ondertekenaar",
     ),
     "verwijstNaar": (
         "verwijst naar",
@@ -206,6 +218,28 @@ _DATA_PROPS: dict[str, tuple[str, str, tuple[URIRef, ...], URIRef | None]] = {
     "breedte": ("breedte", "Breedte van een illustratie (bv. 1417px).", (), None),
     "hoogte": ("hoogte", "Hoogte van een illustratie (bv. 364px).", (), None),
     "alt": ("alt-tekst", "Alternatieve tekst/bijschrift van een illustratie.", (), None),
+    "toestandUrl": (
+        "toestand-URL",
+        "Identiteit van de geïmporteerde toestand (versie) op wetten.overheid.nl.",
+        (),
+        None,
+    ),
+    "publicatiejaar": ("publicatiejaar", "Jaar van de oorspronkelijke publicatie.", (), XSD.gYear),
+    "publicatienr": ("publicatienummer", "Nummer van de oorspronkelijke publicatie.", (), None),
+    "ondertekeningsdatum": (
+        "ondertekeningsdatum",
+        "Datum van ondertekening.",
+        (ELI.date_document,),
+        XSD.date,
+    ),
+    "uitgiftedatum": ("uitgiftedatum", "Datum van uitgifte.", (ELI.date_publication,), XSD.date),
+    "dossier": ("dossier", "Kamerdossiernummer.", (), None),
+    "aanhef": ("aanhef", "Aanhef van de regeling.", (), None),
+    "considerans": ("considerans", "Considerans (overwegingen) van de regeling.", (), None),
+    "functie": ("functie", "Functie/hoedanigheid van de ondertekenaar.", (), None),
+    "voornaam": ("voornaam", "Voornaam van de ondertekenaar.", (), None),
+    "achternaam": ("achternaam", "Achternaam van de ondertekenaar.", (), None),
+    "plaats": ("plaats", "Plaats van ondertekening.", (), None),
 }
 
 
