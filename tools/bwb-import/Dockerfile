@@ -21,6 +21,13 @@ RUN uv sync --frozen --no-dev
 # ── Runtime ──────────────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
 
+# OS-pakketten patchen: de base-image loopt vaak achter op Debian-security-updates
+# (util-linux/libblkid-CVE's o.a.) — spiegelt de aanpak in wetsanalyse-ai's api/Dockerfile.
+# Zonder dit blokkeert de Trivy-gate in bwb-import-docker-publish.yml elke publish.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
