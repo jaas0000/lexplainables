@@ -97,8 +97,13 @@ class AnnotatieStore(Protocol):
 - Wetsartikel niet in graaf geeft 404.
 - Wetsartikel graphdb onbereikbaar geeft 502.
 - Artikel iri percent encodeert segmenten.
+- Sorteersleutel numeriek niet lexicaal.
 - Haal wetsartikel op met opschrift en leden.
-- Haal wetsartikel op zonder leden.
+- Haal wetsartikel op leden numeriek gesorteerd.
+- Haal wetsartikel op onderdelen onder lid.
+- Haal wetsartikel op onderdelen direct onder artikel zonder leden.
+- Haal wetsartikel op zonder leden en zonder onderdelen.
+- Haal wetsartikel op valt terug op bepaling bij decimaal nummer.
 - Haal wetsartikel op lege bindings geeft niet gevonden.
 - Haal wetsartikel op netwerkfout geeft niet bereikbaar.
 - Haal wetsartikel op http fout geeft niet bereikbaar.

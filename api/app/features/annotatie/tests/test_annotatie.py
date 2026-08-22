@@ -357,7 +357,7 @@ def test_wetsartikel_geeft_tekst_en_leden(client, monkeypatch):
     assert resp.status_code == 200
     body = resp.json()
     assert body["opschrift"] == "Belastingplicht"
-    assert body["leden"] == [{"nummer": "1", "tekst": "Eerste lid."}]
+    assert body["leden"] == [{"nummer": "1", "tekst": "Eerste lid.", "onderdelen": []}]
 
 
 def test_wetsartikel_andermans_document_geeft_404(client):

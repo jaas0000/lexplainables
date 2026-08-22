@@ -2159,6 +2159,13 @@
             "title": "Leden",
             "type": "array"
           },
+          "onderdelen": {
+            "items": {
+              "$ref": "#/components/schemas/WetsartikelOnderdeel"
+            },
+            "title": "Onderdelen",
+            "type": "array"
+          },
           "opschrift": {
             "anyOf": [
               {
@@ -2197,6 +2204,13 @@
             ],
             "title": "Nummer"
           },
+          "onderdelen": {
+            "items": {
+              "$ref": "#/components/schemas/WetsartikelOnderdeel"
+            },
+            "title": "Onderdelen",
+            "type": "array"
+          },
           "tekst": {
             "title": "Tekst",
             "type": "string"
@@ -2207,6 +2221,31 @@
           "tekst"
         ],
         "title": "WetsartikelLid",
+        "type": "object"
+      },
+      "WetsartikelOnderdeel": {
+        "properties": {
+          "nummer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nummer"
+          },
+          "tekst": {
+            "title": "Tekst",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nummer",
+          "tekst"
+        ],
+        "title": "WetsartikelOnderdeel",
         "type": "object"
       },
       "WijzigingInvoer": {

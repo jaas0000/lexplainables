@@ -175,9 +175,15 @@ class BeslissingInvoer(BaseModel):
         return self
 
 
+class WetsartikelOnderdeel(BaseModel):
+    nummer: str | None
+    tekst: str
+
+
 class WetsartikelLid(BaseModel):
     nummer: str | None
     tekst: str
+    onderdelen: list[WetsartikelOnderdeel] = Field(default_factory=list)
 
 
 class Wetsartikel(BaseModel):
@@ -185,6 +191,7 @@ class Wetsartikel(BaseModel):
     artikel: str
     opschrift: str | None
     tekst: str
+    onderdelen: list[WetsartikelOnderdeel] = Field(default_factory=list)
     leden: list[WetsartikelLid] = Field(default_factory=list)
 
 
