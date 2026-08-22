@@ -2,6 +2,7 @@
 
 ## Niet uitgebracht
 
+- De werkplek toont nu ook de a/b/c-onderdelen van een wetsartikel (bv. de losse definities in een definitieartikel), niet alleen de inleidende zin. (PR #70)
 - De werkplek toont nu de echte wetsartikeltekst bij een annotatie-document, in plaats van een tijdelijke plaatshoudertekst. (PR #68)
 - Analisten kunnen annotatie-documenten aanmaken, de door de agent voorgestelde JAS-elementen bekijken en per element een beslissing nemen (goedkeuren, bewerken of afwijzen met verplichte reden). De werkplek is bereikbaar via de navigatiebalk. (PR #22)
 - Analisten kunnen wetsartikelen als annotatie-documenten aanmaken, door de agent voorgestelde JAS-elementen beoordelen (goedkeuren, bewerken of afwijzen) en een volledig auditlog raadplegen. (PR #21)
