@@ -44,7 +44,7 @@ Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in
 
 **Alembic-migraties:** 0001–0011 draaien clean op SQLite.
 
-**Nog te bouwen:** 2FA/TOTP (story 017, laag). Services: `frontend-chat`, `tools/wettenbank-mcp`, `tools/graph-qa`.
+**Nog te bouwen:** 2FA/TOTP (story 017, laag). Services: `frontend-chat`, `tools/bwb-import`, `tools/graph-qa`.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -68,7 +68,7 @@ voor de volledige afweging:
 | `api/` | Kernbackend: analyse/jobs, LLM-configuratie, auth, wetcatalogus, runtime-config, annotatie, berichten, feedback, admin, orkestratie (module) |
 | `frontend/` | Hoofdwebapp (BFF) |
 | `frontend-chat/` | Losse chatapp |
-| `tools/wettenbank-mcp/` | MCP-server, wetcatalogus-lookups |
+| `tools/bwb-import/` | ETL-pipeline: BWB → GraphDB-kennisgraaf |
 | `tools/graph-qa/` | QA-/annotatie-agent |
 | `tools/wetsanalyse-admin-mcp/` | Admin-MCP |
 
@@ -105,5 +105,5 @@ naar een aparte werkwijze-repo triviaal (`.claude/skills/` + `docs/project/werkw
 ## Volgende stap
 
 Story 017 (2FA/TOTP, laag) is de enige resterende API/frontend-story. Daarna de vier nog te
-bouwen services: `frontend-chat`, `tools/wettenbank-mcp`, `tools/graph-qa`
+bouwen services: `frontend-chat`, `tools/bwb-import`, `tools/graph-qa`
 (`tools/wetsanalyse-admin-mcp/` is klaar).

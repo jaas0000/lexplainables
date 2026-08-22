@@ -11,11 +11,11 @@ Zes services, vastgelegd in [`docs/architectuur/adr/0001-multi-service-topologie
 
 | Service | Map | Verantwoordelijk voor | Praat met |
 |---|---|---|---|
-| `api` | `api/` | Analyse/jobs, LLM-configuratie, auth, wetcatalogus, runtime-config, annotatie, berichten, feedback, admin-oppervlak, orkestratie (module, geen eigen service) | database (eigen), `wettenbank-mcp`, `graph-qa` |
+| `api` | `api/` | Analyse/jobs, LLM-configuratie, auth, wetcatalogus, runtime-config, annotatie, berichten, feedback, admin-oppervlak, orkestratie (module, geen eigen service) | database (eigen), GraphDB (direct, read-only SPARQL — zie ADR-0001 §Consequenties), `graph-qa` |
 | `frontend` | `frontend/` | Hoofdwebapp (BFF) | `api` |
 | `frontend-chat` | `frontend-chat/` | Losse chatapp | `api` |
-| `wettenbank-mcp` | `tools/wettenbank-mcp/` | MCP-server, wetcatalogus-lookups | database (eigen, indien nodig) |
-| `graph-qa` | `tools/graph-qa/` | QA-/annotatie-agent | `api` |
+| `tools/bwb-import` | `tools/bwb-import/` | ETL-pipeline: BWB → GraphDB-kennisgraaf | GraphDB (`deploy/graphdb/`, infra — geen door ons gebouwde service) |
+| `graph-qa` | `tools/graph-qa/` | QA-/annotatie-agent | `api`, GraphDB (direct, SPARQL/similarity-search via GraphDB's ingebouwde MCP) |
 | `wetsanalyse-admin-mcp` | `tools/wetsanalyse-admin-mcp/` | Admin-MCP, los van `api`'s eigen admin-oppervlak | `api` |
 
 Communicatie: synchroon HTTP tussen alle services. Geen events — lang-lopend werk loopt via
@@ -91,9 +91,12 @@ via `docker compose up -d postgres`.
 ## Migraties
 
 Alembic, zoals werkwijze-ADR-0005 — één migratiehistorie per service met een eigen database
-(`api`, en `wettenbank-mcp` indien die een eigen database krijgt). CI (`check-migraties`)
-draait upgrade+downgrade tegen Postgres. Vervangt de huidige
+(`api`). CI (`check-migraties`) draait upgrade+downgrade tegen Postgres. Vervangt de huidige
 `reconcile_schema()`-functie in `api`.
+
+`tools/bwb-import` heeft geen Alembic-migratiehistorie — het schrijft RDF naar GraphDB, geen
+SQL-schema; de "schemabeslissing" daar is de RDF-ontologie in code (`app/rdf_vocab.py` +
+`app/ontology.py` in de referentie), niet een migratiereeks.
 
 ## Auth
 
@@ -127,8 +130,8 @@ Twee, zoals vastgelegd in de Topologie hierboven: `frontend/` (hoofdwebapp) en `
 
 ## Codestandaard
 
-Zoals werkwijze-ADR-0003: `ruff` voor Python-services (`api`, `graph-qa`), `eslint` + `prettier`
-voor TypeScript-services (`frontend`, `frontend-chat`, `wettenbank-mcp`). CI-checknamen volgen
+Zoals werkwijze-ADR-0003: `ruff` voor Python-services (`api`, `graph-qa`, `tools/bwb-import`),
+`eslint` + `prettier` voor TypeScript-services (`frontend`, `frontend-chat`). CI-checknamen volgen
 het sjabloon uit werkwijze-ADR-0016 zodra de daadwerkelijke workflows per service bestaan.
 
 ## Deploy

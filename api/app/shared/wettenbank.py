@@ -1,21 +1,30 @@
-"""Wettenbank-MCP client — deterministisch ophalen via HTTP JSON-RPC.
+"""Wettenbank-lookup client — deterministisch ophalen via HTTP JSON-RPC.
 
-Gedeelde JSON-RPC-boilerplate (`_jsonrpc_call`) + publieke ophaal-functies:
+**Architectuur-correctie (2026-08-22, zie ADR-0001 §Consequenties):** deze module praat nu met
+een JSON-RPC-service (`WETTENBANK_MCP_URL`) die nooit gebouwd gaat worden — `tools/wettenbank-mcp`
+is geschrapt vóórdat dit project ermee begon (zie het fase-4-plan). De referentie-app
+(wetsanalyse-ai) heeft de vergelijkbare functionaliteit inmiddels zelfs uit de API-laag
+verwijderd; wettekst komt daar rechtstreeks uit een GraphDB-kennisgraaf. Voor lexplainables is de
+vastgelegde vervolgrichting: zodra `deploy/graphdb` + `tools/bwb-import` bestaan en gevuld zijn,
+wordt `haal_citeertitel_op` een directe (read-only) SPARQL-query tegen de graaf i.p.v. dit
+JSON-RPC-protocol. Nog niet omgebouwd — dat is een aparte story zodra er een graaf is om tegen te
+bevragen; tot die tijd faalt deze functie in de praktijk altijd (`WettenbankNietBereikbaar`, geen
+service luistert op `WETTENBANK_MCP_URL`).
 
-- `haal_artikel_op` (story 024) — tool `wettenbank_artikel`, gebruikt door de analyse-engine.
-- `haal_citeertitel_op` (story 020) — tool `wettenbank_structuur`, gebruikt door de
-  wetcatalogus-router om de officiële naam van een wet op te halen.
+Publieke functie:
+
+- `haal_citeertitel_op` (story 020) — gebruikt door de wetcatalogus-router om de officiële naam
+  van een wet op te halen.
 
 Lege of fout-respons → `WettenbankFout` (of een subklasse): doorgaan met lege context is
 verboden (brongetrouwheidseis). Twee subklassen zodat callers netwerk/HTTP-fouten van
 niet-gevonden kunnen onderscheiden (router → 502 vs. 404):
 
-- `WettenbankNietBereikbaar` — netwerk-/HTTP-probleem, de MCP zelf antwoordt niet.
-- `WettenbankNietGevonden` — MCP antwoordt, maar de gevraagde entiteit is er niet
+- `WettenbankNietBereikbaar` — netwerk-/HTTP-probleem, de bron zelf antwoordt niet.
+- `WettenbankNietGevonden` — de bron antwoordt, maar de gevraagde entiteit is er niet
   (JSON-RPC `error`-veld, `is_error`-blok, of geen bruikbare content).
 
-Gedeelde module (feature-bouwen regel 8): geen eigenaar-feature — meerdere features hebben
-wettenbank-ophalingen nodig.
+Gedeelde module (feature-bouwen regel 8): geen eigenaar-feature.
 """
 
 from __future__ import annotations
@@ -89,34 +98,6 @@ def _tekstblokken(content: list[dict]):
             continue
         if isinstance(data, dict):
             yield data
-
-
-async def haal_artikel_op(bwb_id: str, artikel: str, lid: str | None) -> dict:
-    """Haal de tekst van één artikel op via de Wettenbank-MCP.
-
-    Geeft een dict terug met (minimaal):
-      bwbId, artikel, lid, wet, versiedatum, bronreferentie, leden: [{lid, tekst}]
-
-    Werpt `WettenbankFout` (of subklasse) bij netwerk-/MCP-/parseerfout of lege leden-lijst.
-    """
-    args: dict = {"bwbId": bwb_id, "artikel": artikel}
-    if lid:
-        args["lid"] = lid
-
-    foutcontext = f"{bwb_id} art. {artikel}"
-    content = await _jsonrpc_call("wettenbank_artikel", args, foutcontext=foutcontext)
-
-    for artikel_data in _tekstblokken(content):
-        if artikel_data.get("is_error"):
-            raise WettenbankNietGevonden(f"Artikel {foutcontext} niet gevonden in de Wettenbank.")
-        leden = artikel_data.get("leden", [])
-        if not leden:
-            raise WettenbankFout(f"Artikel {foutcontext}: geen leden in de Wettenbank-respons.")
-        return artikel_data
-
-    raise WettenbankFout(
-        f"Kan geen bruikbare data parsen uit de Wettenbank-respons voor {foutcontext}."
-    )
 
 
 async def haal_citeertitel_op(bwb_id: str) -> str:

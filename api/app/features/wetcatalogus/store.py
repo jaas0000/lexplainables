@@ -2,8 +2,10 @@
 
 Story 020: `HardgecodeerdeWetcatalogusStore` is vervangen door `DatabaseWetcatalogusStore`.
 `WetcatalogusStore` (Protocol) is uitgebreid met de nieuwe beheeroperaties.
-De hardgecodeerde structuurdata (`_STRUCTUUR`) blijft als fallback totdat
-tools/wettenbank-mcp gebouwd is en de structuurdata via de MCP kan worden opgehaald.
+De hardgecodeerde structuurdata (`_STRUCTUUR`) blijft als fallback totdat `deploy/graphdb` +
+`tools/bwb-import` bestaan en de structuurdata via een directe SPARQL-query op de
+GraphDB-kennisgraaf kan worden opgehaald (niet via een MCP-tussenlaag — zie ADR-0001
+§Consequenties, 2026-08-22-correctie).
 
 Businessregel: `verwijder` gooit `WetNietGevonden` als het bwb_id onbekend is.
 """
@@ -19,7 +21,7 @@ from ...shared.db import upsert
 from ...shared.tijd import nu
 from .models import ArtikelKeuze, WetKeuze, WetRead, WetStructuur, wet_catalogus, wet_uit_rij
 
-# Hardgecodeerde structuurdata (fallback; wordt vervangen zodra tools/wettenbank-mcp klaar is).
+# Hardgecodeerde structuurdata (fallback; wordt vervangen zodra GraphDB/bwb-import klaar zijn).
 _STRUCTUUR: dict[str, list[ArtikelKeuze]] = {
     "BWBR0011823": [
         ArtikelKeuze(artikel="1", pad="Hoofdstuk 1 / Artikel 1"),
@@ -109,8 +111,8 @@ class DatabaseWetcatalogusStore:
     async def structuur(self, bwb_id: str) -> WetStructuur:
         """Geeft de artikel-structuur van een wet.
 
-        Huidige implementatie: hardgecodeerde fallback. Wordt vervangen door een
-        MCP-aanroep zodra tools/wettenbank-mcp beschikbaar is.
+        Huidige implementatie: hardgecodeerde fallback. Wordt vervangen door een directe
+        SPARQL-query op GraphDB zodra `deploy/graphdb` + `tools/bwb-import` beschikbaar zijn.
         Controleert eerst of het bwb_id in de database bestaat.
         """
         wet_bestaat = await self._wet_bestaat(bwb_id)

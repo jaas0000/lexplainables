@@ -84,7 +84,13 @@ Als beheerder wil ik wetten aan de catalogus kunnen toevoegen, verwijderen, en d
 
 ## Implementatienoot
 
-Routerlogica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/routers/admin.py` (§wet-catalogus: `lijst_wetten`, `upsert_wet`, `verwijder_wet`, `resolve_wet_naam`) en `wetsanalyse-ai/api/app/wetten.py`. De Wettenbank-MCP-client is al aanwezig in `tools/wettenbank-mcp/`; de API-laag spreekt hem aan via HTTP (zie het topologie-ADR). Vervang de `HardgecodeerdeWetcatalogusStore` door een `DatabaseWetcatalogusStore` en registreer de nieuwe implementatie als de default dependency.
+Routerlogica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/routers/admin.py` (§wet-catalogus: `lijst_wetten`, `upsert_wet`, `verwijder_wet`, `resolve_wet_naam`) en `wetsanalyse-ai/api/app/wetten.py`. Vervang de `HardgecodeerdeWetcatalogusStore` door een `DatabaseWetcatalogusStore` en registreer de nieuwe implementatie als de default dependency.
+
+> **Correctie 2026-08-22:** deze noot ging ervan uit dat er al een Wettenbank-MCP-client in
+> `tools/wettenbank-mcp/` zou bestaan. Dat klopte niet — die service is nooit gebouwd en komt er
+> niet (zie ADR-0001 §Consequenties). `shared/wettenbank.haal_citeertitel_op` bestaat wel, maar
+> praat met een JSON-RPC-endpoint dat niet draait; de vastgelegde vervolgrichting is directe
+> SPARQL tegen GraphDB zodra `deploy/graphdb` + `tools/bwb-import` bestaan.
 
 ## UI
 

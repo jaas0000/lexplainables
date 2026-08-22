@@ -7,7 +7,7 @@
 
 Lexplainables heeft nu geen observability — geen tracing, geen metrics-export, alleen
 stdout-logs. Voor een enterprise-target is dat onvoldoende: incidenten in productie zijn niet
-te reconstrueren zonder gedistribueerde traces over api/frontend/graph-qa/wettenbank-mcp.
+te reconstrueren zonder gedistribueerde traces over api/frontend/graph-qa/bwb-import.
 
 Wetsanalyse-ai heeft **OpenTelemetry** als backbone: `observability.py` (~359r in `api/app/`,
 + vergelijkbaar in `graph-qa/agent/`). Traces naar Tempo, metrics naar Prometheus, logs naar
@@ -41,7 +41,8 @@ Minimum per service:
   BFF-proxy; trace-context propageert naar api via `traceparent`-header.
 - **`graph-qa`** — eigen instrumentation (LangGraph-nodes) + FastAPI-instrumentation. Span per
   worker/supervisor-node.
-- **`wettenbank-mcp`** — `@opentelemetry/instrumentation-http` + custom spans per tool-call.
+- **`bwb-import`** (Python) — span per document-import (download → parse → GraphDB-write),
+  custom metrics: `bwb_import_documenten_totaal`, `bwb_import_duur_ms`.
 
 Deploy: aparte observability-stack (Grafana + Prometheus + Loki + Tempo) — één per omgeving,
 gedeeld door alle services. Draait via docker-compose voor lokaal en Bicep voor Azure.
