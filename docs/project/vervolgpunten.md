@@ -192,7 +192,9 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 - **MEDIUM** — Crash in BewerkenFormulier na verwijder-terwijl-bewerkt: `wetten.find(...)!` geeft `undefined` als een rij verwijderd wordt terwijl het bewerkformulier al open staat. `setBewerkt(null)` toevoegen in de `verwijder`-functie (`frontend/app/beheer/wetten/page.tsx:279`).
 - **MEDIUM** — Geen index op `naam`-kolom: alle lijstqueries sorteren op naam, maar de migratie maakt geen index aan. Voeg `ix_wet_catalogus_naam` toe in een volgende migratie (`api/alembic/versions/0007_wet_catalogus_tabel.py`).
-- **MEDIUM** — Nieuwe `httpx.AsyncClient` per resolve-aanroep: maakt elke keer een nieuwe TCP-verbinding. Maak één lifespan-scoped client aan via FastAPI `lifespan` (`api/app/features/wetcatalogus/router.py:126`).
+- **MEDIUM** — ✅ opgelost: het bestand op deze regel bestond niet meer (de resolve-aanroep zit
+  sinds een latere refactor in `shared/wettenbank.py::_jsonrpc_call`, niet meer rechtstreeks in
+  de router) — daar alsnog gefixt (zie het vervolgpunt bij PR #17 hieronder en PR #71).
 - **MEDIUM** — `structuur()` geeft lege artikelenlijst zonder fout als `bwb_id` wel in de DB staat maar niet in `_STRUCTUUR`. Expliciete `WetNietGevonden` gooien of het gedrag documenteren (`api/app/features/wetcatalogus/store.py:117-128`).
 - **LAAG** — `WetCreate.bwb_id` stilzwijgend genegeerd bij mismatch met URL-pad: verwijder het veld uit `WetCreate` of voeg een 422-validatie toe (`api/app/features/wetcatalogus/router.py:80`).
 - **LAAG** — `httpx.ProtocolError` niet afgevangen: bij misvormde MCP-respons propageert als 500 in plaats van 502. Toevoegen aan de except-tuple (`api/app/features/wetcatalogus/router.py:132`).
@@ -240,7 +242,10 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 ## PR #17 — analyse-engine (story 024)
 
 - **Act3b schema-validatie is een no-op**: `schema_check_act3b` in `api/app/engine/steps.py` retourneert altijd een lege lijst (`lambda d: []`). Invullen zodra een formeel JAS-schema voor afleidingsregels beschikbaar is.
-- **`httpx.AsyncClient` per aanroep**: `haal_artikel_op` in `api/app/shared/wettenbank.py` maakt elke keer een nieuwe `AsyncClient` aan (nieuwe TCP-verbinding per Wettenbank-call). Maak één lifespan-scoped client via FastAPI `lifespan` — zelfde patroon als bevinding bij PR #15.
+- **`httpx.AsyncClient` per aanroep** — ✅ opgelost in PR #71: `_jsonrpc_call` in
+  `api/app/shared/wettenbank.py` (de functie heette destijds nog `haal_artikel_op`, sindsdien
+  hernoemd) gebruikt nu een proces-brede, lazily aangemaakte client (`_get_client()`, zelfde
+  patroon als `db.py::get_engine` en `annotatie/graphdb.py`) i.p.v. een nieuwe per aanvraag.
 - **Human-in-the-loop poll zonder backoff**: `orchestrator.py` pollt elke 2 seconden met een vaste `asyncio.sleep(2)` voor maximaal 24 uur. Bij een toekomstige PostgreSQL-backend overwegen om een LISTEN/NOTIFY-notificatiemechanisme te gebruiken i.p.v. polling, voor lagere DB-load en kortere latentie.
 
 ---
