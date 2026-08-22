@@ -1,0 +1,37 @@
+[project]
+name = "graph-qa"
+version = "0.1.0"
+description = "Juridische vraagbeantwoording via GraphDB-graaf (MCP)."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# De code leeft in agent/ + api/ (geen graph_qa/-map), dus hatchling expliciet vertellen welke
+# packages in de wheel horen — anders faalt `uv sync` (kan geen files bepalen).
+[tool.hatch.build.targets.wheel]
+packages = ["agent", "api"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "integration: tests die een echte GraphDB-MCP- of LLM-provider vereisen (standaard geskipt)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
