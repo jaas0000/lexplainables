@@ -1,6 +1,7 @@
 # Lokale ontwikkel-stack. Alleen Postgres voor fase 0 — service-containers (api, frontend,
-# graph-qa, wettenbank-mcp, frontend-chat) komen als hun `Dockerfile` in latere fases wordt
-# toegevoegd (zie docs/project/migratie-wetsanalyse.md).
+# graph-qa, bwb-import, frontend-chat) komen als hun `Dockerfile` in latere fases wordt
+# toegevoegd (zie docs/project/migratie-wetsanalyse.md). GraphDB is een eigen Portainer-stack,
+# los van deze dev-compose: zie deploy/graphdb/.
 #
 # Snelstart:
 #   docker compose up -d postgres

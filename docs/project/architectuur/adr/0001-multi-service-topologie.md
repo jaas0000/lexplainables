@@ -28,8 +28,15 @@ Zes services, elk zijn eigen deploy-eenheid:
    (werkwijze-ADR-0001) in plaats van de huidige verzamelbestanden.
 2. **`frontend`** — hoofdwebapp (Next.js BFF).
 3. **`frontend-chat`** — losse chatapp, eigen deploy-eenheid.
-4. **`wettenbank-mcp`** — MCP-server voor wetcatalogus-lookups.
-5. **`graph-qa`** — QA-/annotatie-agent.
+4. **`tools/bwb-import`** — ETL-pipeline die het Basiswettenbestand importeert in de
+   GraphDB-kennisgraaf (`deploy/graphdb/`, infra, geen eigen "service" in deze lijst — third-party
+   image, geen door ons gebouwde/gedeployde applicatiecode). *Correctie 2026-08-22: eerder stond
+   hier `wettenbank-mcp` — die service is vóór dit ADR al (2026-08-06) uit de referentie-app
+   verwijderd; de wettekst-toegang loopt sindsdien direct via de graaf (GraphDB's ingebouwde MCP),
+   niet via een tussenliggende MCP-server. Zie `docs/project/migratie-wetsanalyse.md` en het
+   fase-4-plan voor de volledige toelichting.*
+5. **`graph-qa`** — QA-/annotatie-agent. Bevraagt de graaf rechtstreeks (SPARQL/similarity-search
+   via GraphDB's ingebouwde MCP), geen tussenliggende wettenbank-mcp.
 6. **`wetsanalyse-admin-mcp`** — admin-MCP, los van het admin-oppervlak binnen `api`.
 
 **Orkestratie/workflow-engine** (de meerfasige analyse-aansturing) is een **module binnen
@@ -54,3 +61,14 @@ dat sync HTTP niet oplost, niet vooruitlopend.
 - **Nog niet besloten in dit ADR:** hoe contracten tússen deze zes services precies vastliggen
   en geversioneerd worden (werkwijze-ADR-0002 stelt alleen dat het geen gedeelde import mag
   zijn) — dat blijft het open backlogpunt "Cross-service contracten".
+- **`api`'s wetcatalogus-structuurdata gaat naar GraphDB, niet naar een MCP-tussenlaag**
+  (vastgelegd 2026-08-22). `api/app/features/wetcatalogus/store.py:structuur()` draait nu op een
+  hardgecodeerde fallback met commentaar dat wachtte op `tools/wettenbank-mcp` — die service komt
+  er niet. In de referentie-app is de vergelijkbare functionaliteit zelfs uit de API-laag
+  geschrapt (`api/app/routers/catalog.py` in wetsanalyse-ai: "de werkplek draait op de graaf...
+  dus de API heeft de wettenbank-MCP niet meer nodig"). Voor lexplainables — waar de
+  wetcatalogus-admin-feature al gebouwd is (PR #15, story 020) en blijft bestaan — betekent dat:
+  zodra `deploy/graphdb` + `tools/bwb-import` er staan, queryt `structuur()` de graaf **direct**
+  via SPARQL (leesrechten, geen MCP-tool ertussen), net zoals `graph-qa` en de backup-cron dat al
+  rechtstreeks doen. Implementatie (credentials, welk account, wel/niet via de mcp-auth-proxy)
+  volgt als aparte story zodra bwb-import gevuld is — deze regel legt alleen de richting vast.

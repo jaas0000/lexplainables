@@ -31,8 +31,11 @@ C4Context
 ## L2 — Container
 
 Zes services (ADR-0001). Gebouwd: `api`, `frontend` en `wetsanalyse-admin-mcp`. De overige
-drie zijn vastgelegd in de topologie maar nog niet geïmplementeerd — ze staan hier al om het
-volledige plaatje te tonen; markeer ze als gebouwd zodra de eerste code er is.
+drie (`frontend-chat`, `bwb-import`, `graph-qa`) zijn vastgelegd in de topologie maar nog niet
+geïmplementeerd — ze staan hier al om het volledige plaatje te tonen; markeer ze als gebouwd
+zodra de eerste code er is. GraphDB staat er ook bij (voor de leesbaarheid van het plaatje) maar
+telt niet mee als "service" in ADR-0001 — het is een third-party image, gedeployd via
+`deploy/graphdb/`, geen applicatiecode die wij bouwen/publiceren.
 
 ```mermaid
 C4Container
@@ -46,8 +49,9 @@ C4Container
     Container(frontend_chat, "frontend-chat", "nog niet gebouwd", "Losse chatapp.")
     Container(api, "api", "FastAPI / Python", "Kernbackend: alle geplande features gebouwd (feedback, berichten, identiteit/toegang, wetcatalogus, llm_profielen, projecten, annotatie, api_tokens, runtime_config, llm_calls). Analyse-engine draait via `engine/`-module met LLM-orkestratie.")
     ContainerDb(db, "database", "SQLite (dev) / PostgreSQL", "Tabel per feature binnen api.")
-    Container(wettenbank_mcp, "wettenbank-mcp", "nog niet gebouwd", "MCP-server, wetcatalogus-lookups.")
-    Container(graph_qa, "graph-qa", "nog niet gebouwd", "QA-/annotatie-agent.")
+    ContainerDb(graphdb, "GraphDB", "third-party, deploy/graphdb/", "BWB-kennisgraaf, ingebouwde MCP op /mcp. Geen door ons gebouwde service.")
+    Container(bwb_import, "bwb-import", "nog niet gebouwd", "ETL-pipeline: BWB → GraphDB.")
+    Container(graph_qa, "graph-qa", "nog niet gebouwd", "QA-/annotatie-agent. Bevraagt GraphDB direct (SPARQL/similarity-search).")
     Container(admin_mcp, "wetsanalyse-admin-mcp", "TypeScript / Node.js (stdio)", "Admin-MCP: berichten aanmaken, bewerken, publiceren via Claude Code.")
   }
 
@@ -57,7 +61,9 @@ C4Container
   Rel(frontend, api, "BFF-aanroepen met API_TOKEN + X-User-Id", "HTTP/JSON")
   Rel(frontend_chat, api, "Roept aan", "HTTP/JSON")
   Rel(api, db, "Leest/schrijft", "SQLAlchemy")
-  Rel(api, wettenbank_mcp, "Roept aan", "MCP")
+  Rel(api, graphdb, "Leest (SPARQL, read-only)", "HTTP")
+  Rel(bwb_import, graphdb, "Schrijft (RDF)", "HTTP")
+  Rel(graph_qa, graphdb, "Bevraagt (SPARQL/similarity-search)", "MCP")
   Rel(api, graph_qa, "Roept aan", "HTTP/JSON")
   Rel(admin_mcp, api, "Roept admin-API aan met API_TOKEN + X-User-Id", "HTTP/JSON")
 ```
@@ -79,7 +85,7 @@ C4Component
     Component(feedback, "feedback", "features/feedback/", "Indienen, admin-lijst, verwijderen, ongelezen-aantal, markeer-gezien.")
     Component(berichten, "berichten", "features/berichten/", "Aanmaken, bewerken, publiceren/depubliceren, verwijderen (admin). Lezen, ongelezen-status, lees-alles (analist).")
     Component(identiteit_toegang, "identiteit_toegang", "features/identiteit_toegang/", "Eigen gebruikers-tabel (bcrypt). POST /v1/auth/verify + CRUD beheerders + account/wachtwoord-wijzigen + setup.")
-    Component(wetcatalogus, "wetcatalogus", "features/wetcatalogus/", "Wet-tabel + admin CRUD + resolve via Wettenbank-MCP.")
+    Component(wetcatalogus, "wetcatalogus", "features/wetcatalogus/", "Wet-tabel + admin CRUD + resolve. Structuur/resolve-databron wordt GraphDB (SPARQL) zodra bwb-import bestaat, zie ADR-0001 §Consequenties.")
     Component(llm_profielen, "llm_profielen", "features/llm_profielen/", "CRUD + Fernet-encryptie van API-sleutels.")
     Component(projecten, "projecten", "features/projecten/", "Analyses aanmaken/volgen (SSE), akkoord/afwijzen (human-in-the-loop), rapport (JSON + Markdown), llm-calls-endpoint.")
     Component(annotatie, "annotatie", "features/annotatie/", "Documenten, elementen, beslissingen, auditlog. Client-scoping via X-User-Id.")
@@ -90,7 +96,7 @@ C4Component
     Component(engine, "engine", "engine/", "Analyse-orkestrator (act2 → human-in-the-loop → act3), steps, prompts, retry met exponential backoff.")
 
     Component(shared_auth, "shared/auth", "shared/auth.py", "API_TOKEN-gate (constant-time) + X-User-Id-header. `huidige_beheerder` verifieert token én leest gebruikersidentiteit.")
-    Component(shared_wettenbank, "shared/wettenbank", "shared/wettenbank.py", "JSON-RPC-client naar wettenbank-mcp. Private `_jsonrpc_call` + publieke `haal_artikel_op` / `haal_citeertitel_op`.")
+    Component(shared_wettenbank, "shared/wettenbank", "shared/wettenbank.py", "Ophaal-client voor `haal_citeertitel_op`. Nu JSON-RPC tegen een niet-bestaande service (faalt in de praktijk); wordt directe SPARQL tegen GraphDB zodra bwb-import bestaat, zie ADR-0001 §Consequenties.")
     Component(shared_llm, "shared/llm", "shared/llm/", "LLMClient Protocol + LiteLLMClient met JSON-parse-herpoging.")
     Component(shared_db, "shared/db", "shared/db.py", "Dialect-aware upsert-helpers (`dialect_insert`, `upsert`).")
     Component(shared_crypto, "shared/crypto", "shared/crypto.py", "Fernet-encryptie voor gevoelige velden.")

@@ -57,10 +57,14 @@ lexplainables volgt. Lex is de basis, wetsanalyse-ai levert de missing pieces.
 10. 2FA/TOTP (story 017 in lex — nog niet gebouwd)
 11. Rijkshuisstijl volledig (Belastingdienst-stijlvak, JAS-klassekleuren, Fira-fonts)
 
-**Aparte services:**
-12. `tools/wettenbank-mcp` — MCP-server met bwbId/artikel/lid/jci-uri
+**Aparte services (herzien 2026-08-22 — zie ai-notes/fase-4-aparte-services-plan.md voor de
+volledige toelichting: `tools/wettenbank-mcp` bestaat niet meer in wetsanalyse-ai, vóór dit
+migratieplan al verwijderd; wettekst komt daar via een GraphDB-kennisgraaf):**
+12. `deploy/graphdb` (infra, geen story-cyclus) + `tools/bwb-import` — ETL-pipeline die het
+    Basiswettenbestand in een GraphDB-kennisgraaf zet (~3.284r)
 13. `tools/graph-qa` — LangGraph-agent, supervisor + antwoord-worker (specialisten
-    definitie/duiding/algemeen) + annotatie-worker + provenance + grounding (~3286r)
+    definitie/duiding/algemeen) + annotatie-worker + provenance + grounding (~5.598r, niet ~3286r
+    zoals eerder hier stond)
 14. `frontend-chat` — losse Next.js chat-app met SSE-streaming tegen graph-qa
 
 **Frontend-uitbreidingen:**
@@ -110,11 +114,11 @@ Postgres draaien.
 
 ### Fase 4 — Aparte services (6-10 weken, gedeeltelijk parallel)
 
-- **`tools/wettenbank-mcp`** — TypeScript MCP-service, contract-first per tool
-  (~5-8 stories)
+- **`deploy/graphdb`** — GraphDB-kennisgraaf (infra-deploy, geen story-cyclus) +
+  **`tools/bwb-import`** — ETL-pipeline BWB → GraphDB, contract-first per stap (~10-15 stories)
 - **`tools/graph-qa`** — LangGraph-agent volledig herbouwd onder werkwijze: supervisor,
-  antwoord-worker (specialisten), annotatie-worker, tools, provenance, grounding
-  (~15-20 stories)
+  antwoord-worker (specialisten), annotatie-worker, tools, provenance, grounding, run-model
+  (~25-35 stories — herzien 2026-08-22, was ~15-20)
 - **`frontend-chat`** — losse Next.js-app met SSE-streaming tegen graph-qa, gedeelde Auth.js
   (~8-10 stories)
 - **Werkplek uitbreiden**: hoofdfrontend praat via BFF met graph-qa i.p.v. eigen backend
@@ -131,9 +135,13 @@ Postgres draaien.
 
 ## Ruwe totaalinschatting
 
-25-30 stories, **3-5 maanden** met werkwijze-v2 strikt gevolgd. Ter vergelijking: de
-docs-infra-refactor van 2026-08-21 kostte ~785k tokens (~4 features aan werk); een gemiddelde
-story-cluster kost 300-500k. Totaal daarmee ~10-15 miljoen tokens.
+**Herzien 2026-08-22** (was 25-30 stories / 3-5 maanden — te laag ingeschat, zie
+ai-notes/fase-4-aparte-services-plan.md §Herzieningslog): fase 4 alleen al ~46-65 stories
+(deploy/graphdb + bwb-import ~10-15, graph-qa ~25-35, frontend-chat ~8-10,
+werkplek-koppeling ~3-5), plus fases 0-3 (grotendeels afgerond) en fase 5. Totaal ~60-75
+stories, eerder **6-9 maanden** dan 3-5. Ter vergelijking: de docs-infra-refactor van
+2026-08-21 kostte ~785k tokens (~4 features aan werk); een gemiddelde story-cluster kost
+300-500k. Totaal daarmee eerder 20-25 miljoen tokens dan de eerdere 10-15 miljoen.
 
 ## Status
 

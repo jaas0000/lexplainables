@@ -29,14 +29,18 @@ Portainer-stack (on-premise, secundair).
 
 Concreet:
 - Elke service heeft één `Dockerfile` in zijn map (`api/Dockerfile`,
-  `frontend/Dockerfile`, `tools/graph-qa/Dockerfile`, `tools/wettenbank-mcp/Dockerfile`,
-  `frontend-chat/Dockerfile`, `tools/wetsanalyse-admin-mcp/Dockerfile`).
+  `frontend/Dockerfile`, `tools/graph-qa/Dockerfile`, `tools/bwb-import/Dockerfile`,
+  `frontend-chat/Dockerfile`, `tools/wetsanalyse-admin-mcp/Dockerfile`). GraphDB zelf is geen
+  door ons gebouwde service (third-party image `ontotext/graphdb`) en heeft dus geen eigen
+  Dockerfile/CI-publish — alleen een Portainer-compose-stack (zie `deploy/graphdb/`).
 - CI-workflow per service (`<service>-docker-publish.yml`) bouwt en pusht naar `ghcr.io/<owner>/<service>`.
 - **Azure**: één Bicep-file (`main.bicep`) provisioneert de Container Apps + Container Apps
   Environment + Log Analytics + de bijbehorende secrets vault. Deploy-workflow
   (`azure-infra.yml`) draait de Bicep bij een push naar `master`.
-- **Portainer**: een `deploy/compose/` map bevat één `docker-compose.yml` per Portainer-stack.
-  Portainer pulled uit GHCR bij een release-tag.
+- **Portainer**: `deploy/<stack>/docker-compose.yml` — één submap per Portainer-stack (zelfde
+  layout als wetsanalyse-ai, bv. `deploy/graphdb/`, `deploy/bwb-import/`), niet een platte
+  `deploy/compose/`-map. Portainer pulled uit GHCR bij een release-tag; GraphDB zelf pullt het
+  third-party `ontotext/graphdb`-image, geen GHCR.
 - **Secrets**: bestandsgebaseerd zoals werkwijze-ADR-0006 — geen env-variabelen die geheimen
   bevatten; in Azure via `Key Vault → CSI-mount`, in Portainer via `secrets:` mount.
 
