@@ -1,0 +1,38 @@
+name: bwb-import-ci
+
+# Eén workflow per service (werkwijze-ADR-0016) — triggert alleen op wijzigingen binnen
+# tools/bwb-import/. Geen Postgres-service nodig (geen SQL-schema, zie stack-profiel.md
+# §Migraties: bwb-import schrijft RDF naar GraphDB, geen Alembic-migratiehistorie).
+on:
+  pull_request:
+    paths:
+      - "tools/bwb-import/**"
+      - ".github/workflows/bwb-import-ci.yml"
+  push:
+    branches: [master, main]
+    paths:
+      - "tools/bwb-import/**"
+      - ".github/workflows/bwb-import-ci.yml"
+
+jobs:
+  test-bwb-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Tests
+        working-directory: tools/bwb-import
+        run: |
+          uv sync
+          uv run pytest -q
+
+  check-python-style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: ruff
+        working-directory: tools/bwb-import
+        run: |
+          uv run --no-project --with ruff ruff check .
+          uv run --no-project --with ruff ruff format --check .

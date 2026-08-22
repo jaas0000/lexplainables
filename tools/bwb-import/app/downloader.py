@@ -1,0 +1,114 @@
+"""Download van BWB-bronbestanden: SRU-discovery + toestand-XML, met lokale caching.
+
+`BwbDownloader` ontdekt beschikbare toestanden via de SRU-zoekdienst en haalt de gewenste
+toestand-XML op. Een `requests.Session` is injecteerbaar (DI) zodat tests geen echt
+netwerkverkeer doen.
+"""
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+
+import requests
+from lxml import etree
+
+from app.config import Settings
+from app.models import ToestandRef
+
+logger = logging.getLogger(__name__)
+
+# Namespaces in het SRU-antwoord (geverifieerd tegen de referentie-app).
+_SRU_NS = {
+    "gzd": "http://standaarden.overheid.nl/sru",
+    "bwb": "http://standaarden.overheid.nl/bwb/terms/",
+}
+
+
+class DownloadError(RuntimeError):
+    """Een download of discovery is mislukt."""
+
+
+class BwbDownloader:
+    """Haalt BWB-bronbestanden op met lokale caching."""
+
+    def __init__(self, settings: Settings, session: requests.Session | None = None) -> None:
+        self._settings = settings
+        self._session = session or requests.Session()
+        self._session.headers.setdefault("User-Agent", "bwb-import/0.1 (+lexplainables)")
+
+    def discover_toestanden(self, bwb_id: str) -> list[ToestandRef]:
+        """Vraag alle toestanden (versies) van een regeling op via SRU.
+
+        De lijst is gesorteerd op geldigheidsstartdatum (oudste eerst).
+        """
+        params = {
+            "operation": "searchRetrieve",
+            "version": "2.0",
+            "x-connection": "BWB",
+            "maximumRecords": "1000",
+            "query": f"dcterms.identifier={bwb_id}",
+        }
+        logger.info("SRU-discovery voor %s", bwb_id)
+        # De SRU-dienst kan een non-2xx-status teruggeven terwijl de body een valide
+        # searchRetrieveResponse is; we beoordelen daarom de inhoud, niet de status.
+        response = self._session.get(self._settings.sru_base_url, params=params, timeout=60)
+        if not response.content:
+            raise DownloadError(f"Lege SRU-respons voor {bwb_id} (HTTP {response.status_code})")
+
+        try:
+            root = etree.fromstring(response.content)
+        except etree.XMLSyntaxError as exc:
+            raise DownloadError(f"Onleesbare SRU-respons voor {bwb_id}: {exc}") from exc
+
+        toestanden: list[ToestandRef] = []
+        for record in root.iterfind(".//gzd:gzd", _SRU_NS):
+            ref = self._parse_record(record, bwb_id)
+            if ref is not None:
+                toestanden.append(ref)
+
+        if not toestanden:
+            raise DownloadError(f"Geen toestanden gevonden voor {bwb_id}")
+
+        toestanden.sort(key=lambda t: t.geldig_vanaf or "")
+        logger.info("%d toestanden gevonden voor %s", len(toestanden), bwb_id)
+        return toestanden
+
+    def _parse_record(self, gzd: etree._Element, bwb_id: str) -> ToestandRef | None:
+        locatie = gzd.findtext(".//bwb:locatie_toestand", namespaces=_SRU_NS)
+        if not locatie:
+            return None
+        return ToestandRef(
+            bwb_id=bwb_id,
+            locatie_toestand=locatie,
+            geldig_vanaf=gzd.findtext(".//bwb:geldigheidsperiode_startdatum", namespaces=_SRU_NS),
+            geldig_tot=gzd.findtext(".//bwb:geldigheidsperiode_einddatum", namespaces=_SRU_NS),
+        )
+
+    def latest_toestand(self, bwb_id: str) -> ToestandRef:
+        """Geef de meest recente toestand (hoogste geldigheidsstartdatum)."""
+        toestanden = self.discover_toestanden(bwb_id)
+        latest = toestanden[-1]
+        logger.info("Nieuwste toestand %s: geldig vanaf %s", bwb_id, latest.geldig_vanaf or "?")
+        return latest
+
+    def download_toestand(self, bwb_id: str, ref: ToestandRef | None = None) -> Path:
+        """Download (en cache) de toestand-XML. Gebruikt de nieuwste indien geen ref."""
+        ref = ref or self.latest_toestand(bwb_id)
+        target = self._cache_path(bwb_id, ref.locatie_toestand)
+        return self._download_to(ref.locatie_toestand, target)
+
+    def _cache_path(self, bwb_id: str, url: str) -> Path:
+        return self._settings.data_dir / bwb_id / url.rsplit("/", 1)[-1]
+
+    def _download_to(self, url: str, target: Path) -> Path:
+        if target.exists() and target.stat().st_size > 0:
+            logger.info("Cache-hit: %s", target)
+            return target
+        logger.info("Download %s -> %s", url, target)
+        response = self._session.get(url, timeout=120)
+        if response.status_code != 200 or not response.content:
+            raise DownloadError(f"Download mislukt ({response.status_code}) voor {url}")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(response.content)
+        return target
