@@ -3,10 +3,10 @@
 Kernstructuur: ``toestand -> wetgeving -> wet-besluit/wettekst (of regeling/regeling-tekst) ->
 hoofdstuk/afdeling/paragraaf (generiek genest) -> artikel -> lid``, elk met onderdelen
 (genestelde ``<lijst>/<li>``), gestructureerde verwijzingen (``<intref>``/``<extref>``),
-provenance-attributen, voetnoten, definities, illustraties en tabellen (story 031), en wet-niveau
-brondata/aanhef/considerans/ondertekenaars (story 032). Circulaires (``circulaire/
-circulaire-tekst``), bijlagen en tekstuele verwijzingsdetectie volgen in latere stories — zie
-docs/project/stories/026-bwb-import-onderdelen-en-verwijzingen.md §Buiten scope.
+provenance-attributen, voetnoten, definities, illustraties en tabellen (story 031), wet-niveau
+brondata/aanhef/considerans/ondertekenaars (story 032), en bijlagen (``<bijlage>``, story 033).
+Circulaires (``circulaire/circulaire-tekst``) en tekstuele verwijzingsdetectie volgen in latere
+stories — zie docs/project/stories/026-bwb-import-onderdelen-en-verwijzingen.md §Buiten scope.
 """
 
 from __future__ import annotations
@@ -17,7 +17,16 @@ from pathlib import Path
 
 from lxml import etree
 
-from app.models import Artikel, Illustratie, Lid, Onderdeel, Ondertekenaar, Structuurdeel, Wet
+from app.models import (
+    Artikel,
+    Bijlage,
+    Illustratie,
+    Lid,
+    Onderdeel,
+    Ondertekenaar,
+    Structuurdeel,
+    Wet,
+)
 from app.references import extract_references
 
 logger = logging.getLogger(__name__)
@@ -110,13 +119,23 @@ class ToestandParser:
             elif tag == "artikel":
                 wet.losse_artikelen.append(self._parse_artikel(child, bwb_id))
 
+        # Bijlagen staan náást de wettekst: kind van <wet-besluit>/<regeling>, dus van de ouder
+        # van <wettekst>/<regeling-tekst>. Een losstaand wettekst-fragment (bv. in een test) heeft
+        # geen ouder — dan is er simpelweg niets te scannen.
+        houder = wettekst.getparent()
+        if houder is not None:
+            for bijlage_el in houder.iterfind("bijlage"):
+                wet.bijlagen.append(self._parse_bijlage(bijlage_el, bwb_id))
+
         wet.ondertekenaars = self._parse_ondertekenaars(wetgeving)
 
         logger.info(
-            "Parse klaar voor %s: %d structuurdelen, %d losse artikelen, %d ondertekenaars",
+            "Parse klaar voor %s: %d structuurdelen, %d losse artikelen, %d bijlagen, "
+            "%d ondertekenaars",
             bwb_id,
             len(wet.structuurdelen),
             len(wet.losse_artikelen),
+            len(wet.bijlagen),
             len(wet.ondertekenaars),
         )
         return wet
@@ -140,6 +159,37 @@ class ToestandParser:
             elif tag == "artikel":
                 deel.artikelen.append(self._parse_artikel(child, bwb_id))
         return deel
+
+    def _parse_bijlage(self, element: etree._Element, bwb_id: str) -> Bijlage:
+        """Parse een `<bijlage>` (kind van `<wet-besluit>`/`<regeling>`).
+
+        Een bijlage is container én tekstdrager: eigen alinea's + onderdelen, en kan eigen
+        artikelen bevatten (die als aparte `Artikel`-nodes tellen). Tekst/verwijzingen/onderdelen
+        op bijlage-niveau sluiten de inhoud van geneste artikelen/leden/onderdelen uit om
+        dubbeling te vermijden."""
+        kop = element.find("kop")
+        excl = " and not(ancestor::artikel) and not(ancestor::lid) and not(ancestor::li)"
+        bijlage = Bijlage(
+            id=self._knoop_id(bwb_id, element),
+            nummer=self._tekst(kop.find("nr")) if kop is not None else "",
+            label=self._tekst(kop.find("label")) if kop is not None else element.get("label", ""),
+            titel=self._tekst(kop.find("titel")) if kop is not None else "",
+            tekst=_bijlage_tekst(element),
+            jci=self._element_jci(element),
+            inwerking=element.get("inwerking"),
+            bron=element.get("bron"),
+            effect=element.get("effect"),
+            status=element.get("status"),
+            terugwerkend_tot=self._terugwerkend(element),
+            wijzigingsbronnen=self._wijzigingsbronnen(element),
+            verwijzingen=extract_references(element, eigen_bwb_id=bwb_id, extra_excl=excl),
+            onderdelen=self._parse_onderdelen(element, bwb_id),
+            voetnoten=self._noten(element, excl),
+            illustraties=self._illustraties(element, extra_excl=excl),
+        )
+        for art in element.iterfind("artikel"):
+            bijlage.artikelen.append(self._parse_artikel(art, bwb_id))
+        return bijlage
 
     def _parse_artikel(self, element: etree._Element, bwb_id: str) -> Artikel:
         kop = element.find("kop")
@@ -398,6 +448,31 @@ class ToestandParser:
         if tabellen:
             tekst = "\n".join([tekst, *tabellen]).strip()
         return tekst
+
+
+def _bijlage_tekst(element: etree._Element) -> str:
+    """Eigen lopende tekst van een bijlage: alinea's die niet in een genest artikel/lid/onderdeel
+    of tabel staan (die horen bij hun eigen node). Tabellen worden — net als bij `_lichaamstekst`
+    — als leesbare rijen ná de lopende tekst toegevoegd."""
+    scope = (
+        "not(ancestor::artikel) and not(ancestor::lid) and not(ancestor::li)"
+        " and not(ancestor::meta-data) and not(ancestor::table)"
+    )
+    delen = [
+        "".join(al.xpath(".//text()[not(ancestor::noot)]"))
+        for al in element.xpath(f".//al[{scope}]")
+    ]
+    tekst = re.sub(r"\s+", " ", " ".join(delen)).strip()
+    tabellen = [
+        _tabel_tekst(t)
+        for t in element.xpath(
+            ".//table[not(ancestor::artikel) and not(ancestor::lid) and not(ancestor::li)]"
+        )
+    ]
+    tabellen = [t for t in tabellen if t]
+    if tabellen:
+        tekst = "\n".join([tekst, *tabellen]).strip()
+    return tekst
 
 
 def _tabel_tekst(table: etree._Element) -> str:

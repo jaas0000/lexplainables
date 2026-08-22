@@ -520,6 +520,87 @@ def test_parse_lege_tabel_levert_niets_op(tmp_path: Path) -> None:
     assert artikel.tekst == "Tekst zonder relevante tabel."
 
 
+def test_parse_bijlage_volledig(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit>"
+        "<wettekst>"
+        "<artikel label='Artikel 1'><kop><nr>1</nr></kop><al>Tekst.</al></artikel>"
+        "</wettekst>"
+        "<bijlage inwerking='2020-01-01' bron='Stb.2020-1' effect='wijziging' status='goed'>"
+        "<kop><nr>1</nr><titel>Tarieventabel</titel></kop>"
+        "<al>Onderstaande tabel geldt.</al>"
+        "<table><tgroup><tbody>"
+        "<row><entry>Categorie</entry><entry>Tarief</entry></row>"
+        "</tbody></tgroup></table>"
+        "<artikel label='Artikel A'><kop><nr>A</nr></kop><al>Tekst in bijlage.</al></artikel>"
+        "</bijlage>"
+        "</wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    wet = parser.parse(pad)
+
+    assert len(wet.bijlagen) == 1
+    bijlage = wet.bijlagen[0]
+    assert bijlage.nummer == "1"
+    assert bijlage.titel == "Tarieventabel"
+    assert bijlage.inwerking == "2020-01-01"
+    assert bijlage.bron == "Stb.2020-1"
+    assert bijlage.effect == "wijziging"
+    assert bijlage.status == "goed"
+    assert "Onderstaande tabel geldt." in bijlage.tekst
+    assert "Categorie | Tarief" in bijlage.tekst
+    assert [a.nummer for a in bijlage.artikelen] == ["A"]
+
+
+def test_parse_bijlage_zonder_kop_gebruikt_label_attribuut(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit>"
+        "<wettekst>"
+        "<artikel label='Artikel 1'><kop><nr>1</nr></kop><al>Tekst.</al></artikel>"
+        "</wettekst>"
+        "<bijlage label='Bijlage bij artikel 5'><al>Inhoud.</al></bijlage>"
+        "</wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    bijlage = parser.parse(pad).bijlagen[0]
+
+    assert bijlage.label == "Bijlage bij artikel 5"
+    assert bijlage.artikelen == []
+
+
+def test_parse_document_zonder_bijlagen_geeft_lege_lijst(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'><kop><nr>1</nr></kop><al>Tekst.</al></artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    wet = parser.parse(pad)
+
+    assert wet.bijlagen == []
+
+
 def test_parse_artikel_zonder_leden(tmp_path: Path) -> None:
     parser = ToestandParser()
     xml = (

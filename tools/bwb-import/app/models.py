@@ -5,9 +5,9 @@ wet-besluit-document (`Wet`/`Structuurdeel`/`Artikel`/`Lid`, story 025), onderde
 `<lijst>/<li>`) + gestructureerde verwijzingen (`Onderdeel`/`Verwijzing`, story 026), de
 `jci`-identiteit per node + import-tellingen (`ImportSummary`/`ImportResult`, story 027), de
 `label_id`/`locatie_wti`-join-sleutels voor WTI-verrijking (story 030), provenance/voetnoten/
-definities/illustraties op artikel/lid/onderdeel (`Illustratie`, story 031), en wet-niveau
-brondata/aanhef/considerans/ondertekenaars (`Ondertekenaar`, story 032).
-Bijlagen en circulaires komen in latere stories.
+definities/illustraties op artikel/lid/onderdeel (`Illustratie`, story 031), wet-niveau
+brondata/aanhef/considerans/ondertekenaars (`Ondertekenaar`, story 032), en bijlagen
+(`Bijlage`, story 033). Circulaires komen in een latere story.
 """
 
 from __future__ import annotations
@@ -120,6 +120,31 @@ class Artikel:
 
 
 @dataclass(slots=True)
+class Bijlage:
+    """Een `<bijlage>` van een regeling (direct kind van `<wet-besluit>`/`<regeling>`, ná de
+    wettekst). Net als een artikel citeerbaar op JuriConnect-sleutel, maar tegelijk container
+    (kan eigen artikelen en onderdelen bevatten) én tekstdrager (eigen alinea's)."""
+
+    id: str
+    nummer: str
+    label: str
+    titel: str
+    tekst: str
+    jci: str | None = None
+    inwerking: str | None = None
+    bron: str | None = None
+    effect: str | None = None
+    status: str | None = None
+    terugwerkend_tot: str | None = None  # retroactieve ingangsdatum (ISO), indien aanwezig
+    wijzigingsbronnen: list[str] = field(default_factory=list)
+    verwijzingen: list[Verwijzing] = field(default_factory=list)
+    artikelen: list[Artikel] = field(default_factory=list)
+    onderdelen: list[Onderdeel] = field(default_factory=list)
+    voetnoten: list[str] = field(default_factory=list)
+    illustraties: list[Illustratie] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class Structuurdeel:
     """Een structuurdeel (hoofdstuk/titeldeel/afdeling/paragraaf), generiek genest."""
 
@@ -171,6 +196,7 @@ class Wet:
     dossier: str | None = None
     structuurdelen: list[Structuurdeel] = field(default_factory=list)
     losse_artikelen: list[Artikel] = field(default_factory=list)
+    bijlagen: list[Bijlage] = field(default_factory=list)
     ondertekenaars: list[Ondertekenaar] = field(default_factory=list)
 
 
@@ -188,6 +214,7 @@ class ImportSummary:
     leden: int = 0
     onderdelen: int = 0
     illustraties: int = 0
+    bijlagen: int = 0
     relaties: int = 0
 
     def as_dict(self) -> dict[str, int | str]:
@@ -202,6 +229,7 @@ class ImportSummary:
             "leden": self.leden,
             "onderdelen": self.onderdelen,
             "illustraties": self.illustraties,
+            "bijlagen": self.bijlagen,
             "relaties": self.relaties,
         }
 
