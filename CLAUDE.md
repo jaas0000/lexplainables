@@ -1,8 +1,8 @@
 # CLAUDE.md — lexplainables
 
-Startpunt voor een nieuw project op basis van de multi-service contract-first werkwijze. De
-methodologie, skills en achtergrond staan in
-[werkwijze-v2-multi-service](https://github.com/jaas0000/werkwijze-v2-multi-service).
+Project op basis van de multi-service contract-first werkwijze. De methodologie, skills en
+achtergrond staan in dit repo zelf onder [`docs/project/werkwijze/`](docs/project/werkwijze/CLAUDE.md)
+(geen sibling-repo-dependency meer).
 
 **Stand van zaken:** topologie en stack-profiel liggen vast (zie hieronder). Gebouwde features:
 
@@ -79,26 +79,17 @@ regel 3 leest daaruit.
 
 ## Instellingen
 
-- **Autonome merge:** ja <!-- ja | nee -->
-  `ja` — `pr-triage` mergt direct zodra `code-review` niets blocking meer vindt (of bij een
-  mechanische dependency-bump met CI groen). Zie `pr-triage` regel 2a/4/5 voor de exacte
-  stappen bij het mergen.
-
-- **Simplify bij feature-bouwen:** nee <!-- ja | nee -->
-  `nee` — tijdens de wetsanalyse-migratie (zie `docs/project/migratie-wetsanalyse.md`)
-  slaan we simplify standaard over. Reden: retrocatief simplify op fase 0-2 (PR #45) leverde
-  in verhouding weinig substantie op (~2.5M tokens voor −13 lines, 1 echte dedup). De
-  werkwijze aanvaardt dit expliciet — `feature-bouwen` regel 9 zet dan zelf
-  `Simplify: overgeslagen (instelling staat op nee)` in het commit-/PR-bericht, zodat de
-  keuze zichtbaar blijft en niet stilzwijgend wordt genegeerd. Zet weer op `ja` als de
-  refactor voorbij is en er stabielere feature-ontwikkeling start.
+Staan (uitsluitend) in [`docs/project/werkwijze/CLAUDE.md`](docs/project/werkwijze/CLAUDE.md) §Instellingen — dat is de
+enige plek waar Autonome merge en Simplify bij feature-bouwen worden bijgehouden. Niet hier
+herhalen; verander de waarde daar, niet in de skill zelf.
 
 ## Docs-structuur
 
-- `docs/project/` — hoe we werken en wat we hebben gebouwd: `architectuur/` (ADR's over dit
-  project), `werkwijze/` (methodologie-ADR's + de originele werkwijze-`CLAUDE.md`), `features/`
-  (gegenereerd door `scripts/docs/genereer-feature-docs.py`), `stories/`, `vervolgpunten.md`,
-  `changelog-technisch.md`.
+- `docs/project/werkwijze/` — de methodologie zelf: `CLAUDE.md` (incl. §Instellingen) + ADR's onder
+  `docs/project/werkwijze/adr/`. Portable naar een volgend project; zie §Skills hieronder.
+- `docs/project/` — hoe we werken aan dít project en wat we hebben gebouwd: `architectuur/`
+  (ADR's over dit project), `features/` (gegenereerd door `scripts/docs/genereer-feature-docs.py`),
+  `stories/`, `vervolgpunten.md`, `changelog-technisch.md`.
 - `docs/domein/` — waar de app over gaat: JAS, wetsanalyse-methode, WetsTaal, referenties.
   Vult zich naarmate wetsanalyse-content wordt overgezet.
 - `CHANGELOG.md` blijft op de root (open-source-conventie).
@@ -106,11 +97,10 @@ regel 3 leest daaruit.
 ## Skills
 
 De skills staan in `.claude/skills/` — in-project, geen sibling-repo-dependency. De methode
-zelf staat in `docs/project/werkwijze/CLAUDE.md` (met bijbehorende ADR's onder
-`docs/project/werkwijze/adr/`); dit CLAUDE.md hier verwijst naar die inhoud maar herhaalt hem
-niet. Zodra de werkwijze stabiel is en herbruikbaar moet worden voor een tweede project, is de
-afsplitsing terug naar een aparte werkwijze-repo triviaal (`.claude/skills/` +
-`docs/project/werkwijze/` kopiëren).
+zelf staat in [`docs/project/werkwijze/CLAUDE.md`](docs/project/werkwijze/CLAUDE.md) (met bijbehorende ADR's onder
+`docs/project/werkwijze/adr/`); dit CLAUDE.md hier verwijst naar die inhoud maar herhaalt hem niet. Zodra de
+werkwijze stabiel is en herbruikbaar moet worden voor een tweede project, is de afsplitsing terug
+naar een aparte werkwijze-repo triviaal (`.claude/skills/` + `docs/project/werkwijze/` kopiëren).
 
 ## Volgende stap
 
