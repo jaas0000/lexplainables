@@ -60,6 +60,16 @@ gehad.
    `docs/project/stories/<nummer>-<naam>.md` overeenkomt met wat de code doet. Ontbreekt de story bij
    zo'n PR, dan is de PR niet compleet.
 
+   Dit is meer dan "de story past bij de scope van de diff" — loop de acceptatiecriteria één
+   voor één na tegen de daadwerkelijke code (niet tegen de aanname dat "de PR is gemerged" al
+   genoeg bewijs is): elk `- [x]` moet je zelf hebben geverifieerd, elk criterium dat niet (of
+   maar deels) is gebouwd blijft `- [ ]` met een korte toelichting waarom, en de `**Gebouwd:**`-
+   regel onderaan de story volgt daaruit (`ja`/`grotendeels`/`nee`, nooit optimistisch afgerond).
+   Blijkt een criterium niet volledig gebouwd: dat is zelf een blocking bevinding (regel 5) —
+   niet alleen de doc-staleness die daaruit volgt. Werk de story-doc bij als onderdeel van deze
+   stap; net als `feature-bouwen` regel 9 is dit geen aanname die je stilzwijgend mag overslaan
+   omdat "de tests slagen toch al".
+
 3. Generieke correctheid en veiligheid: input-validatie voorbij het schema, auth op nieuwe
    endpoints, geen secrets in code of migraties.
 
