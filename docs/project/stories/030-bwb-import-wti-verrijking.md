@@ -26,15 +26,15 @@ organisatie-node.
 
 ## Acceptatiecriteria
 
-- [ ] `models.py`: `ToestandRef.locatie_wti: str | None` (SRU levert 'm al, alleen nog niet
+- [x] `models.py`: `ToestandRef.locatie_wti: str | None` (SRU levert 'm al, alleen nog niet
       gelezen). `Wet`, `Structuurdeel`, `Artikel` krijgen elk `label_id: str | None` (WTI-
       join-sleutel; `Lid`/`Onderdeel` niet — de referentie kent daar geen WTI-relaties aan toe).
-- [ ] `parser.py`: `label_id=element.get("label-id")` op dezelfde drie plekken waar nu al
+- [x] `parser.py`: `label_id=element.get("label-id")` op dezelfde drie plekken waar nu al
       `jci=self._element_jci(element)` gebeurt (`wetgeving`, structuurdeel, artikel).
-- [ ] `downloader.py`: `download_wti(ref: ToestandRef) -> Path | None` — `None` zonder
+- [x] `downloader.py`: `download_wti(ref: ToestandRef) -> Path | None` — `None` zonder
       netwerkcall als `ref.locatie_wti` leeg is; anders cache + download zoals
       `download_toestand`.
-- [ ] Nieuw `wti_parser.py`: `WtiElementRel` (`grondslag_voor`/`bevoegdheid_voor`/
+- [x] Nieuw `wti_parser.py`: `WtiElementRel` (`grondslag_voor`/`bevoegdheid_voor`/
       `verwijzing_door`, elk `list[str]` van BWB-id's), `WtiInfo` (`citeertitels`,
       `afkortingen`, `niet_officiele_titels`, `eerstverantwoordelijke`, `rechtsgebieden`
       (`list[tuple[hoofdgebied, specifiekgebied | None]]`), `overheidsdomeinen`, `grondslagen`
@@ -42,16 +42,16 @@ organisatie-node.
       `element_relaties: dict[label_id, WtiElementRel]`), `WtiParser.parse(xml_path) -> WtiInfo`
       — 1:1 de parse-logica van de referentie (defensief: elk veld optioneel, geen enkel
       ontbrekend element is een fout).
-- [ ] `config.py`: `Settings.import_wti: bool` uit `BWB_IMPORT_WTI` (default `false` — zelfde
+- [x] `config.py`: `Settings.import_wti: bool` uit `BWB_IMPORT_WTI` (default `false` — zelfde
       patroon als `validate_xsd`).
-- [ ] `main.py`: als `settings.import_wti`, download + parse de WTI **best-effort** (nooit
+- [x] `main.py`: als `settings.import_wti`, download + parse de WTI **best-effort** (nooit
       blokkerend — een mislukte WTI-download/parse logt een warning en de import gaat door
       zonder verrijking, want de kernwettekst is altijd waardevoller dan de verrijking).
-- [ ] `rdf_vocab.py` (`Vocab`): `entiteit(soort: str, sleutel: str) -> URIRef` — deterministische,
+- [x] `rdf_vocab.py` (`Vocab`): `entiteit(soort: str, sleutel: str) -> URIRef` — deterministische,
       wet-overstijgende slug-IRI (bv. dezelfde organisatie valt over wetten heen samen tot één
       node), 1:1 uit de referentie. `begrip(label: str) -> URIRef` — slug-IRI voor een
       thesaurusterm (rechtsgebied/overheidsdomein), 1:1 uit de referentie.
-- [ ] `ontology.py`: nieuwe klasse `Organisatie` (superklasse `FOAF.Agent`); nieuwe
+- [x] `ontology.py`: nieuwe klasse `Organisatie` (superklasse `FOAF.Agent`); nieuwe
       object-properties `heeftGrondslag` (Regeling→Regeling, `ELI.based_on`), `uitgegevenDoor`
       (Regeling→Organisatie, `ELI.responsibility_of`), `inFamilie` (Regeling→Regeling,
       wetsfamilie), en op `Citeerbaar`-niveau `grondslagVoor`/`bevoegdheidVoor`/`verwijzingDoor`
@@ -60,7 +60,7 @@ organisatie-node.
       Organisatie). Rechtsgebieden/overheidsdomeinen worden `skos:Concept`s (via `_begrip()` in
       de writer — SKOS is een extern vocabulaire, geen ontology-toevoeging nodig). `citeertitel`
       bestaat al (hergebruikt: WTI voegt er extra waarden aan toe).
-- [ ] `graphdb_writer.py`: `build_graph(wet, wti: WtiInfo | None = None)` en
+- [x] `graphdb_writer.py`: `build_graph(wet, wti: WtiInfo | None = None)` en
       `write_wet(wet, wti: WtiInfo | None = None)` — WTI-triples in dezelfde named graph als de
       wet zelf (atomair mee-vervangen bij her-import). `_wti_verrijking` zet de wet-node-triples
       (titels, thesaurustermen, grondslagen, organisatie); `_wti_element_relaties` koppelt via de
