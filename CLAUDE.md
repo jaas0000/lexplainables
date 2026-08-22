@@ -42,9 +42,11 @@ achtergrond staan in dit repo zelf onder [`docs/project/werkwijze/`](docs/projec
 
 Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in docker-compose of CI.
 
-**Alembic-migraties:** 0001–0011 draaien clean op SQLite.
+**Alembic-migraties:** 0001–0014, draaien tegen Postgres (SQLite volledig verwijderd sinds
+ADR-0003).
 
-**Nog te bouwen:** 2FA/TOTP (story 017, laag). Service `frontend-chat` nog niet gestart.
+**Nog te bouwen:** Service `frontend-chat` nog niet gestart. (2FA/TOTP, story 017, bleek bij
+onderzoek al gebouwd onder de oude fase-indeling — zie de story-doc.)
 `tools/bwb-import` heeft een werkende kernpijplijn: SRU-discovery + download (024),
 XSD-validatie + kernparser (025), onderdelen + verwijzingen (026), RDF/GraphDB-writer (027),
 CLI + FastAPI-service + Dockerfile + CI-publish (028), WTI-verrijking (030: citeertitels,
@@ -130,9 +132,8 @@ naar een aparte werkwijze-repo triviaal (`.claude/skills/` + `docs/project/werkw
 
 ## Volgende stap
 
-Story 017 (2FA/TOTP, laag) is de enige resterende API/frontend-story. `tools/bwb-import` heeft nu
+Geen resterende API/frontend-story meer (story 017 bleek al gebouwd). `tools/bwb-import` heeft
 zijn volledige scope uit story 027 §Buiten scope afgerond (stories 024-028, 030-036, zie
-hierboven) — resterende scope: divisies/bijlagen kregen al hun eigen story, dus verder is de
-service inhoudelijk klaar; vervolg is `tools/graph-qa` (service 3, zie
-`ai-notes/fase-4-aparte-services-plan.md`). Daarna `frontend-chat`
-(`tools/wetsanalyse-admin-mcp/` is klaar).
+hierboven) — inhoudelijk klaar. Vervolg: `tools/graph-qa` (service 3, zie
+`ai-notes/fase-4-aparte-services-plan.md`) zodra de Azure Foundry-key beschikbaar is, daarna
+`frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
