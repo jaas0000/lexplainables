@@ -278,3 +278,14 @@ schrijfpijplijn nu volledig werkt:
 
 Let op: GraphDB Free is alleen toegestaan voor dev/test (zie `ai-notes/licenties-en-juridisch.md`);
 een productie-deploy (fase 5) vereist een betaalde licentie.
+
+---
+
+## Gevonden tijdens story 034 (bwb-import circulaires)
+
+- **`tools/bwb-import/CLAUDE.md` is op twee punten stale**: noemt "de nog te bouwen
+  GraphDB-writer" (§Architectuurbeslissingen, DI-punt) en "Geen `integration`-marker/echte-
+  GraphDB-tests in deze story — komt zodra de GraphDB-writer gebouwd wordt" (§Tests) — beide
+  achterhaald sinds story 027 (de GraphDB-writer bestaat, en er is wel degelijk een
+  `integration`-marked test tegen de lokale stack). Pre-existing, niet door story 034 veroorzaakt;
+  bijwerken bij de eerstvolgende aanraking van dat bestand.
