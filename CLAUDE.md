@@ -44,7 +44,9 @@ Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in
 
 **Alembic-migraties:** 0001–0011 draaien clean op SQLite.
 
-**Nog te bouwen:** 2FA/TOTP (story 017, laag). Services: `frontend-chat`, `tools/bwb-import`, `tools/graph-qa`.
+**Nog te bouwen:** 2FA/TOTP (story 017, laag). Services: `frontend-chat`, `tools/graph-qa`.
+`tools/bwb-import` is gestart (story 024: SRU-discovery + download; zie
+`docs/project/stories/024-bwb-import-setup-en-download.md` voor wat nog volgt).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone

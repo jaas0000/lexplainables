@@ -252,3 +252,9 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 - **BFF-rolautorisatie**: `app/api/admin/berichten/` controleert `session.user.rol` niet — momenteel alleen beheerders actief, maar de BFF hoort rolautorisatie te dragen zodra analisten bestaan.
 - **E2E-tests voor `/beheer` en `/berichten`**: ontbreken nog (`frontend-bouwen` regel 6). Aanmaken vóór de feature in productie gaat.
+
+---
+
+## Gevonden tijdens story 024 (bwb-import setup)
+
+- **`api/app/shared/crypto.py:29` schendt werkwijze-ADR-0006**: `FERNET_KEY` wordt rechtstreeks uit een env-var gelezen (`os.environ.get("FERNET_KEY", "")`), niet via het `*_FILE`-pad-patroon dat de ADR voorschrijft. `tools/bwb-import`'s nieuwe `Settings` volgt de ADR wél voor `GRAPHDB_PASSWORD`; `crypto.py` retrofitten is een aparte, kleine story.
