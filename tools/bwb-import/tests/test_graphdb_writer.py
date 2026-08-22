@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 import pytest
-from rdflib import OWL, RDF, RDFS, URIRef
+from rdflib import OWL, RDF, RDFS, Literal, URIRef
 
 from app.graphdb_writer import GraphDbWriter, _fts_connector_config
 from app.models import Artikel, Bijlage, Divisie, Illustratie, Lid, Ondertekenaar, Wet
@@ -289,6 +289,40 @@ def test_build_graph_divisie_citeerbaar_en_heeft_divisie() -> None:
     assert (divisie_iri, RDF.type, URIRef("urn:bwb-ns:Divisie")) in g
     assert (divisie_iri, RDF.type, URIRef("urn:bwb-ns:Citeerbaar")) in g
     assert (wet_iri, heeft_divisie, divisie_iri) in g
+
+
+def test_build_graph_tekstuele_verwijzing_krijgt_betrouwbaarheid_triple() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        losse_artikelen=[
+            Artikel(
+                id="BWBR9999/Art1",
+                nummer="1",
+                label="Artikel 1",
+                tekst="zoals bedoeld in artikel 5",
+            )
+        ],
+    )
+    g, _ = _writer().build_graph(wet)
+
+    betrouwbaarheid = URIRef("urn:bwb-ns:betrouwbaarheid")
+    assert (None, betrouwbaarheid, Literal("laag")) in g
+
+
+def test_build_graph_structured_verwijzing_heeft_geen_betrouwbaarheid_triple() -> None:
+    """Met `tekstuele_refs=False` komen er alleen brongetrouwe structured refs in de graaf —
+    geen enkele draagt een betrouwbaarheid-label (dat is uitsluitend voor tekstuele fallback)."""
+    wet = ToestandParser().parse(FIXTURE)
+    writer = GraphDbWriter(
+        url="http://localhost:7200", repository="inning", vocab=Vocab(), tekstuele_refs=False
+    )
+    g, _ = writer.build_graph(wet)
+
+    betrouwbaarheid = URIRef("urn:bwb-ns:betrouwbaarheid")
+    assert (None, betrouwbaarheid, None) not in g
 
 
 def test_build_graph_onbekende_soort_geen_subklasse() -> None:

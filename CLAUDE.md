@@ -62,9 +62,12 @@ dossier/toestandUrl/ondertekendDoor-triples geverifieerd via SPARQL); bijlagen e
 zijn los geverifieerd met een synthetische `Wet` (de Invorderingswet-fixture heeft geen van
 beide) — `heeftBijlage`/`heeftDivisie`/`volgtOp`/geneste-relaties bevestigd. Lucene-FTS-connector
 (035, `ensure_fts_connector` in `prepare()`) draait tegen de live GraphDB en geeft echte,
-gerankte zoekresultaten (bv. "invordering" → artikel 1 lid 1). Daarmee is de kernscope uit
-story 027 §Buiten scope volledig afgerond, op tekstuele verwijzingsdetectie na (036 — vereist
-eerst afstemming over een acceptabele foutmarge, botst met het brongetrouwheidsprincipe).
+gerankte zoekresultaten (bv. "invordering" → artikel 1 lid 1). Tekstuele fallback-
+verwijzingsdetectie (036: kleine hardcoded afkortingentabel + regex, elke treffer
+`soort=tekstueel`/`betrouwbaarheid=laag`, aanpak afgestemd met de gebruiker vóór bouwen) vindt
+22 echte, correct opgeloste verwijzingen in de Invorderingswet-fixture. Daarmee is `bwb-import`'s
+volledige scope uit story 027 §Buiten scope afgerond — divisies/bijlagen/illustraties/tabellen
+én FTS én tekstuele detectie, alles handmatig geverifieerd tegen de live GraphDB.
 `tools/graph-qa` is gestart (story 029: projectskelet + poorten `GraphPort`/`LLMPort` + fakes,
 21 tests) — de agent-loop zelf (orkestrator, supervisor, toollaag, annotatieketen, ~25-35 stories
 geschat) moet nog gebouwd worden, zie `ai-notes/fase-4-aparte-services-plan.md` §Service 3.
@@ -128,8 +131,8 @@ naar een aparte werkwijze-repo triviaal (`.claude/skills/` + `docs/project/werkw
 ## Volgende stap
 
 Story 017 (2FA/TOTP, laag) is de enige resterende API/frontend-story. `tools/bwb-import` heeft nu
-de volledige kernscope uit story 027 §Buiten scope afgerond, inclusief de Lucene-FTS-connector
-(stories 024-028, 030-035, zie hierboven) — vervolg: tekstuele fallback-verwijzingsdetectie
-(036, vraagt eerst afstemming over een acceptabele foutmarge), of verder naar `tools/graph-qa`
-(service 3, zie `ai-notes/fase-4-aparte-services-plan.md`). Daarna
-`frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
+zijn volledige scope uit story 027 §Buiten scope afgerond (stories 024-028, 030-036, zie
+hierboven) — resterende scope: divisies/bijlagen kregen al hun eigen story, dus verder is de
+service inhoudelijk klaar; vervolg is `tools/graph-qa` (service 3, zie
+`ai-notes/fase-4-aparte-services-plan.md`). Daarna `frontend-chat`
+(`tools/wetsanalyse-admin-mcp/` is klaar).

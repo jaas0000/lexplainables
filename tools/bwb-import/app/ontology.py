@@ -5,9 +5,10 @@ graph). Scoped tot de entiteiten die dit project parset (Regeling, Structuurdeel
 Onderdeel, Illustratie, Ondertekenaar, Bijlage, Divisie, Verwijzing) plus de WTI-verrijking
 (Organisatie, grondslag-/wetsfamilie-relaties, story 030), artikel/lid/onderdeel-verrijking
 (provenance, voetnoten, definities, illustraties, story 031), wet-brondata/aanhef/considerans/
-ondertekenaars (story 032), bijlagen (story 033) en circulaires (story 034) — dat is de volledige
-kernscope uit story 027 §Buiten scope, op de Lucene-FTS-connector en tekstuele
-verwijzingsdetectie na.
+ondertekenaars (story 032), bijlagen (story 033), circulaires (story 034), de Lucene-FTS-
+connector (story 035, buiten deze ontologie — GraphDB-interne staat) en tekstuele fallback-
+verwijzingsdetectie (`betrouwbaarheid`-property, story 036) — daarmee is de volledige scope uit
+story 027 §Buiten scope afgerond.
 """
 
 from __future__ import annotations
@@ -193,6 +194,12 @@ _DATA_PROPS: dict[str, tuple[str, str, tuple[URIRef, ...], URIRef | None]] = {
     "doelPad": ("doel-pad", "bwb-ng-variabel-deel van het verwijsdoel.", (), None),
     "ankerTekst": ("ankertekst", "Tekst waarmee de verwijzing in de bron staat.", (), None),
     "verwijzingId": ("verwijzing-id", "Bron-id van de verwijzing.", (), XSD.string),
+    "betrouwbaarheid": (
+        "betrouwbaarheid",
+        "Betrouwbaarheid van een gedetecteerde (tekstuele) verwijzing.",
+        (),
+        None,
+    ),
     "afkorting": ("afkorting", "Gangbare afkorting van de regeling (uit de WTI).", (), None),
     "alternatieveTitel": (
         "alternatieve titel",

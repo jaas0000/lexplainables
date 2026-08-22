@@ -3,7 +3,13 @@ from __future__ import annotations
 from lxml import etree
 
 from app.models import VerwijzingSoort
-from app.references import extract_references, jci_doel, jci_doel_ref_key, jci_to_ref_key
+from app.references import (
+    detect_textual_references,
+    extract_references,
+    jci_doel,
+    jci_doel_ref_key,
+    jci_to_ref_key,
+)
 
 
 def test_intref_geeft_soort_intern() -> None:
@@ -116,3 +122,50 @@ def test_jci_doel_ref_key_alleen_wet() -> None:
 
 def test_jci_doel_ref_key_geen_bwb_id_geeft_none() -> None:
     assert jci_doel_ref_key("niet-een-jci-string") == (None, None)
+
+
+# ----------------------------------------------------- tekstuele fallback-detectie (story 036)
+
+
+def test_detect_textual_references_met_bekende_afkorting() -> None:
+    treffers = detect_textual_references(
+        "zie artikel 3:2 Awb voor de procedure", eigen_bwb_id="BWBR0004770"
+    )
+
+    assert len(treffers) == 1
+    treffer = treffers[0]
+    assert treffer.soort == VerwijzingSoort.TEKSTUEEL
+    assert treffer.doel_bwb_id == "BWBR0005537"
+    assert treffer.doel_artikel == "3:2"
+    assert treffer.tekst == "artikel 3:2 Awb"
+
+
+def test_detect_textual_references_zonder_afkorting_is_intern() -> None:
+    treffers = detect_textual_references("zoals bedoeld in artikel 12", eigen_bwb_id="BWBR0004770")
+
+    assert len(treffers) == 1
+    assert treffers[0].doel_bwb_id == "BWBR0004770"
+    assert treffers[0].doel_artikel == "12"
+
+
+def test_detect_textual_references_onbekende_afkorting_wordt_overgeslagen() -> None:
+    """Onbekende afkortingen worden nooit gegokt — geen treffer, niet als intern behandeld."""
+    treffers = detect_textual_references("zie artikel 5 XYZ", eigen_bwb_id="BWBR0004770")
+
+    assert treffers == []
+
+
+def test_detect_textual_references_meerdere_treffers() -> None:
+    tekst = "zie artikel 3 en artikel 4 van deze wet"
+    treffers = detect_textual_references(tekst, eigen_bwb_id="BWBR0004770")
+
+    assert [t.doel_artikel for t in treffers] == ["3", "4"]
+
+
+def test_detect_textual_references_bw_boek() -> None:
+    treffers = detect_textual_references(
+        "aansprakelijk op grond van artikel 6:162 BW", eigen_bwb_id="X"
+    )
+
+    assert treffers[0].doel_bwb_id == "BWBR0005289"
+    assert treffers[0].doel_artikel == "6:162"

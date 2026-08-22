@@ -24,7 +24,7 @@ from app.models import (
     Verwijzing,
     Wet,
 )
-from app.references import jci_doel_ref_key, jci_to_ref_key
+from app.references import detect_textual_references, jci_doel, jci_doel_ref_key, jci_to_ref_key
 
 STRUCT_REL = {
     "hoofdstuk": "HEEFT_HOOFDSTUK",
@@ -70,8 +70,9 @@ class Batch:
 class _Collector:
     """Bouwt een `Batch` uit een `Wet` (één traversal)."""
 
-    def __init__(self, wet: Wet) -> None:
+    def __init__(self, wet: Wet, *, tekstuele_refs: bool = True) -> None:
         self._bwb = wet.bwb_id
+        self._tekstuele_refs = tekstuele_refs
         self.batch = Batch()
         self.summary = ImportSummary(bwb_id=wet.bwb_id, wetten=1)
 
@@ -149,7 +150,7 @@ class _Collector:
             self.batch.rel(ouder_ent, "HEEFT_ARTIKEL", "Artikel", ouder_id, artikel.id)
             self.summary.artikelen += 1
             self._illustraties("Artikel", artikel.id, artikel.illustraties)
-            self._verwijzingen(ref_key, artikel.verwijzingen)
+            self._verwijzingen(ref_key, artikel.verwijzingen, artikel.tekst)
             self._leden(artikel, ref_key)
             self._onderdelen(artikel.onderdelen, artikel.id, "Artikel", ref_key)
 
@@ -182,7 +183,7 @@ class _Collector:
             vorige_bijlage = bijlage.id
 
             self._illustraties("Bijlage", bijlage.id, bijlage.illustraties)
-            self._verwijzingen(ref_key, bijlage.verwijzingen)
+            self._verwijzingen(ref_key, bijlage.verwijzingen, bijlage.tekst)
             self._onderdelen(bijlage.onderdelen, bijlage.id, "Bijlage", ref_key)
             # Een bijlage kan eigen artikelen bevatten (aparte Artikel-nodes, hergebruikt).
             self._artikelen(bijlage.artikelen, bijlage.id, "Bijlage")
@@ -216,7 +217,7 @@ class _Collector:
             vorige_divisie = divisie.id
 
             self._illustraties("Divisie", divisie.id, divisie.illustraties)
-            self._verwijzingen(ref_key, divisie.verwijzingen)
+            self._verwijzingen(ref_key, divisie.verwijzingen, divisie.tekst)
             self._onderdelen(divisie.onderdelen, divisie.id, "Divisie", ref_key)
             self._divisies(divisie.subdivisies, divisie.id, "Divisie")
 
@@ -241,7 +242,7 @@ class _Collector:
             self.summary.leden += 1
             self._illustraties("Lid", lid.id, lid.illustraties)
             bron = lid_ref or artikel_ref_key
-            self._verwijzingen(bron, lid.verwijzingen)
+            self._verwijzingen(bron, lid.verwijzingen, lid.tekst)
             self._onderdelen(lid.onderdelen, lid.id, "Lid", bron)
 
     def _onderdelen(
@@ -264,7 +265,7 @@ class _Collector:
             self.summary.onderdelen += 1
             self._illustraties("Onderdeel", onderdeel.id, onderdeel.illustraties)
             bron = ref_key or erf_ref_key
-            self._verwijzingen(bron, onderdeel.verwijzingen)
+            self._verwijzingen(bron, onderdeel.verwijzingen, onderdeel.tekst)
             self._onderdelen(onderdeel.subonderdelen, onderdeel.id, "Onderdeel", bron)
 
     def _illustraties(self, ouder_ent: str, ouder_id: str, illustraties: list[Illustratie]) -> None:
@@ -283,11 +284,23 @@ class _Collector:
             self.batch.rel(ouder_ent, "BEVAT_ILLUSTRATIE", "Illustratie", ouder_id, illustratie.id)
             self.summary.illustraties += 1
 
-    def _verwijzingen(self, bron_ref_key: str, verwijzingen: list[Verwijzing]) -> None:
+    def _verwijzingen(
+        self, bron_ref_key: str, verwijzingen: list[Verwijzing], tekst: str | None = None
+    ) -> None:
         """Elke verwijzing met een jci-`doc` wordt een graafrelatie. Zonder `doc` (bv. een
         `<intref>` zonder jci-metadata) is er geen betrouwbare manier om het doel te resolven —
-        wordt overgeslagen, niet gegokt (brongetrouwheid). Zie story 027 §Buiten scope."""
+        wordt overgeslagen, niet gegokt (brongetrouwheid). Zie story 027 §Buiten scope.
+
+        Ná de gestructureerde verwijzingen detecteert de tekstuele fallback (story 036) ongetagde
+        verwijzingen in de lopende tekst — nooit voor een artikelnummer dat al gestructureerd
+        gevonden is (voorkomt een dubbele/onterechte edge), en altijd met
+        `betrouwbaarheid=laag` zodat een consument dit kan onderscheiden van brongetrouwe refs.
+        """
+        artikelnummers: set[str] = set()
         for verwijzing in verwijzingen:
+            _, artikelnummer, _ = jci_doel(verwijzing.doc)
+            if artikelnummer:
+                artikelnummers.add(artikelnummer)
             doel_ref_key, doel_soort = jci_doel_ref_key(verwijzing.doc)
             if doel_ref_key is None:
                 continue
@@ -305,9 +318,32 @@ class _Collector:
                 }
             )
 
+        if not (self._tekstuele_refs and tekst):
+            return
+        for verwijzing in detect_textual_references(tekst, eigen_bwb_id=self._bwb):
+            if verwijzing.doel_artikel in artikelnummers:
+                continue
+            to_key = f"{verwijzing.doel_bwb_id}#artikel={verwijzing.doel_artikel}"
+            if to_key == bron_ref_key:
+                continue
+            self.batch.verwijzingen.append(
+                {
+                    "from": bron_ref_key,
+                    "to": to_key,
+                    "to_bwb": verwijzing.doel_bwb_id,
+                    "soort": verwijzing.soort.value,
+                    "doc": None,
+                    "doel_soort": "artikel",
+                    "doel_pad": None,
+                    "verwijzing_id": None,
+                    "anker_tekst": verwijzing.tekst,
+                    "betrouwbaarheid": "laag",
+                }
+            )
 
-def collect(wet: Wet) -> tuple[Batch, ImportSummary]:
+
+def collect(wet: Wet, *, tekstuele_refs: bool = True) -> tuple[Batch, ImportSummary]:
     """Bouw de `Batch` + `ImportSummary` voor één `Wet` (geen HTTP, geen I/O)."""
-    collector = _Collector(wet)
+    collector = _Collector(wet, tekstuele_refs=tekstuele_refs)
     collector.run(wet)
     return collector.batch, collector.summary

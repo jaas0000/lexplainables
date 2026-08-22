@@ -2,8 +2,9 @@
 ontleding van jci-verwijzingen tot stabiele ref_keys (story 027).
 
 Tekstuele fallback-detectie van ongetagde verwijzingen ("artikel 4", "artikel 6:162 BW") is
-bewust niet in deze module — apart, kleiner stukje functionaliteit met een ander risicoprofiel
-(regex-gebaseerde detectie, fout-positieven mogelijk), eigen story zodra dat nodig is.
+sinds story 036 ook hier: conservatief (kleine hardcoded afkortingentabel + één regex), en elke
+treffer draagt in de graaf een expliciet `betrouwbaarheid=laag`-label (zie `app/collect.py`),
+nooit vermengd met de brongetrouwe structured refs.
 """
 
 from __future__ import annotations
@@ -12,12 +13,23 @@ import re
 
 from lxml import etree
 
+from app.afkortingen import zoek_bwb_id
 from app.models import Verwijzing, VerwijzingSoort
 
 # Onderdelen van een jci-verwijzing (bv. "jci1.3:c:BWBR0005537&artikel=3:40").
 _JCI_BWB = re.compile(r":c:(BWBR\d+)")
 _JCI_ARTIKEL = re.compile(r"[&?]artikel=([^&]+)")
 _JCI_LID = re.compile(r"[&?]lid=([^&]+)")
+
+# Losse tekstverwijzingen: "artikel 4", "12a", "10.1", "3:2 Awb", "6:162 BW". Vangt het
+# artikelnummer (cijfers met optionele letter/punt/dubbelepunt) plus een optionele wetafkorting
+# (hoofdletter-initiaal, bv. BW, Awb, Sr). Geen IGNORECASE: de wetafkorting begint met een
+# hoofdletter, zodat losse woorden als "en"/"van" niet als afkorting worden aangezien.
+_TEXT_REF = re.compile(
+    r"\b[Aa]rtikel(?:en)?\s+"
+    r"(?P<nummer>\d+[a-z]?(?:[.:]\d+[a-z]?)*)"
+    r"(?:\s+(?P<wet>[A-Z][A-Za-z]{0,6}))?"
+)
 
 
 def _normaliseer(tekst: str | None) -> str:
@@ -114,3 +126,32 @@ def extract_references(
             )
         )
     return verwijzingen
+
+
+def detect_textual_references(tekst: str, *, eigen_bwb_id: str) -> list[Verwijzing]:
+    """Detecteer losse (ongetagde) tekstverwijzingen naar artikelen (fallback, story 036).
+
+    Een herkende wetafkorting wordt via `app.afkortingen` naar een BWB-id vertaald; zonder
+    afkorting geldt de verwijzing als intern (eigen wet). Matches met een onbekende afkorting
+    worden overgeslagen (te onzeker — nooit gegokt)."""
+    treffers: list[Verwijzing] = []
+    for match in _TEXT_REF.finditer(tekst):
+        nummer = match.group("nummer")
+        wet = match.group("wet")
+        if wet:
+            doel_bwb = zoek_bwb_id(wet, nummer)
+            if doel_bwb is None:
+                continue
+            anker = f"artikel {nummer} {wet}"
+        else:
+            doel_bwb = eigen_bwb_id
+            anker = f"artikel {nummer}"
+        treffers.append(
+            Verwijzing(
+                soort=VerwijzingSoort.TEKSTUEEL,
+                tekst=anker,
+                doel_bwb_id=doel_bwb,
+                doel_artikel=nummer,
+            )
+        )
+    return treffers

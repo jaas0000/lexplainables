@@ -12,6 +12,7 @@ def test_from_env_gebruikt_defaults_zonder_env_vars(monkeypatch: pytest.MonkeyPa
         "BWB_DATA_DIR",
         "BWB_SRU_URL",
         "BWB_IMPORT_WTI",
+        "BWB_DETECT_TEKSTUELE_REFS",
         "GRAPHDB_URL",
         "GRAPHDB_REPOSITORY",
         "GRAPHDB_USER",
@@ -25,6 +26,7 @@ def test_from_env_gebruikt_defaults_zonder_env_vars(monkeypatch: pytest.MonkeyPa
     assert settings.graphdb_repository == "inning"
     assert settings.graphdb_password is None
     assert settings.import_wti is False
+    assert settings.detect_tekstuele_refs is True
 
 
 def test_import_wti_aan_via_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -33,6 +35,14 @@ def test_import_wti_aan_via_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = Settings.from_env()
 
     assert settings.import_wti is True
+
+
+def test_detect_tekstuele_refs_uit_via_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BWB_DETECT_TEKSTUELE_REFS", "false")
+
+    settings = Settings.from_env()
+
+    assert settings.detect_tekstuele_refs is False
 
 
 def test_graphdb_password_komt_uit_bestand_niet_uit_env_waarde(

@@ -263,3 +263,77 @@ def test_collect_verwijzing_zonder_doc_wordt_overgeslagen() -> None:
     batch, _ = collect(wet)
 
     assert batch.verwijzingen == []
+
+
+def test_collect_tekstuele_verwijzing_krijgt_betrouwbaarheid_laag() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        losse_artikelen=[
+            Artikel(
+                id="BWBR9999/Art1",
+                nummer="1",
+                label="Artikel 1",
+                tekst="zoals bedoeld in artikel 5",
+            )
+        ],
+    )
+    batch, _ = collect(wet)
+
+    assert len(batch.verwijzingen) == 1
+    rij = batch.verwijzingen[0]
+    assert rij["soort"] == "tekstueel"
+    assert rij["betrouwbaarheid"] == "laag"
+    assert rij["to"] == "BWBR9999#artikel=5"
+
+
+def test_collect_tekstuele_refs_uitgezet_onderdrukt_detectie() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        losse_artikelen=[
+            Artikel(
+                id="BWBR9999/Art1",
+                nummer="1",
+                label="Artikel 1",
+                tekst="zoals bedoeld in artikel 5",
+            )
+        ],
+    )
+    batch, _ = collect(wet, tekstuele_refs=False)
+
+    assert batch.verwijzingen == []
+
+
+def test_collect_tekstuele_match_al_gestructureerd_wordt_overgeslagen() -> None:
+    """Een artikelnummer dat al via een gestructureerde (getagde) verwijzing gevonden is, wordt
+    niet nogmaals als tekstuele match toegevoegd (geen dubbele/onterechte edge)."""
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        losse_artikelen=[
+            Artikel(
+                id="BWBR9999/Art1",
+                nummer="1",
+                label="Artikel 1",
+                tekst="zie artikel 5",
+                verwijzingen=[
+                    Verwijzing(
+                        soort=VerwijzingSoort.INTERN,
+                        tekst="artikel 5",
+                        doc="jci1.3:c:BWBR9999&artikel=5",
+                    )
+                ],
+            )
+        ],
+    )
+    batch, _ = collect(wet)
+
+    assert len(batch.verwijzingen) == 1
+    assert batch.verwijzingen[0]["soort"] == "intref"
