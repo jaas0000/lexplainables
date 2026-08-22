@@ -84,6 +84,73 @@ def test_parse_artikel_tekst_bevat_geen_lid_tekst() -> None:
     assert "Deze wet geldt bij de invordering" not in artikel1.tekst
 
 
+def test_parse_lid_verwijzingen_extref() -> None:
+    parser = ToestandParser()
+    wet = parser.parse(FIXTURES / "sample_toestand.xml")
+
+    lid2 = wet.structuurdelen[0].artikelen[0].leden[1]
+    assert len(lid2.verwijzingen) == 7
+    eerste = lid2.verwijzingen[0]
+    assert eerste.soort.value == "extref"
+    assert eerste.doel_bwb_id == "BWBR0005537"
+    assert eerste.tekst == "artikel 3:40"
+    assert eerste.doc == "jci1.3:c:BWBR0005537&artikel=3:40"
+
+
+def test_parse_onderdelen_van_lijst() -> None:
+    parser = ToestandParser()
+    wet = parser.parse(FIXTURES / "sample_toestand.xml")
+
+    lid1_artikel2 = wet.structuurdelen[0].artikelen[1].leden[0]
+    assert [o.nummer for o in lid1_artikel2.onderdelen] == [
+        "a.",
+        "aa.",
+        "b.",
+        "c.",
+        "d.",
+        "e.",
+        "f.",
+        "g.",
+        "h.",
+        "i.",
+        "j.",
+        "k.",
+        "l.",
+        "m.",
+        "n.",
+        "o.",
+        "p.",
+        "q.",
+        "r.",
+        "s.",
+        "t.",
+    ]
+    onderdeel_a = lid1_artikel2.onderdelen[0]
+    assert "rijksbelastingen" in onderdeel_a.tekst
+    assert len(onderdeel_a.verwijzingen) == 2
+
+
+def test_parse_geneste_subonderdelen() -> None:
+    parser = ToestandParser()
+    wet = parser.parse(FIXTURES / "sample_toestand.xml")
+
+    lid1_artikel2 = wet.structuurdelen[0].artikelen[1].leden[0]
+    onderdeel_aa = lid1_artikel2.onderdelen[1]
+    assert onderdeel_aa.nummer == "aa."
+    assert [sub.nummer for sub in onderdeel_aa.subonderdelen] == ["1°.", "2°.", "3°.", "4°."]
+    assert "Nederland" in onderdeel_aa.subonderdelen[2].tekst
+
+
+def test_parse_artikel_verwijzingen_sluiten_lid_en_onderdeel_uit() -> None:
+    """De verwijzingen van artikel 2 zelf (buiten zijn leden/onderdelen) zijn leeg — alle
+    extref's in de fixture zitten binnen leden/onderdelen, niet direct op artikelniveau."""
+    parser = ToestandParser()
+    wet = parser.parse(FIXTURES / "sample_toestand.xml")
+
+    artikel2 = wet.structuurdelen[0].artikelen[1]
+    assert artikel2.verwijzingen == []
+
+
 def test_parse_extref_tekst_blijft_leesbaar_in_lid() -> None:
     """Inline <extref>-verwijzingen leveren nog geen Verwijzing-object op (latere story), maar
     hun omringende tekst moet wel meekomen — anders verdwijnt een deel van de leestekst."""

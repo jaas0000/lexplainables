@@ -1,10 +1,12 @@
 """Parser voor de BWB toestand-XML (lxml), met optionele XSD-validatie.
 
-Kernstructuur (deze story): ``toestand -> wetgeving -> wet-besluit/wettekst (of
-regeling/regeling-tekst) -> hoofdstuk/afdeling/paragraaf (generiek genest) -> artikel -> lid``.
+Kernstructuur: ``toestand -> wetgeving -> wet-besluit/wettekst (of regeling/regeling-tekst) ->
+hoofdstuk/afdeling/paragraaf (generiek genest) -> artikel -> lid``, elk met onderdelen
+(genestelde ``<lijst>/<li>``) en gestructureerde verwijzingen (``<intref>``/``<extref>``).
 Circulaires (``circulaire/circulaire-tekst``) en de rijkere velden van de referentie-parser
-(onderdelen, verwijzingen, illustraties, voetnoten, tabellen, ondertekenaars, bijlagen) volgen in
-latere stories — zie docs/project/stories/025-bwb-import-xsd-en-kernparser.md §Buiten scope.
+(illustraties, voetnoten, tabellen, ondertekenaars, bijlagen, tekstuele verwijzingsdetectie)
+volgen in latere stories — zie
+docs/project/stories/026-bwb-import-onderdelen-en-verwijzingen.md §Buiten scope.
 """
 
 from __future__ import annotations
@@ -15,7 +17,8 @@ from pathlib import Path
 
 from lxml import etree
 
-from app.models import Artikel, Lid, Structuurdeel, Wet
+from app.models import Artikel, Lid, Onderdeel, Structuurdeel, Wet
+from app.references import extract_references
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +139,12 @@ class ToestandParser:
             nummer=self._tekst(kop.find("nr")) if kop is not None else "",
             label=element.get("label", ""),
             tekst=self._lichaamstekst(element, binnen_lid=False),
+            verwijzingen=extract_references(
+                element,
+                eigen_bwb_id=bwb_id,
+                extra_excl=" and not(ancestor::lid) and not(ancestor::li)",
+            ),
+            onderdelen=self._parse_onderdelen(element, bwb_id),
         )
         for lid in element.iterfind("lid"):
             artikel.leden.append(self._parse_lid(lid, bwb_id))
@@ -146,6 +155,33 @@ class ToestandParser:
             id=self._knoop_id(bwb_id, element),
             nummer=self._tekst(element.find("lidnr")),
             tekst=self._lichaamstekst(element, binnen_lid=True),
+            verwijzingen=extract_references(
+                element, eigen_bwb_id=bwb_id, extra_excl=" and not(ancestor::li)"
+            ),
+            onderdelen=self._parse_onderdelen(element, bwb_id),
+        )
+
+    # --------------------------------------------------------------- onderdelen
+    def _parse_onderdelen(self, element: etree._Element, bwb_id: str) -> list[Onderdeel]:
+        """Onderdelen uit direct geneste `<lijst>/<li>` (niet uit een genest lid — die heeft zijn
+        eigen `_parse_lid`-aanroep)."""
+        onderdelen: list[Onderdeel] = []
+        for lijst in element.findall("lijst"):
+            for li in lijst.findall("li"):
+                onderdelen.append(self._parse_onderdeel(li, bwb_id))
+        return onderdelen
+
+    def _parse_onderdeel(self, li: etree._Element, bwb_id: str) -> Onderdeel:
+        nr = li.find("li.nr")
+        tekst_delen = [
+            "".join(al.xpath(".//text()[not(ancestor::noot)]")) for al in li.xpath("./al")
+        ]
+        return Onderdeel(
+            id=self._knoop_id(bwb_id, li),
+            nummer=self._tekst(nr) if nr is not None else "",
+            tekst=re.sub(r"\s+", " ", " ".join(tekst_delen)).strip(),
+            verwijzingen=extract_references(li, eigen_bwb_id=bwb_id, base="./al//*"),
+            subonderdelen=self._parse_onderdelen(li, bwb_id),
         )
 
     # --------------------------------------------------------------- helpers
@@ -167,12 +203,11 @@ class ToestandParser:
     @staticmethod
     def _lichaamstekst(element: etree._Element, *, binnen_lid: bool) -> str:
         """Verzamel de lopende `<al>`-tekst van een element, exclusief meta-data, exclusief
-        onderdeel-tekst (`<lijst>/<li>` — nog niet apart geparsed in deze story, zie §Buiten
-        scope, maar wél al uitgesloten hier zodat 'ie niet dubbel/ongestructureerd in de lopende
-        tekst terechtkomt) en (voor een artikel met leden) exclusief de tekst die al bij een
-        `<lid>` hoort — anders dubbelt de artikeltekst met zijn eigen leden. Tabellen worden in
-        deze story niet gerenderd; wél uitgesloten van de lopende tekst zodat tabelcellen niet als
-        kale, ongestructureerde tekst lekken."""
+        onderdeel-tekst (`<lijst>/<li>` — die hoort bij zijn eigen `Onderdeel`-node, zie
+        `_parse_onderdeel`) en (voor een artikel met leden) exclusief de tekst die al bij een
+        `<lid>` hoort — anders dubbelt de artikeltekst met zijn eigen leden. Tabellen worden nog
+        niet gerenderd (zie §Buiten scope); wél uitgesloten van de lopende tekst zodat tabelcellen
+        niet als kale, ongestructureerde tekst lekken."""
         if binnen_lid:
             scope = "not(ancestor::li) and not(ancestor::meta-data)"
         else:
