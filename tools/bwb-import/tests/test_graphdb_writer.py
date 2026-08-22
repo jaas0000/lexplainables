@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
 import pytest
 from rdflib import OWL, RDF, RDFS, URIRef
 
-from app.graphdb_writer import GraphDbWriter
+from app.graphdb_writer import GraphDbWriter, _fts_connector_config
 from app.models import Artikel, Bijlage, Divisie, Illustratie, Lid, Ondertekenaar, Wet
 from app.parser import ToestandParser
 from app.rdf_vocab import Vocab
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_toestand.xml"
+V = Vocab()
 
 
 def _writer() -> GraphDbWriter:
@@ -297,6 +299,106 @@ def test_build_graph_onbekende_soort_geen_subklasse() -> None:
     types = set(g.objects(wet_iri, RDF.type))
     verwachte_types = {URIRef("urn:bwb-ns:Regeling"), URIRef("urn:bwb-ns:Citeerbaar")}
     assert types == verwachte_types
+
+
+# ------------------------------------------------------------- FTS-connector
+
+
+class _StubResponse:
+    def __init__(self, payload: dict | None = None) -> None:
+        self._payload = payload or {}
+
+    def raise_for_status(self) -> None:
+        pass
+
+    def json(self) -> dict:
+        return self._payload
+
+
+class _StubSession:
+    """Minimale requests.Session-vervanger die SPARQL-calls opneemt.
+
+    `bestaande_config` bepaalt het antwoord op de listConnectors-SELECT.
+    """
+
+    def __init__(self, bestaande_config: dict | None = None, rauw: str | None = None) -> None:
+        self.updates: list[str] = []
+        self._bestaand = bestaande_config
+        # `rauw` bootst de GraphDB-versies na die géén JSON-config teruggeven maar bijvoorbeeld
+        # alleen de connectornaam.
+        self._rauw = rauw
+
+    def post(self, url: str, *, data=None, **_kw) -> _StubResponse:
+        data = data or {}
+        if "query" in data:
+            bindings = []
+            if self._rauw is not None:
+                bindings = [{"createString": {"value": self._rauw}}]
+            elif self._bestaand is not None:
+                bindings = [{"createString": {"value": json.dumps(self._bestaand)}}]
+            return _StubResponse({"results": {"bindings": bindings}})
+        self.updates.append(data["update"])
+        return _StubResponse()
+
+
+def _fts_writer(session: _StubSession) -> GraphDbWriter:
+    return GraphDbWriter(url="http://graphdb:7200", repository="inning", vocab=V, session=session)
+
+
+def test_fts_config_dekt_tekstvelden_en_typen() -> None:
+    config = _fts_connector_config(V)
+    assert str(V.klasse("Artikel")) in config["types"]
+    assert str(V.klasse("Onderdeel")) in config["types"]
+    assert str(V.klasse("Divisie")) in config["types"]
+    assert str(V.klasse("Bijlage")) in config["types"]
+    # Het generieke Regeling-type (elke wet/regeling draagt het) i.p.v. Wet.
+    assert str(V.klasse("Regeling")) in config["types"]
+    assert str(V.klasse("Wet")) not in config["types"]
+    veldnamen = {veld["fieldName"] for veld in config["fields"]}
+    assert {"tekst", "titel", "citeertitel", "voetnoot", "definieertBegrip", "label"} <= veldnamen
+    assert config["languages"] == ["nl", ""]
+    assert config["analyzer"].endswith("DutchAnalyzer")
+
+
+def test_ensure_fts_maakt_connector_aan_wanneer_afwezig() -> None:
+    session = _StubSession(bestaande_config=None)
+    _fts_writer(session).ensure_fts_connector()
+    assert len(session.updates) == 1
+    assert "createConnector" in session.updates[0]
+    assert "DutchAnalyzer" in session.updates[0]
+
+
+def test_ensure_fts_is_idempotent_bij_actuele_config() -> None:
+    # GraphDB geeft de config terug aangevuld met defaults; dat mag geen herindexering
+    # triggeren.
+    bestaand = json.loads(json.dumps(_fts_connector_config(V)))
+    bestaand["readonly"] = False
+    for veld in bestaand["fields"]:
+        veld["indexed"] = True
+    session = _StubSession(bestaande_config=bestaand)
+    _fts_writer(session).ensure_fts_connector()
+    assert session.updates == []
+
+
+def test_ensure_fts_hermaakt_wanneer_de_config_onleesbaar_is() -> None:
+    """Onleesbare config betekent: we weten niet waarop hij indexeert — dus opnieuw bouwen,
+    nooit stilzwijgend aannemen dat hij actueel is (stille nul-treffers is erger dan een
+    herindexering)."""
+    session = _StubSession(rauw="bwb_tekst")
+    _fts_writer(session).ensure_fts_connector()
+    assert len(session.updates) == 2
+    assert "dropConnector" in session.updates[0]
+    assert "createConnector" in session.updates[1]
+
+
+def test_ensure_fts_hermaakt_bij_gewijzigde_config() -> None:
+    verouderd = _fts_connector_config(V)
+    verouderd["fields"] = verouderd["fields"][:2]  # oude index met minder velden
+    session = _StubSession(bestaande_config=verouderd)
+    _fts_writer(session).ensure_fts_connector()
+    assert len(session.updates) == 2
+    assert "dropConnector" in session.updates[0]
+    assert "createConnector" in session.updates[1]
 
 
 # ------------------------------------------------------------------------- integration

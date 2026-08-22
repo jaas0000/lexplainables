@@ -32,9 +32,10 @@ def maak_writer(settings: Settings) -> GraphDbWriter:
 
 
 def prepare(writer: GraphDbWriter) -> None:
-    """Eenmalige waarborgen per (batch-)import: repo + ontologie."""
+    """Eenmalige waarborgen per (batch-)import: repo + ontologie + FTS-index."""
     writer.ensure_constraints()
     writer.write_ontology()
+    writer.ensure_fts_connector()
 
 
 def run_import(
