@@ -32,7 +32,30 @@ GRAPHDB_URL = os.environ.get("GRAPHDB_URL", "http://graphdb:7200")
 GRAPHDB_REPOSITORY = os.environ.get("GRAPHDB_REPOSITORY", "inning")
 GRAPHDB_USER = os.environ.get("GRAPHDB_USER") or None
 
+
+def _lees_graphdb_password() -> str | None:
+    pad = os.environ.get("GRAPHDB_PASSWORD_FILE")
+    if pad is None:
+        return None
+    return Path(pad).read_text(encoding="utf-8").strip()
+
+
+# Eén keer bij module-load gelezen, zelfde als GRAPHDB_URL/REPOSITORY/USER hierboven — niet
+# opnieuw van disk lezen bij elke aanvraag.
+GRAPHDB_PASSWORD = _lees_graphdb_password()
+
 _TIMEOUT = 15.0
+
+_client: httpx.AsyncClient | None = None
+
+
+def _get_client() -> httpx.AsyncClient:
+    """Proces-brede client, lazily aangemaakt — zelfde patroon als `db.py::get_engine`."""
+    global _client
+    if _client is None:
+        _client = httpx.AsyncClient(timeout=_TIMEOUT)
+    return _client
+
 
 _QUERY_TEMPLATE = """
 PREFIX bwb: <urn:bwb-ns:>
@@ -63,13 +86,6 @@ class WetsartikelNietGevonden(GraphDbFout):
     """GraphDB antwoordt, maar het artikel staat niet (meer) in de graaf."""
 
 
-def _graphdb_password() -> str | None:
-    pad = os.environ.get("GRAPHDB_PASSWORD_FILE")
-    if pad is None:
-        return None
-    return Path(pad).read_text(encoding="utf-8").strip()
-
-
 def _artikel_iri(bwb_id: str, artikel: str) -> str:
     """`urn:bwb:{bwb_id}:artikel:{artikel}` — zelfde vorm als `Vocab.by_ref_key` in bwb-import."""
     return "urn:bwb:" + ":".join(quote(s, safe="") for s in (bwb_id, "artikel", artikel))
@@ -86,15 +102,14 @@ async def haal_wetsartikel_op(
 
     Werpt `GraphDbNietBereikbaar` bij netwerk-/HTTP-fouten en `WetsartikelNietGevonden` als het
     artikel niet (meer) in de graaf staat. `client` is een DI-punt voor tests (zelfde patroon
-    als bwb-import's injecteerbare `requests.Session`) — zonder wordt een kortlevende
-    `httpx.AsyncClient` gebruikt.
+    als bwb-import's injecteerbare `requests.Session`) — zonder wordt de proces-brede,
+    lazily aangemaakte client uit `_get_client()` gebruikt (niet per aanvraag een nieuwe).
     """
     iri = _artikel_iri(bwb_id, artikel)
     query = _QUERY_TEMPLATE.format(iri=iri)
-    auth = (GRAPHDB_USER, _graphdb_password()) if GRAPHDB_USER else None
+    auth = (GRAPHDB_USER, GRAPHDB_PASSWORD) if GRAPHDB_USER else None
 
-    eigen_client = client is None
-    http = client or httpx.AsyncClient(timeout=_TIMEOUT)
+    http = client or _get_client()
     try:
         resp = await http.post(
             f"{GRAPHDB_URL}/repositories/{GRAPHDB_REPOSITORY}",
@@ -106,9 +121,6 @@ async def haal_wetsartikel_op(
         raise GraphDbNietBereikbaar(
             f"GraphDB niet bereikbaar voor {bwb_id} art. {artikel}: {exc}"
         ) from exc
-    finally:
-        if eigen_client:
-            await http.aclose()
 
     if not resp.is_success:
         raise GraphDbNietBereikbaar(f"GraphDB HTTP {resp.status_code} voor {bwb_id} art. {artikel}")

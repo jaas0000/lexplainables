@@ -415,7 +415,6 @@ class ToestandParser:
                     voornaam=voornaam or None,
                     achternaam=achternaam or None,
                     plaats=self._tekst(ondt.find("plaats")) or None,
-                    datum=None,
                 )
             )
         return out

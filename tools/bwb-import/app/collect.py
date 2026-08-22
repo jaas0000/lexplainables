@@ -67,6 +67,19 @@ class Batch:
         self.rels.setdefault((src, rel_type, dst), []).append({"from": from_id, "to": to_id})
 
 
+def _provenance_props(item) -> dict:
+    """Gedeelde provenance-/temporaliteitsvelden — identiek op `Artikel`/`Bijlage`/`Divisie`."""
+    return {
+        "inwerking": item.inwerking,
+        "bron": item.bron,
+        "effect": item.effect,
+        "status": item.status,
+        "terugwerkend_tot": item.terugwerkend_tot,
+        "wijzigingsbronnen": item.wijzigingsbronnen,
+        "voetnoot": item.voetnoten,
+    }
+
+
 class _Collector:
     """Bouwt een `Batch` uit een `Wet` (één traversal)."""
 
@@ -138,13 +151,7 @@ class _Collector:
                     "label": artikel.label,
                     "tekst": artikel.tekst,
                     "label_id": artikel.label_id,
-                    "inwerking": artikel.inwerking,
-                    "bron": artikel.bron,
-                    "effect": artikel.effect,
-                    "status": artikel.status,
-                    "terugwerkend_tot": artikel.terugwerkend_tot,
-                    "wijzigingsbronnen": artikel.wijzigingsbronnen,
-                    "voetnoot": artikel.voetnoten,
+                    **_provenance_props(artikel),
                 },
             )
             self.batch.rel(ouder_ent, "HEEFT_ARTIKEL", "Artikel", ouder_id, artikel.id)
@@ -167,13 +174,7 @@ class _Collector:
                     "label": bijlage.label,
                     "titel": bijlage.titel,
                     "tekst": bijlage.tekst,
-                    "inwerking": bijlage.inwerking,
-                    "bron": bijlage.bron,
-                    "effect": bijlage.effect,
-                    "status": bijlage.status,
-                    "terugwerkend_tot": bijlage.terugwerkend_tot,
-                    "wijzigingsbronnen": bijlage.wijzigingsbronnen,
-                    "voetnoot": bijlage.voetnoten,
+                    **_provenance_props(bijlage),
                 },
             )
             self.batch.rel(ouder_ent, "HEEFT_BIJLAGE", "Bijlage", ouder_id, bijlage.id)
@@ -201,13 +202,7 @@ class _Collector:
                     "label": divisie.label,
                     "titel": divisie.titel,
                     "tekst": divisie.tekst,
-                    "inwerking": divisie.inwerking,
-                    "bron": divisie.bron,
-                    "effect": divisie.effect,
-                    "status": divisie.status,
-                    "terugwerkend_tot": divisie.terugwerkend_tot,
-                    "wijzigingsbronnen": divisie.wijzigingsbronnen,
-                    "voetnoot": divisie.voetnoten,
+                    **_provenance_props(divisie),
                 },
             )
             self.batch.rel(ouder_ent, "HEEFT_DIVISIE", "Divisie", ouder_id, divisie.id)
