@@ -209,4 +209,7 @@ Geen enkele binding (het artikel bestaat niet als `bwb:Artikel`-resource) → ni
 - Story 023's criterium mag pas op `ja` als dit endpoint écht werkt — niet optimistisch vooruit
   afvinken (zie het eerdere vervolgpunt over precies deze valkuil).
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #68). Geverifieerd tegen de live GraphDB (Invorderingswet-fixture
+BWBR0004770, art. 1 — een artikel met twee leden en géén eigen `bwb:tekst`, exact het geval dat
+de query-fix vereiste): echte artikel-/ledentekst zichtbaar in `/werkplek/{slug}`, gemarkeerd
+lid klopt, 404 op een niet-bestaand artikel bevestigd.
