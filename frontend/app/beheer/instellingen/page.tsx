@@ -86,15 +86,7 @@ export default function InstellingenPagina() {
             subtitel="prompts + respons, voor analyse"
           />
 
-          <div
-            style={{
-              marginBottom: "1rem",
-              padding: "1rem",
-              background: "rgb(var(--surface))",
-              border: "1px solid rgb(var(--line))",
-              borderRadius: "6px",
-            }}
-          >
+          <div className="card" style={{ marginBottom: "1rem" }}>
             <div
               style={{
                 display: "flex",
@@ -136,41 +128,16 @@ export default function InstellingenPagina() {
                 }}
               >
                 <span
-                  style={{
-                    fontSize: "0.75rem",
-                    padding: "0.125rem 0.5rem",
-                    borderRadius: "9999px",
-                    background: capture
-                      ? "rgb(var(--succes) / 0.1)"
-                      : "rgb(var(--faint) / 0.15)",
-                    color: capture ? "rgb(var(--succes))" : "rgb(var(--muted))",
-                    border: `1px solid ${capture ? "rgb(var(--succes) / 0.3)" : "rgb(var(--line))"}`,
-                    fontWeight: 500,
-                  }}
+                  className={`badge ${capture ? "badge-gepubliceerd" : "badge-concept"}`}
                 >
                   {capture ? "aan" : "uit"}
                 </span>
                 <button
                   type="button"
+                  className={capture ? "btn btn-secondary" : "btn btn-primary"}
                   disabled={bezig || instellingen === null}
                   onClick={() => void wisselCapture()}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderRadius: "4px",
-                    border: "none",
-                    fontSize: "0.875rem",
-                    fontWeight: 500,
-                    fontFamily: "inherit",
-                    cursor: bezig ? "default" : "pointer",
-                    background: capture
-                      ? "rgb(var(--surface))"
-                      : "rgb(var(--lint))",
-                    color: capture ? "rgb(var(--ink))" : "white",
-                    boxShadow: capture
-                      ? "inset 0 0 0 1px rgb(var(--line))"
-                      : "none",
-                    opacity: bezig ? 0.6 : 1,
-                  }}
+                  style={{ opacity: bezig ? 0.6 : 1 }}
                 >
                   {bezig ? "Bezig…" : capture ? "Uitzetten" : "Aanzetten"}
                 </button>
@@ -180,15 +147,8 @@ export default function InstellingenPagina() {
             {fout && (
               <div
                 role="alert"
-                style={{
-                  marginTop: "0.75rem",
-                  padding: "0.5rem 0.875rem",
-                  borderRadius: "4px",
-                  background: "rgb(var(--fout) / 0.08)",
-                  border: "1px solid rgb(var(--fout) / 0.3)",
-                  color: "rgb(var(--fout))",
-                  fontSize: "0.8125rem",
-                }}
+                className="melding melding-fout"
+                style={{ marginTop: "0.75rem" }}
               >
                 {fout}
               </div>

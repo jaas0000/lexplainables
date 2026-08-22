@@ -19,6 +19,48 @@ JWT-callback ververst rol/actief-status via `GET /v1/auth/me` elke `SESSION_CHEC
 
 ---
 
+## Fase 3 — Rijkshuisstijl (sidebar-migratie)
+
+- **`AppSidebar.tsx` is een skelet, nog geen gesprekkenlijst**: de bron-app (`wetsanalyse-ai`)
+  heeft de sidebar verweven met de chatgeschiedenis-feature (nieuw-gesprek-knop, scrollende
+  gesprekkenlijst, hernoemen/verwijderen — zie `GesprekSidebar.tsx`). Die functionaliteit bestaat
+  in lexplainables nog niet; komt pas met de analyse-werkplek in fase 4. Nu staat er alleen de
+  vorm (logo, statische nav-links Projecten/Werkplek/Beheer, gebruikersblok, mobiele drawer).
+  Fase 4 vult 'm met de echte gesprekkenlijst i.p.v. opnieuw op te zetten.
+- **Rijkshuisstijl-vorm gewijzigd**: de horizontale, gecentreerde logobalk (lint op de
+  middenas, Rijkshuisstijl-regel) is vervangen door een sidebar met het logo linksboven, conform
+  `wetsanalyse-ai`'s huidige aanpak (`layout.tsx`-comment daar: "de oude logobalk + navigatiebalk
+  + footer zijn weg"). Dit wijkt af van de klassieke RH-lintregel; bewust gekozen om gelijk te
+  lopen met de bron-app. Als dit ooit een RH-toetsing moet doorstaan, is dit het punt om op terug
+  te komen.
+- **Geen rol-gating op de "Beheer"-link**: zowel de oude `NavigatieHeader` als de nieuwe
+  `AppSidebar` tonen "Beheer" aan elke ingelogde gebruiker, ongeacht `session.user.rol`. Bestaand
+  gedrag, niet gewijzigd in fase 3 (zuiver visuele scope) — wel inconsistent met
+  `GesprekSidebar.tsx` in de bron-app, die "Beheer" alleen aan `beheerder`-rol toont. Zie ook het
+  bestaande vervolgpunt onder "PR #5 — auth-eigen-gebruikers": BFF-routes controleren
+  `session.user.rol` sowieso nog niet.
+- **`tailwind.config.ts` was géén volledige match met `wetsanalyse-ai`**: het fase-3-plan
+  claimde "identiek", maar `borderRadius.kaart`, `boxShadow.zacht`/`.kaart`, de `.focus-ring`-CSS-
+  klasse en de `coarse:`-Tailwind-variant ontbraken. Toegevoegd in deze PR (nodig voor de sidebar-
+  vormtaal); geverifieerd dat verder niets anders was.
+- **Geen generieke `Dialog`-abstractie**: de mobiele drawer in `AppSidebar.tsx` is een eigen,
+  eenvoudige implementatie (backdrop + paneel, geen focus-trap), niet de 5-varianten-`Dialog` uit
+  `wetsanalyse-ai/components/ui/Dialog.tsx`. Voldoende voor nu (één variant nodig); overwegen zodra
+  een tweede modal-usecase komt (bv. een uitgebreidere feedback-dialoog of een artefact-paneel in
+  fase 4).
+- **Sidebar altijd gemount, ook onzichtbaar op mobiel** (Simplify-bevinding, bewust niet gefixt):
+  `AppSidebar.tsx`'s `<aside>` wordt met CSS verborgen op mobiel (`hidden lg:block`), niet
+  conditioneel gerenderd — en mount dus altijd, inclusief zijn eigen `BerichtenPopover` met een
+  60s-polling-interval. Zodra de mobiele drawer opengaat, mount een *tweede* instantie ernaast, wat
+  tijdelijk dubbele polling geeft. Dit patroon is 1:1 overgenomen van `wetsanalyse-ai`'s eigen
+  `AppSidebar.tsx` (identieke structuur: altijd-gemounte `<aside>` + los gemounte `Dialog` bij
+  `drawerOpen`) — dus geen regressie t.o.v. de bron-app, maar wel een generieke inefficiëntie die
+  in beide codebases zou opgaan. Fix (indien ooit nodig): één `SidebarInhoud`-instantie die van
+  container wisselt i.p.v. twee aparte mounts, of de aside niet-conditioneel maken achter een
+  JS-media-query-hook.
+
+---
+
 ## Simplify-sweep story 005 — auth-login
 
 - **Onbenutte BFF-route `app/api/auth/setup-status/route.ts`**: mogelijk dead code — de frontend gebruikt alleen `haalSetupStatus` (server-side). Onderzoeken en verwijderen indien nergens meer bereikt. Gevonden tijdens simplify-sweep (story 005, PR #32); buiten simplify-scope want gedragsverandering.
@@ -183,7 +225,7 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 - **LAAG** — `api/app/features/runtime_config/store.py` r88-90: na elke schrijfactie cache wissen + nieuwe `SELECT *` — de geschreven waarden zijn al bekend, round-trip overbodig.
 - **LAAG** — `api/app/features/runtime_config/store.py` r78-87: per-sleutel upsert in loop — nu 1 query, bij méér instellingen N sequentiële queries binnen één transactie.
 - **LAAG** — `frontend/app/beheer/instellingen/page.tsx` r18-29: `useEffect` zonder `AbortController` — geen lek in React 18, maar netwerk-request loopt onnodig door na unmount.
-- **LAAG** — `frontend/app/beheer/instellingen/page.tsx`: 197 regels inline styles voor één kaart — kaart-layout en status-badge herhalen patronen die extraction verdienen (zie `SectieHeader` als precedent).
+- **LAAG** — `frontend/app/beheer/instellingen/page.tsx`: 197 regels inline styles voor één kaart — kaart-layout en status-badge herhalen patronen die extraction verdienen (zie `SectieHeader` als precedent). ✅ opgelost in fase 3 (Rijkshuisstijl): kaart-wrapper → `.card`, status-tag → `.badge`/`.badge-gepubliceerd`/`.badge-concept`, knop → `.btn`, foutmelding → `.melding melding-fout`.
 ---
 
 ## PR #17 — analyse-engine (story 024)

@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 const config: Config = {
   content: [
@@ -37,6 +38,12 @@ const config: Config = {
         field: "3px",
         // Vormelement: één grote afgeronde hoek als signatuur (RH-radius-stap).
         vorm: "32px",
+        // Modern jasje: rondere kaarten/bubbels náást de RH-knopradius (sidebar, dialogen).
+        kaart: "14px",
+      },
+      boxShadow: {
+        zacht: "var(--schaduw-zacht)",
+        kaart: "var(--schaduw-kaart)",
       },
       maxWidth: {
         prose: "72ch",
@@ -52,7 +59,14 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // `coarse:` richt zich op aanraakbediening: knoppen/velden kunnen compact zijn met een muis
+    // (40px) en toch de 44–48px raakvlakgrootte houden op touch. Tailwind 3.4 heeft hier nog geen
+    // ingebouwde variant voor; die komt pas in v4.
+    plugin(({ addVariant }) => {
+      addVariant("coarse", "@media (pointer: coarse)");
+    }),
+  ],
 };
 
 export default config;

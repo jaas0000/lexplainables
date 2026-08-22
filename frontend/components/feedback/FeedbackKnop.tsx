@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   CATEGORIE_META,
   CATEGORIEN,
   type Categorie,
 } from "@/lib/feedback-types";
+import { useClickOutside } from "@/lib/useClickOutside";
 
 export function FeedbackKnop() {
   const pathname = usePathname();
@@ -18,23 +19,7 @@ export function FeedbackKnop() {
   const [tekst, setTekst] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!panelOpen) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setPanelOpen(false);
-    }
-    function onMouseDown(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setPanelOpen(false);
-      }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("mousedown", onMouseDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("mousedown", onMouseDown);
-    };
-  }, [panelOpen]);
+  useClickOutside(panelRef, panelOpen, () => setPanelOpen(false));
 
   async function handleVerzenden() {
     if (!tekst.trim()) {
