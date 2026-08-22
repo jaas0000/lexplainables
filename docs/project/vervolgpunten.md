@@ -261,13 +261,20 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ---
 
-## Gevonden tijdens story 027 (bwb-import GraphDB-writer)
+## Gevonden tijdens story 027 (bwb-import GraphDB-writer) ✅ opgelost 2026-08-22
 
-- **GraphDB ≥ 11.x vereist een licentie voor elke schrijfactie** ("No license was set", 500 op
-  elke PUT/SPARQL-update). Blokkeert `tools/bwb-import/tests/test_graphdb_writer.py`'s
-  `@pytest.mark.integration`-test (standaard geskipt) én elke echte import totdat er een licentie
-  is. Registratie is gratis maar vereist een Ontotext-account — buiten wat een agent zelfstandig
-  kan regelen. Zie `deploy/graphdb/README.md` §Licentie voor de stappen (download +
-  `docker-compose.override.yml`). De schrijflogica zelf is wél volledig getest (51 unit-tests
-  tegen in-memory RDF-graven, incl. tegen een echt fragment van de Invorderingswet 1990) — alleen
-  de HTTP-PUT naar een echte GraphDB-instance is nog niet end-to-end geverifieerd.
+GraphDB ≥ 11.x vereist een licentie voor elke schrijfactie ("No license was set", 500 op elke
+PUT/SPARQL-update). Root cause + juridische afweging vastgelegd in
+`ai-notes/licenties-en-juridisch.md`. Gebruiker heeft een GraphDB Free-licentie geregistreerd
+(Licensee: Belastingdienst) en aangeleverd; geladen via `deploy/graphdb/docker-compose.override.yml`
+(gitignored, licentiebestand buiten de repo in `/root/.secrets/`). Twee checks bevestigen dat de
+schrijfpijplijn nu volledig werkt:
+- `test_write_wet_en_terugvragen` (`@pytest.mark.integration`) slaagt tegen de echte lokale
+  GraphDB.
+- Live `python -m app.main BWBR0004770` tegen de actuele Invorderingswet 1990
+  (geldig vanaf 2026-07-01, rechtstreeks van `repository.officiele-overheidspublicaties.nl`)
+  schreef 9.686 triples weg: 133 artikelen, 385 leden, 232 onderdelen, 1.284 relaties — geverifieerd
+  via SPARQL.
+
+Let op: GraphDB Free is alleen toegestaan voor dev/test (zie `ai-notes/licenties-en-juridisch.md`);
+een productie-deploy (fase 5) vereist een betaalde licentie.

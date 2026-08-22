@@ -86,6 +86,7 @@ class ToestandParser:
             opschrift=self._tekst(wetgeving.find("intitule")),
             soort=wetgeving.get("soort", ""),
             geldig_vanaf=root.get("inwerkingtreding"),
+            label_id=wetgeving.get("label-id"),
         )
 
         # Ministeriële regelingen dragen dezelfde bouwstenen als een wettekst, maar onder
@@ -124,6 +125,7 @@ class ToestandParser:
             label=self._tekst(kop.find("label")) if kop is not None else "",
             titel=self._tekst(kop.find("titel")) if kop is not None else "",
             jci=self._element_jci(element),
+            label_id=element.get("label-id"),
         )
         for child in element:
             tag = child.tag if isinstance(child.tag, str) else ""
@@ -141,6 +143,7 @@ class ToestandParser:
             label=element.get("label", ""),
             tekst=self._lichaamstekst(element, binnen_lid=False),
             jci=self._element_jci(element),
+            label_id=element.get("label-id"),
             verwijzingen=extract_references(
                 element,
                 eigen_bwb_id=bwb_id,

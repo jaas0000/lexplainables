@@ -24,3 +24,6 @@ api/alembic/versions/*.pyc
 
 # Lokale compose-overrides (secrets/licenties, bv. deploy/graphdb/docker-compose.override.yml)
 docker-compose.override.yml
+
+# Gedownloade BWB-brondata (bwb-import lokale cache, geen projectcode)
+tools/bwb-import/data/

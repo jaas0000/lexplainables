@@ -43,6 +43,7 @@ class Settings:
     schemas_dir: Path
     sru_base_url: str
     validate_xsd: bool
+    import_wti: bool
     graphdb_url: str
     graphdb_repository: str
     graphdb_user: str | None
@@ -57,6 +58,8 @@ class Settings:
             schemas_dir=Path(os.environ.get("BWB_SCHEMAS_DIR", str(PROJECT_ROOT / "schemas"))),
             sru_base_url=os.environ.get("BWB_SRU_URL", DEFAULT_SRU_BASE_URL),
             validate_xsd=os.environ.get("BWB_VALIDATE_XSD", "true").strip().lower()
+            not in {"0", "false", "nee", "no"},
+            import_wti=os.environ.get("BWB_IMPORT_WTI", "false").strip().lower()
             not in {"0", "false", "nee", "no"},
             graphdb_url=os.environ.get("GRAPHDB_URL", "http://graphdb:7200"),
             graphdb_repository=os.environ.get("GRAPHDB_REPOSITORY", "inning"),

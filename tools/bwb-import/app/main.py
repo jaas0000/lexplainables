@@ -13,9 +13,10 @@ import sys
 from app.config import Settings
 from app.downloader import BwbDownloader
 from app.graphdb_writer import GraphDbWriter
-from app.models import ImportResult, ImportSummary
+from app.models import ImportResult, ImportSummary, ToestandRef
 from app.parser import ToestandParser
 from app.rdf_vocab import Vocab
+from app.wti_parser import WtiInfo, WtiParser
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,10 @@ def run_import(
         prepare(writer)
 
     downloader = BwbDownloader(settings)
-    xml_path = downloader.download_toestand(bwb_id)
+    # Eerst zelf de toestand-ref bepalen (i.p.v. impliciet in download_toestand) — die ref
+    # dragen we ook naar de WTI-download (locatie_wti), dus één SRU-discovery-call voor beide.
+    toestand = downloader.latest_toestand(bwb_id)
+    xml_path = downloader.download_toestand(bwb_id, toestand)
 
     schema_path = settings.schemas_dir / "toestand_2016-1.xsd"
     parser = ToestandParser(schema_path=schema_path if settings.validate_xsd else None)
@@ -62,10 +66,25 @@ def run_import(
         parser.validate(xml_path)
 
     wet = parser.parse(xml_path)
-    summary = writer.write_wet(wet)
+    wti = _laad_wti(downloader, toestand) if settings.import_wti else None
+    summary = writer.write_wet(wet, wti=wti)
 
     logger.info("Import voltooid voor %s", bwb_id)
     return summary
+
+
+def _laad_wti(downloader: BwbDownloader, toestand: ToestandRef) -> WtiInfo | None:
+    """Download en parse de WTI; verrijking is best-effort (nooit blokkerend) — de kernwettekst
+    is altijd waardevoller dan de verrijking, dus een falende WTI-stap breekt de import niet."""
+    try:
+        wti_path = downloader.download_wti(toestand)
+        if wti_path is None:
+            logger.warning("Geen WTI-locatie bekend voor %s", toestand.bwb_id)
+            return None
+        return WtiParser().parse(wti_path)
+    except Exception as exc:  # noqa: BLE001 - verrijking mag de import niet breken
+        logger.warning("WTI-verrijking overgeslagen voor %s: %s", toestand.bwb_id, exc)
+        return None
 
 
 def run_imports(bwb_ids: list[str], settings: Settings) -> list[ImportResult]:
