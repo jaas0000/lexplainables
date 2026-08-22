@@ -8,6 +8,7 @@ import { AuditlogTabblad } from "@/components/annotatie/AuditlogTabblad";
 
 type AnnotatieDocument = components["schemas"]["AnnotatieDocument"];
 type AuditRegel = components["schemas"]["AuditRegel"];
+type Wetsartikel = components["schemas"]["Wetsartikel"];
 
 type Tabblad = "elementen" | "auditlog";
 
@@ -27,6 +28,9 @@ export default function WerkplekDetailPagina({
   const [audit, setAudit] = useState<AuditRegel[] | null>(null);
   const [fout, setFout] = useState<string | null>(null);
   const [tabblad, setTabblad] = useState<Tabblad>("elementen");
+  const [wetsartikel, setWetsartikel] = useState<Wetsartikel | null>(null);
+  const [wetsartikelFout, setWetsartikelFout] = useState<string | null>(null);
+  const [wetsartikelLaden, setWetsartikelLaden] = useState(true);
   const laden = document_ === null && fout === null;
 
   // Resolve params (Next.js 16)
@@ -64,6 +68,45 @@ export default function WerkplekDetailPagina({
     }
 
     void laad();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, router]);
+
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+
+    async function laadWetsartikel() {
+      setWetsartikelLaden(true);
+      setWetsartikelFout(null);
+      try {
+        const res = await fetch(
+          `/api/annotatie/documenten/${slug}/wetsartikel`,
+        );
+        if (cancelled) return;
+        if (res.status === 401) {
+          router.push("/login");
+          return;
+        }
+        if (res.status === 404) {
+          setWetsartikelFout("Wetsartikel niet gevonden in de kennisgraaf.");
+          return;
+        }
+        if (!res.ok) {
+          setWetsartikelFout("Wetsartikeltekst tijdelijk niet beschikbaar.");
+          return;
+        }
+        setWetsartikel((await res.json()) as Wetsartikel);
+      } catch {
+        if (!cancelled)
+          setWetsartikelFout("Wetsartikeltekst tijdelijk niet beschikbaar.");
+      } finally {
+        if (!cancelled) setWetsartikelLaden(false);
+      }
+    }
+
+    void laadWetsartikel();
     return () => {
       cancelled = true;
     };
@@ -253,16 +296,88 @@ export default function WerkplekDetailPagina({
               {document_.bwb_id} · art. {document_.artikel}
               {document_.lid ? ` · lid ${document_.lid}` : ""}
             </p>
-            <p
-              style={{
-                fontSize: "0.8125rem",
-                color: "rgb(var(--faint))",
-                marginTop: "0.75rem",
-              }}
-            >
-              De volledige wetsartikeltekst is beschikbaar via de
-              Wettenbank-koppeling (nog niet ingebouwd in deze versie).
-            </p>
+
+            {wetsartikelLaden && (
+              <p
+                style={{
+                  fontSize: "0.8125rem",
+                  color: "rgb(var(--muted))",
+                  marginTop: "0.75rem",
+                }}
+              >
+                Wetsartikeltekst laden…
+              </p>
+            )}
+
+            {!wetsartikelLaden && wetsartikelFout && (
+              <p
+                style={{
+                  fontSize: "0.8125rem",
+                  color: "rgb(var(--faint))",
+                  marginTop: "0.75rem",
+                }}
+              >
+                Wetsartikeltekst niet beschikbaar: {wetsartikelFout}
+              </p>
+            )}
+
+            {!wetsartikelLaden && wetsartikel && (
+              <div style={{ marginTop: "0.75rem" }}>
+                {wetsartikel.opschrift && (
+                  <h4
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: 600,
+                      margin: "0 0 0.5rem",
+                    }}
+                  >
+                    {wetsartikel.opschrift}
+                  </h4>
+                )}
+                {(wetsartikel.leden ?? []).length === 0 ? (
+                  <p style={{ fontSize: "0.8125rem", lineHeight: 1.6 }}>
+                    {wetsartikel.tekst}
+                  </p>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    {(wetsartikel.leden ?? []).map((lid, i) => {
+                      const gemarkeerd =
+                        document_.lid && lid.nummer === document_.lid;
+                      return (
+                        <p
+                          key={lid.nummer ?? i}
+                          style={{
+                            fontSize: "0.8125rem",
+                            lineHeight: 1.6,
+                            margin: 0,
+                            padding: gemarkeerd ? "0.375rem 0.5rem" : 0,
+                            borderLeft: gemarkeerd
+                              ? "3px solid rgb(var(--lint))"
+                              : "none",
+                            background: gemarkeerd
+                              ? "rgba(var(--lint), 0.06)"
+                              : "transparent",
+                          }}
+                        >
+                          {lid.nummer && (
+                            <strong style={{ marginRight: "0.375rem" }}>
+                              {lid.nummer}.
+                            </strong>
+                          )}
+                          {lid.tekst}
+                        </p>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Rechterkolom: elementen */}

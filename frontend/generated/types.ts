@@ -439,6 +439,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/annotatie/documenten/{slug}/wetsartikel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Wetsartikel
+         * @description Wetsartikeltekst uit GraphDB voor het `bwb_id`/`artikel` van dit document (story 037).
+         */
+        get: operations["get_wetsartikel_v1_annotatie_documenten__slug__wetsartikel_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/2fa/activeer": {
         parameters: {
             query?: never;
@@ -1689,6 +1709,26 @@ export interface components {
             /** Bwb Id */
             bwb_id: string;
         };
+        /** Wetsartikel */
+        Wetsartikel: {
+            /** Artikel */
+            artikel: string;
+            /** Bwb Id */
+            bwb_id: string;
+            /** Leden */
+            leden?: components["schemas"]["WetsartikelLid"][];
+            /** Opschrift */
+            opschrift: string | null;
+            /** Tekst */
+            tekst: string;
+        };
+        /** WetsartikelLid */
+        WetsartikelLid: {
+            /** Nummer */
+            nummer: string | null;
+            /** Tekst */
+            tekst: string;
+        };
         /** WijzigingInvoer */
         WijzigingInvoer: {
             /** Klasse */
@@ -2863,6 +2903,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotatieDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_wetsartikel_v1_annotatie_documenten__slug__wetsartikel_get: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Wetsartikel"];
                 };
             };
             /** @description Validation Error */

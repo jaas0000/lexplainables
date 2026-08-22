@@ -49,6 +49,7 @@ append-only auditlog; tijdlijn = ORDER BY id (BIGINT autoincrement).
 | `PUT` | `/annotatie/documenten/{slug}/elementen` | gebruiker | `ElementenZettenOut` |
 | `POST` | `/annotatie/documenten/{slug}/elementen/{element_id}/beslissing` | gebruiker | `AnnotatieDocument` |
 | `GET` | `/annotatie/documenten/{slug}/audit` | gebruiker | `AuditlogOut` |
+| `GET` | `/annotatie/documenten/{slug}/wetsartikel` | gebruiker | `Wetsartikel` |
 
 ## Store-interface
 
@@ -91,6 +92,16 @@ class AnnotatieStore(Protocol):
 - Client scoping lijst isoleert gebruikers.
 - Document met optioneel lid.
 - Gedeeltelijk gereviewd status.
+- Wetsartikel geeft tekst en leden.
+- Wetsartikel andermans document geeft 404.
+- Wetsartikel niet in graaf geeft 404.
+- Wetsartikel graphdb onbereikbaar geeft 502.
+- Artikel iri percent encodeert segmenten.
+- Haal wetsartikel op met opschrift en leden.
+- Haal wetsartikel op zonder leden.
+- Haal wetsartikel op lege bindings geeft niet gevonden.
+- Haal wetsartikel op netwerkfout geeft niet bereikbaar.
+- Haal wetsartikel op http fout geeft niet bereikbaar.
 
 ## Beslissingen
 

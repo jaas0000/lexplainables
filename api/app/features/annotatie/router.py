@@ -11,6 +11,9 @@ Businessregels die niet uit de modellen volgen:
   `afwijzen` → `afgewezen`; `opmerking` → levenscyclus ongewijzigd.
 - Documentstatus na beslissing: herberekend op basis van levenscyclus-verdeling van alle
   elementen — volledig beslist → `klaar`; gedeeltelijk → `gedeeltelijk_gereviewd`.
+- Wetsartikeltekst (story 037): opgehaald uit GraphDB via `graphdb.py`, niet uit Postgres.
+  Artikel niet in de graaf → 404; GraphDB onbereikbaar → 502 (onderscheiden van het generieke
+  "document niet gevonden"-404 hierboven).
 
 Gebruikt `GELDIGE_JAS_KLASSEN` uit `shared/validation.py` (zie feature-bouwen regel 8;
 terugverwijzing: annotatie gebruikt `shared/validation.py`, zie daar).
@@ -27,6 +30,7 @@ from ...db import get_engine
 from ...shared.auth import huidige_gebruiker
 from ...shared.tijd import nu
 from ...shared.validation import GELDIGE_JAS_KLASSEN
+from .graphdb import GraphDbNietBereikbaar, WetsartikelNietGevonden, haal_wetsartikel_op
 from .models import (
     AnnotatieDocument,
     AnnotatieElement,
@@ -39,6 +43,7 @@ from .models import (
     DocumentStatus,
     ElementenInvoer,
     Levenscyclus,
+    Wetsartikel,
 )
 from .store import (
     AnnotatieStore,
@@ -296,3 +301,19 @@ async def get_audit(
     await _laad_eigen_document(slug, client_id, store)
     regels = await store.lees_audit(slug)
     return AuditlogOut(items=regels)
+
+
+@router.get("/{slug}/wetsartikel", response_model=Wetsartikel)
+async def get_wetsartikel(
+    slug: str,
+    client_id: str = Depends(huidige_gebruiker),
+    store: AnnotatieStore = Depends(get_store),
+) -> Wetsartikel:
+    """Wetsartikeltekst uit GraphDB voor het `bwb_id`/`artikel` van dit document (story 037)."""
+    doc = await _laad_eigen_document(slug, client_id, store)
+    try:
+        return await haal_wetsartikel_op(doc.bwb_id, doc.artikel)
+    except WetsartikelNietGevonden as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    except GraphDbNietBereikbaar as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc

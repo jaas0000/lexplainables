@@ -10,6 +10,9 @@ Dekt de acceptatiecriteria uit docs/stories/022-annotatie-backend.md:
 
 from __future__ import annotations
 
+import app.features.annotatie.router as annotatie_router
+from app.features.annotatie.graphdb import GraphDbNietBereikbaar, WetsartikelNietGevonden
+from app.features.annotatie.models import Wetsartikel, WetsartikelLid
 from app.main import app
 from app.shared.auth import huidige_gebruiker
 
@@ -330,3 +333,62 @@ def test_gedeeltelijk_gereviewd_status(client):
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "gedeeltelijk_gereviewd"
+
+
+# --- wetsartikeltekst (story 037) ---------------------------------------------------
+
+
+def test_wetsartikel_geeft_tekst_en_leden(client, monkeypatch):
+    doc = _maak(client)
+
+    async def fake_haal_op(bwb_id: str, artikel: str) -> Wetsartikel:
+        assert (bwb_id, artikel) == (doc["bwb_id"], doc["artikel"])
+        return Wetsartikel(
+            bwb_id=bwb_id,
+            artikel=artikel,
+            opschrift="Belastingplicht",
+            tekst="De belasting wordt geheven van...",
+            leden=[WetsartikelLid(nummer="1", tekst="Eerste lid.")],
+        )
+
+    monkeypatch.setattr(annotatie_router, "haal_wetsartikel_op", fake_haal_op)
+
+    resp = client.get(f"/v1/annotatie/documenten/{doc['slug']}/wetsartikel", headers=HDRS_A)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["opschrift"] == "Belastingplicht"
+    assert body["leden"] == [{"nummer": "1", "tekst": "Eerste lid."}]
+
+
+def test_wetsartikel_andermans_document_geeft_404(client):
+    doc = _maak(client)
+
+    app.dependency_overrides[huidige_gebruiker] = lambda: "analist-B"
+    resp = client.get(f"/v1/annotatie/documenten/{doc['slug']}/wetsartikel", headers=HDRS_B)
+    app.dependency_overrides[huidige_gebruiker] = lambda: "analist-A"
+
+    assert resp.status_code == 404
+
+
+def test_wetsartikel_niet_in_graaf_geeft_404(client, monkeypatch):
+    doc = _maak(client)
+
+    async def fake_haal_op(bwb_id: str, artikel: str) -> Wetsartikel:
+        raise WetsartikelNietGevonden("niet gevonden")
+
+    monkeypatch.setattr(annotatie_router, "haal_wetsartikel_op", fake_haal_op)
+
+    resp = client.get(f"/v1/annotatie/documenten/{doc['slug']}/wetsartikel", headers=HDRS_A)
+    assert resp.status_code == 404
+
+
+def test_wetsartikel_graphdb_onbereikbaar_geeft_502(client, monkeypatch):
+    doc = _maak(client)
+
+    async def fake_haal_op(bwb_id: str, artikel: str) -> Wetsartikel:
+        raise GraphDbNietBereikbaar("geen verbinding")
+
+    monkeypatch.setattr(annotatie_router, "haal_wetsartikel_op", fake_haal_op)
+
+    resp = client.get(f"/v1/annotatie/documenten/{doc['slug']}/wetsartikel", headers=HDRS_A)
+    assert resp.status_code == 502

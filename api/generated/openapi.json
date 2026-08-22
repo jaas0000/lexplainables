@@ -2142,6 +2142,73 @@
         "title": "WetStructuur",
         "type": "object"
       },
+      "Wetsartikel": {
+        "properties": {
+          "artikel": {
+            "title": "Artikel",
+            "type": "string"
+          },
+          "bwb_id": {
+            "title": "Bwb Id",
+            "type": "string"
+          },
+          "leden": {
+            "items": {
+              "$ref": "#/components/schemas/WetsartikelLid"
+            },
+            "title": "Leden",
+            "type": "array"
+          },
+          "opschrift": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opschrift"
+          },
+          "tekst": {
+            "title": "Tekst",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bwb_id",
+          "artikel",
+          "opschrift",
+          "tekst"
+        ],
+        "title": "Wetsartikel",
+        "type": "object"
+      },
+      "WetsartikelLid": {
+        "properties": {
+          "nummer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nummer"
+          },
+          "tekst": {
+            "title": "Tekst",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nummer",
+          "tekst"
+        ],
+        "title": "WetsartikelLid",
+        "type": "object"
+      },
       "WijzigingInvoer": {
         "properties": {
           "klasse": {
@@ -4571,6 +4638,58 @@
           }
         },
         "summary": "Registreer Beslissing",
+        "tags": [
+          "annotatie"
+        ]
+      }
+    },
+    "/v1/annotatie/documenten/{slug}/wetsartikel": {
+      "get": {
+        "description": "Wetsartikeltekst uit GraphDB voor het `bwb_id`/`artikel` van dit document (story 037).",
+        "operationId": "get_wetsartikel_v1_annotatie_documenten__slug__wetsartikel_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wetsartikel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Wetsartikel",
         "tags": [
           "annotatie"
         ]

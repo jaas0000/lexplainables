@@ -13,7 +13,7 @@ Als analist wil ik een wetsartikel kunnen selecteren, de door de agent voorgeste
 
 - [x] De werkplek (`/werkplek/`) toont een lijst van eigen annotatie-documenten met bwb-id, artikel, werkgebied, status en datum.
 - [x] Een analist kan een nieuw annotatie-document aanmaken via een formulier (werkgebied-naam, bwb-id, artikel, optioneel lid).
-- [ ] Het documentdetailscherm (`/werkplek/{slug}`) toont de volledige wetsartikeltekst (opgehaald via de Wettenbank-MCP of de API) en de voorgestelde elementen. **Nog niet gebouwd**: de linkerkolom toont een placeholder ("Wettenbank-koppeling nog niet ingebouwd in deze versie" — `frontend/app/werkplek/[slug]/page.tsx:264`); voorgestelde elementen wél. Wettenbank-MCP bestaat inmiddels niet meer (vervangen door `bwb-import`+GraphDB, zie ADR-0001) — dit moet dus alsnog via een nieuw endpoint op `api/` dat SPARQL tegen GraphDB doet, niet via de oorspronkelijke MCP-route.
+- [x] Het documentdetailscherm (`/werkplek/{slug}`) toont de volledige wetsartikeltekst (opgehaald via de Wettenbank-MCP of de API) en de voorgestelde elementen. Gebouwd in story 037: een nieuw endpoint (`GET /v1/annotatie/documenten/{slug}/wetsartikel`) haalt de tekst rechtstreeks via SPARQL uit GraphDB op (Wettenbank-MCP bestaat niet meer, zie ADR-0001); de linkerkolom van `/werkplek/{slug}` toont de echte artikel-/ledentekst, geverifieerd tegen de live GraphDB (Invorderingswet-fixture).
 - [x] Per element is de klasse, tekst, toelichting en aandachtsniveau (`groen`/`geel`/`rood`) zichtbaar; de levenscyclus-status (voorgesteld, goedgekeurd, bewerkt, afgewezen) is als badge zichtbaar.
 - [x] Een analist kan per element op "Goedkeuren", "Bewerken" of "Afwijzen" klikken; bij bewerken en afwijzen is een verplichte reden selecteerbaar.
 - [x] Na een beslissing wordt het element direct bijgewerkt in de UI (optimistisch of na een API-antwoord).
@@ -73,5 +73,4 @@ De werkplek kopiëren en aanpassen vanuit `wetsanalyse-ai/frontend/app/workbench
   - "Auditlog"-tabblad: tijdlijn van acties (actie, actor, element, tijdstip).
 - Mockup-varianten: lege documentenlijst, document met mix van besliste en onbesliste elementen, bewerken-formulier open, auditlog-tabblad.
 
-**Gebouwd:** grotendeels (PR #22) — één acceptatiecriterium nog open, zie hierboven
-(wetsartikeltekst is een placeholder).
+**Gebouwd:** ja (PR #22; wetsartikeltekst-criterium nagekomen in story 037).

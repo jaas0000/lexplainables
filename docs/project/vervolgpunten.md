@@ -4,6 +4,16 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #68 — werkplek: echte wetsartikeltekst via GraphDB (story 037)
+
+- **`httpx.AsyncClient` per aanroep in `annotatie/graphdb.py`**: `haal_wetsartikel_op` maakt
+  zonder geïnjecteerde client een nieuwe `AsyncClient` per call — zelfde patroon als de al
+  bestaande vervolgpunten bij PR #15 (`wetcatalogus/router.py`) en PR #17
+  (`shared/wettenbank.py`). Overwegen om alle drie tegelijk op een gedeelde lifespan-scoped
+  client aan te sluiten via FastAPI's `lifespan`.
+
+---
+
 ## Fase 2 story 5 — 2FA e2e-test ✅ opgelost in fase 2b.2 (PR #48)
 
 Root cause: `signIn(..., { totp: undefined })` serialiseerde `undefined` naar de string

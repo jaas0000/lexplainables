@@ -332,6 +332,84 @@ test("auditlog-tabblad toont tijdlijn of lege placeholder", async ({
   await expect(page.getByText("Nog geen acties vastgelegd.")).toBeVisible();
 });
 
+test("wetsartikeltekst wordt getoond met gemarkeerd lid (story 037)", async ({
+  page,
+}) => {
+  const docMetLid = { ...DUMMY_DOCUMENT, lid: "2" };
+
+  await page.route(
+    `/api/annotatie/documenten/${DUMMY_DOCUMENT.slug}`,
+    (route) => {
+      void route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(docMetLid),
+      });
+    },
+  );
+
+  await page.route(
+    `/api/annotatie/documenten/${DUMMY_DOCUMENT.slug}/wetsartikel`,
+    (route) => {
+      void route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          bwb_id: DUMMY_DOCUMENT.bwb_id,
+          artikel: DUMMY_DOCUMENT.artikel,
+          opschrift: "Belastingplicht",
+          tekst: "",
+          leden: [
+            { nummer: "1", tekst: "Eerste lid van het artikel." },
+            { nummer: "2", tekst: "Tweede lid van het artikel." },
+          ],
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/werkplek/${DUMMY_DOCUMENT.slug}`);
+
+  await expect(page.getByText("Belastingplicht")).toBeVisible();
+  await expect(page.getByText("Eerste lid van het artikel.")).toBeVisible();
+  await expect(page.getByText("Tweede lid van het artikel.")).toBeVisible();
+});
+
+test("wetsartikelfout blokkeert de elementenkolom niet (story 037)", async ({
+  page,
+}) => {
+  const docMetElement = { ...DUMMY_DOCUMENT, elementen: [DUMMY_ELEMENT] };
+
+  await page.route(
+    `/api/annotatie/documenten/${DUMMY_DOCUMENT.slug}`,
+    (route) => {
+      void route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(docMetElement),
+      });
+    },
+  );
+
+  await page.route(
+    `/api/annotatie/documenten/${DUMMY_DOCUMENT.slug}/wetsartikel`,
+    (route) => {
+      void route.fulfill({ status: 404 });
+    },
+  );
+
+  await page.goto(`/werkplek/${DUMMY_DOCUMENT.slug}`);
+
+  await expect(
+    page.getByText(/Wetsartikeltekst niet beschikbaar/),
+  ).toBeVisible();
+  // De elementenkolom blijft functioneren ondanks de wetsartikel-fout.
+  await expect(
+    page.getByText("De belastingplichtige betaalt belasting."),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Goedkeuren" })).toBeVisible();
+});
+
 test("document verwijderen navigeert terug naar werkplek", async ({ page }) => {
   await page.route(
     `/api/annotatie/documenten/${DUMMY_DOCUMENT.slug}`,
