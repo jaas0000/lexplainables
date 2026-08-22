@@ -2,10 +2,10 @@
 
 `build_ontology` levert de schema-graaf die naast de instance-data wordt geladen (eigen named
 graph). Scoped tot de entiteiten die dit project parset (Regeling, Structuurdeel, Artikel, Lid,
-Onderdeel, Illustratie, Ondertekenaar, Verwijzing) plus de WTI-verrijking (Organisatie,
+Onderdeel, Illustratie, Ondertekenaar, Bijlage, Verwijzing) plus de WTI-verrijking (Organisatie,
 grondslag-/wetsfamilie-relaties, story 030), artikel/lid/onderdeel-verrijking (provenance,
-voetnoten, definities, illustraties, story 031) en wet-brondata/aanhef/considerans/
-ondertekenaars (story 032) — divisies en bijlagen volgen zodra hun parser-onderdeel bestaat (zie
+voetnoten, definities, illustraties, story 031), wet-brondata/aanhef/considerans/ondertekenaars
+(story 032) en bijlagen (story 033) — divisies volgen zodra hun parser-onderdeel bestaat (zie
 docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope).
 """
 
@@ -76,6 +76,12 @@ _KLASSEN: dict[str, tuple[str, str, tuple[str | URIRef, ...]]] = {
         "Persoon die de regeling heeft ondertekend (functie + naam).",
         (FOAF.Agent,),
     ),
+    "Bijlage": (
+        "Bijlage",
+        "Bijlage van een regeling; container (eigen artikelen/onderdelen) én tekstdrager, "
+        "citeerbaar op JuriConnect-sleutel.",
+        ("Citeerbaar", ELI.LegalResourceSubdivision),
+    ),
 }
 
 # Objectproperty -> (label, toelichting, superproperties, rdfs:range of None).
@@ -87,6 +93,8 @@ _OBJECT_PROPS: dict[str, tuple[str, str, tuple[URIRef, ...], str | None]] = {
     "heeftArtikel": ("heeft artikel", "Bevat artikel.", (ELI.has_part,), "Artikel"),
     "heeftLid": ("heeft lid", "Artikel bevat lid.", (ELI.has_part,), "Lid"),
     "heeftOnderdeel": ("heeft onderdeel", "Bevat lijstonderdeel.", (ELI.has_part,), "Onderdeel"),
+    "heeftBijlage": ("heeft bijlage", "Regeling bevat bijlage.", (ELI.has_part,), "Bijlage"),
+    "volgtOp": ("volgt op", "Documentvolgorde binnen dezelfde ouder.", (), None),
     "bevatIllustratie": (
         "bevat illustratie",
         "Tekstdrager bevat een afbeelding.",

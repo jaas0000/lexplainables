@@ -7,7 +7,7 @@ import pytest
 from rdflib import OWL, RDF, RDFS, URIRef
 
 from app.graphdb_writer import GraphDbWriter
-from app.models import Artikel, Illustratie, Lid, Ondertekenaar, Wet
+from app.models import Artikel, Bijlage, Illustratie, Lid, Ondertekenaar, Wet
 from app.parser import ToestandParser
 from app.rdf_vocab import Vocab
 
@@ -217,6 +217,58 @@ def test_build_graph_illustratie_en_provenance_triples() -> None:
     assert (artikel_iri, bevat_illustratie, illustratie_iri) in g
     assert (illustratie_iri, RDF.type, URIRef("urn:bwb-ns:Illustratie")) in g
     assert (illustratie_iri, URIRef("urn:bwb-ns:naam"), None) in g
+
+
+def test_build_graph_bijlage_citeerbaar_en_relaties() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        bijlagen=[
+            Bijlage(
+                id="BWBR9999/Bijlage1",
+                nummer="1",
+                label="Bijlage 1",
+                titel="Tabel",
+                tekst="inhoud",
+                artikelen=[
+                    Artikel(id="BWBR9999/Bijlage1/ArtA", nummer="A", label="A", tekst="tekst")
+                ],
+            )
+        ],
+    )
+    g, _ = _writer().build_graph(wet)
+
+    bijlage_iri = URIRef("urn:bwb:BWBR9999:id:BWBR9999%2FBijlage1")
+    wet_iri = URIRef("urn:bwb:BWBR9999")
+    heeft_bijlage = URIRef("urn:bwb-ns:heeftBijlage")
+    assert (bijlage_iri, RDF.type, URIRef("urn:bwb-ns:Bijlage")) in g
+    assert (bijlage_iri, RDF.type, URIRef("urn:bwb-ns:Citeerbaar")) in g
+    assert (wet_iri, heeft_bijlage, bijlage_iri) in g
+    # Het geneste artikel is een aparte, citeerbare Artikel-node onder de bijlage.
+    artikel_iri = URIRef("urn:bwb:BWBR9999:id:BWBR9999%2FBijlage1%2FArtA")
+    heeft_artikel = URIRef("urn:bwb-ns:heeftArtikel")
+    assert (bijlage_iri, heeft_artikel, artikel_iri) in g
+
+
+def test_build_graph_twee_bijlagen_volgt_op_camelcase() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        bijlagen=[
+            Bijlage(id="B1", nummer="1", label="B1", titel="Eerste", tekst=""),
+            Bijlage(id="B2", nummer="2", label="B2", titel="Tweede", tekst=""),
+        ],
+    )
+    g, _ = _writer().build_graph(wet)
+
+    volgt_op = URIRef("urn:bwb-ns:volgtOp")
+    b1_iri = URIRef("urn:bwb:BWBR9999:id:B1")
+    b2_iri = URIRef("urn:bwb:BWBR9999:id:B2")
+    assert (b2_iri, volgt_op, b1_iri) in g
 
 
 def test_build_graph_onbekende_soort_geen_subklasse() -> None:

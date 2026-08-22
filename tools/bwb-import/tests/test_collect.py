@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.collect import collect
-from app.models import Artikel, Illustratie, Verwijzing, VerwijzingSoort, Wet
+from app.models import Artikel, Bijlage, Illustratie, Verwijzing, VerwijzingSoort, Wet
 from app.parser import ToestandParser
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_toestand.xml"
@@ -105,6 +105,74 @@ def test_collect_illustratie_node_en_relatie() -> None:
     rel = batch.rels[("Artikel", "BEVAT_ILLUSTRATIE", "Illustratie")]
     assert rel == [{"from": "BWBR9999/Art1", "to": "IL1"}]
     assert summary.illustraties == 1
+
+
+def test_collect_bijlage_node_en_relatie() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        bijlagen=[
+            Bijlage(id="BWBR9999/Bijlage1", nummer="1", label="Bijlage 1", titel="Tabel", tekst="")
+        ],
+    )
+    batch, summary = collect(wet)
+
+    bijlage = batch.nodes["Bijlage"][0]
+    assert bijlage["ref_key"] == "BWBR9999#id=BWBR9999/Bijlage1"
+    assert bijlage["titel"] == "Tabel"
+    rel = batch.rels[("Regeling", "HEEFT_BIJLAGE", "Bijlage")]
+    assert rel == [{"from": "BWBR9999", "to": "BWBR9999/Bijlage1"}]
+    assert summary.bijlagen == 1
+    assert ("Bijlage", "VOLGT_OP", "Bijlage") not in batch.rels
+
+
+def test_collect_twee_bijlagen_krijgen_volgt_op_relatie() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        bijlagen=[
+            Bijlage(
+                id="BWBR9999/Bijlage1", nummer="1", label="Bijlage 1", titel="Eerste", tekst=""
+            ),
+            Bijlage(
+                id="BWBR9999/Bijlage2", nummer="2", label="Bijlage 2", titel="Tweede", tekst=""
+            ),
+        ],
+    )
+    batch, _ = collect(wet)
+
+    rel = batch.rels[("Bijlage", "VOLGT_OP", "Bijlage")]
+    assert rel == [{"from": "BWBR9999/Bijlage2", "to": "BWBR9999/Bijlage1"}]
+
+
+def test_collect_bijlage_met_eigen_artikel_als_aparte_node() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        bijlagen=[
+            Bijlage(
+                id="BWBR9999/Bijlage1",
+                nummer="1",
+                label="Bijlage 1",
+                titel="Tabel",
+                tekst="",
+                artikelen=[Artikel(id="BWBR9999/Bijlage1/ArtA", nummer="A", label="A", tekst="")],
+            )
+        ],
+    )
+    batch, summary = collect(wet)
+
+    artikel = next(a for a in batch.nodes["Artikel"] if a["nummer"] == "A")
+    assert artikel["id"] == "BWBR9999/Bijlage1/ArtA"
+    rel = batch.rels[("Bijlage", "HEEFT_ARTIKEL", "Artikel")]
+    assert rel == [{"from": "BWBR9999/Bijlage1", "to": "BWBR9999/Bijlage1/ArtA"}]
+    assert summary.artikelen == 1
 
 
 def test_collect_verwijzing_zonder_doc_wordt_overgeslagen() -> None:

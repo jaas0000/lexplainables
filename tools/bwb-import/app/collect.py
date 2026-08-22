@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 
 from app.models import (
     Artikel,
+    Bijlage,
     Illustratie,
     ImportSummary,
     Onderdeel,
@@ -97,6 +98,7 @@ class _Collector:
         for deel in wet.structuurdelen:
             self._structuur(deel, wet.bwb_id, "Regeling")
         self._artikelen(wet.losse_artikelen, wet.bwb_id, "Regeling")
+        self._bijlagen(wet.bijlagen, wet.bwb_id, "Regeling")
 
     def _structuur(self, deel: Structuurdeel, ouder_id: str, ouder_ent: str) -> None:
         entiteit = STRUCT_LABEL[deel.soort]
@@ -148,6 +150,40 @@ class _Collector:
             self._verwijzingen(ref_key, artikel.verwijzingen)
             self._leden(artikel, ref_key)
             self._onderdelen(artikel.onderdelen, artikel.id, "Artikel", ref_key)
+
+    def _bijlagen(self, bijlagen: list[Bijlage], ouder_id: str, ouder_ent: str) -> None:
+        vorige_bijlage: str | None = None
+        for bijlage in bijlagen:
+            ref_key = jci_to_ref_key(bijlage.jci) or f"{self._bwb}#id={bijlage.id}"
+            self.batch.node(
+                "Bijlage",
+                {
+                    "id": bijlage.id,
+                    "ref_key": ref_key,
+                    "nummer": bijlage.nummer,
+                    "label": bijlage.label,
+                    "titel": bijlage.titel,
+                    "tekst": bijlage.tekst,
+                    "inwerking": bijlage.inwerking,
+                    "bron": bijlage.bron,
+                    "effect": bijlage.effect,
+                    "status": bijlage.status,
+                    "terugwerkend_tot": bijlage.terugwerkend_tot,
+                    "wijzigingsbronnen": bijlage.wijzigingsbronnen,
+                    "voetnoot": bijlage.voetnoten,
+                },
+            )
+            self.batch.rel(ouder_ent, "HEEFT_BIJLAGE", "Bijlage", ouder_id, bijlage.id)
+            self.summary.bijlagen += 1
+            if vorige_bijlage is not None:
+                self.batch.rel("Bijlage", "VOLGT_OP", "Bijlage", bijlage.id, vorige_bijlage)
+            vorige_bijlage = bijlage.id
+
+            self._illustraties("Bijlage", bijlage.id, bijlage.illustraties)
+            self._verwijzingen(ref_key, bijlage.verwijzingen)
+            self._onderdelen(bijlage.onderdelen, bijlage.id, "Bijlage", ref_key)
+            # Een bijlage kan eigen artikelen bevatten (aparte Artikel-nodes, hergebruikt).
+            self._artikelen(bijlage.artikelen, bijlage.id, "Bijlage")
 
     def _leden(self, artikel: Artikel, artikel_ref_key: str) -> None:
         for lid in artikel.leden:
