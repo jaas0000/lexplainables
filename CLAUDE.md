@@ -47,10 +47,12 @@ Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in
 **Nog te bouwen:** 2FA/TOTP (story 017, laag). Service `frontend-chat` nog niet gestart.
 `tools/bwb-import` heeft een werkende kernpijplijn: SRU-discovery + download (024),
 XSD-validatie + kernparser (025), onderdelen + verwijzingen (026), RDF/GraphDB-writer (027),
-CLI + FastAPI-service + Dockerfile + CI-publish (028). Gebouwd en manueel geverifieerd
-(`podman build` + `/health`); een echte import blokkeert nog op een GraphDB-licentie (zie
-`deploy/graphdb/README.md` §Licentie). Nog niet gebouwd: WTI-verrijking, divisies/bijlagen/
-illustraties/tabellen — zie `docs/project/stories/027-bwb-import-graphdb-writer.md` §Buiten scope.
+CLI + FastAPI-service + Dockerfile + CI-publish (028). GraphDB-licentie is geregeld (Free,
+Licensee: Belastingdienst, dev/test — zie `ai-notes/licenties-en-juridisch.md`); een echte import
+(`python -m app.main BWBR0004770`, de actuele Invorderingswet 1990) is end-to-end geverifieerd
+tegen de live GraphDB (9.686 triples, geverifieerd via SPARQL). Nog niet gebouwd: WTI-verrijking,
+divisies/bijlagen/illustraties/tabellen — zie
+`docs/project/stories/027-bwb-import-graphdb-writer.md` §Buiten scope.
 `tools/graph-qa` is gestart (story 029: projectskelet + poorten `GraphPort`/`LLMPort` + fakes,
 21 tests) — de agent-loop zelf (orkestrator, supervisor, toollaag, annotatieketen, ~25-35 stories
 geschat) moet nog gebouwd worden, zie `ai-notes/fase-4-aparte-services-plan.md` §Service 3.
