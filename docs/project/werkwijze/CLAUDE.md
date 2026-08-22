@@ -48,18 +48,19 @@ verplichte regel + een expliciete check in de skill die erna komt.
 
 ## Instellingen
 
-- **Autonome merge:** nee <!-- ja | nee -->
-  `nee` — `pr-triage` mergt niet zelf; zodra `code-review` niets blocking meer vindt, zet het
-  een PR-comment ("klaar om te mergen, wacht op goedkeuring") en wacht op een menselijke
-  approve (zie `.claude/skills/pr-triage/SKILL.md` regel 2b). Dit is de enige plek waar dat
-  wordt aangegeven — verander het hier, niet in de skill zelf.
+- **Autonome merge:** ja <!-- ja | nee -->
+  `ja` — `pr-triage` mergt direct zodra `code-review` niets blocking meer vindt (of bij een
+  mechanische dependency-bump met CI groen), zonder op een menselijke approve te wachten (zie
+  `.claude/skills/pr-triage/SKILL.md` regel 2a/4/5). Dit is de enige plek waar dat wordt
+  aangegeven — verander het hier, niet in de skill zelf.
 
-- **Simplify bij feature-bouwen:** ja <!-- ja | nee -->
-  `ja` — `feature-bouwen` regel 9 draait `/simplify` (vier parallelle subagents) vóór elke
-  aflevering. Zet op `nee` om dit uit te zetten (bv. om tokens te besparen bij veel kleine
-  wijzigingen) — regel 9 zet dan zelf `Simplify: overgeslagen (instelling staat op nee)` in het
-  commit-/PR-bericht in plaats van de check te draaien, zodat het uitzetten zelf zichtbaar en
-  controleerbaar blijft.
+- **Simplify bij feature-bouwen:** nee <!-- ja | nee -->
+  `nee` — tijdens de wetsanalyse-migratie (zie `docs/project/migratie-wetsanalyse.md`) slaan we
+  simplify standaard over (PR #46). Reden: retroactief simplify op fase 0-2 (PR #45) leverde in
+  verhouding weinig substantie op (~2.5M tokens voor −13 lines, 1 echte dedup). `feature-bouwen`
+  regel 9 zet dan zelf `Simplify: overgeslagen (instelling staat op nee)` in het commit-/PR-bericht
+  in plaats van de check te draaien, zodat het uitzetten zelf zichtbaar en controleerbaar blijft.
+  Zet weer op `ja` als de refactor voorbij is en er stabielere feature-ontwikkeling start.
 
 ## Codestandaard
 
