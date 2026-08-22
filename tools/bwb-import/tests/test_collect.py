@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.collect import collect
-from app.models import Artikel, Verwijzing, VerwijzingSoort, Wet
+from app.models import Artikel, Illustratie, Verwijzing, VerwijzingSoort, Wet
 from app.parser import ToestandParser
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_toestand.xml"
@@ -69,6 +69,42 @@ def test_collect_ref_key_fallback_zonder_jci() -> None:
 
     artikel = batch.nodes["Artikel"][0]
     assert artikel["ref_key"] == "BWBR9999#id=BWBR9999/Art1"
+
+
+def test_collect_artikel_provenance_props() -> None:
+    wet = ToestandParser().parse(FIXTURE)
+    batch, _ = collect(wet)
+
+    artikel2 = next(a for a in batch.nodes["Artikel"] if a["nummer"] == "2")
+    assert artikel2["bron"] == "Stb.2016-163"
+    assert artikel2["effect"] == "wijziging"
+    assert artikel2["status"] == "goed"
+
+
+def test_collect_illustratie_node_en_relatie() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        losse_artikelen=[
+            Artikel(
+                id="BWBR9999/Art1",
+                nummer="1",
+                label="Artikel 1",
+                tekst="tekst",
+                illustraties=[Illustratie(id="IL1", naam="foto.png", formaat="png")],
+            )
+        ],
+    )
+    batch, summary = collect(wet)
+
+    illustratie = batch.nodes["Illustratie"][0]
+    assert illustratie["id"] == "IL1"
+    assert illustratie["naam"] == "foto.png"
+    rel = batch.rels[("Artikel", "BEVAT_ILLUSTRATIE", "Illustratie")]
+    assert rel == [{"from": "BWBR9999/Art1", "to": "IL1"}]
+    assert summary.illustraties == 1
 
 
 def test_collect_verwijzing_zonder_doc_wordt_overgeslagen() -> None:

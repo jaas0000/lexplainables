@@ -117,6 +117,7 @@ def _print_overzicht(summary: ImportSummary) -> None:
         ("Artikelen", summary.artikelen),
         ("Leden", summary.leden),
         ("Onderdelen", summary.onderdelen),
+        ("Illustraties", summary.illustraties),
         ("Relaties", summary.relaties),
     ]
     breedte = max(len(label) for label, _ in regels)

@@ -195,6 +195,251 @@ def test_parse_zonder_wettekst_geeft_parse_error(tmp_path: Path) -> None:
         parser.parse(pad)
 
 
+def test_parse_artikel_provenance_uit_fixture() -> None:
+    """Artikel 2 in de fixture draagt echte provenance-attributen."""
+    parser = ToestandParser()
+    wet = parser.parse(FIXTURES / "sample_toestand.xml")
+
+    artikel2 = wet.structuurdelen[0].artikelen[1]
+    assert artikel2.bron == "Stb.2016-163"
+    assert artikel2.effect == "wijziging"
+    assert artikel2.status == "goed"
+    assert artikel2.inwerking == "2016-05-01"
+
+
+def test_parse_artikel_provenance_ontbrekend_geeft_none(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'>"
+        "<kop><nr>1</nr></kop>"
+        "<al>Tekst.</al>"
+        "</artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    artikel = parser.parse(pad).losse_artikelen[0]
+
+    assert artikel.inwerking is None
+    assert artikel.bron is None
+    assert artikel.effect is None
+    assert artikel.status is None
+    assert artikel.terugwerkend_tot is None
+    assert artikel.wijzigingsbronnen == []
+
+
+def test_parse_wijzigingsbronnen_en_terugwerkende_kracht(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'>"
+        "<kop><nr>1</nr></kop>"
+        "<al>Tekst.</al>"
+        "<meta-data>"
+        "<brondata><inwerkingtreding>"
+        "<terugwerkend.datum isodatum='2020-01-01'/>"
+        "</inwerkingtreding></brondata>"
+        "<juncto><publicatie soort='Stb'>"
+        "<publicatiejaar>2021</publicatiejaar><publicatienr>42</publicatienr>"
+        "</publicatie></juncto>"
+        "</meta-data>"
+        "</artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    artikel = parser.parse(pad).losse_artikelen[0]
+
+    assert artikel.terugwerkend_tot == "2020-01-01"
+    assert artikel.wijzigingsbronnen == ["Stb.2021-42"]
+
+
+def test_parse_voetnoten_op_artikel(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'>"
+        "<kop><nr>1</nr></kop>"
+        "<al>Tekst met noot<noot>Dit is een voetnoot.</noot>.</al>"
+        "</artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    artikel = parser.parse(pad).losse_artikelen[0]
+
+    assert artikel.voetnoten == ["Dit is een voetnoot."]
+    assert "Dit is een voetnoot" not in artikel.tekst
+
+
+def test_parse_definieert_begrippen_op_lid(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'>"
+        "<kop><nr>1</nr></kop>"
+        "<lid><lidnr>1</lidnr>"
+        "<al><nadruk type='cur'>belastingschuldige:</nadruk> degene die belasting is "
+        "verschuldigd.</al>"
+        "</lid>"
+        "</artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    lid = parser.parse(pad).losse_artikelen[0].leden[0]
+
+    assert lid.definieert_begrippen == ["belastingschuldige"]
+
+
+def test_parse_cursief_zonder_dubbele_punt_is_geen_definitie(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'>"
+        "<kop><nr>1</nr></kop>"
+        "<lid><lidnr>1</lidnr>"
+        "<al><nadruk type='cur'>nadruk zonder definitie</nadruk> in de tekst.</al>"
+        "</lid>"
+        "</artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    lid = parser.parse(pad).losse_artikelen[0].leden[0]
+
+    assert lid.definieert_begrippen == []
+
+
+def test_parse_illustratie_op_artikel(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'>"
+        "<kop><nr>1</nr></kop>"
+        "<al>Zie de afbeelding.</al>"
+        "<plaatje><illustratie id='IL1' naam='123.png' formaat='png' breedte='100px' "
+        "hoogte='50px' alt='een schema'/></plaatje>"
+        "</artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    artikel = parser.parse(pad).losse_artikelen[0]
+
+    assert len(artikel.illustraties) == 1
+    il = artikel.illustraties[0]
+    assert il.id == "IL1"
+    assert il.naam == "123.png"
+    assert il.formaat == "png"
+    assert il.alt == "een schema"
+
+
+def test_parse_illustratie_zonder_id_of_naam_geeft_lege_id(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'>"
+        "<kop><nr>1</nr></kop>"
+        "<al>Tekst.</al>"
+        "<plaatje><illustratie formaat='png'/></plaatje>"
+        "</artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    artikel = parser.parse(pad).losse_artikelen[0]
+
+    assert artikel.illustraties[0].id == ""
+
+
+def test_parse_tabel_gerenderd_als_tekst(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'>"
+        "<kop><nr>1</nr></kop>"
+        "<al>Onderstaande tabel geldt.</al>"
+        "<table><tgroup><tbody>"
+        "<row><entry>Categorie</entry><entry>Tarief</entry></row>"
+        "<row><entry>A</entry><entry>21%</entry></row>"
+        "</tbody></tgroup></table>"
+        "</artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    artikel = parser.parse(pad).losse_artikelen[0]
+
+    assert "Onderstaande tabel geldt." in artikel.tekst
+    assert "Categorie | Tarief" in artikel.tekst
+    assert "A | 21%" in artikel.tekst
+
+
+def test_parse_lege_tabel_levert_niets_op(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'>"
+        "<kop><nr>1</nr></kop>"
+        "<al>Tekst zonder relevante tabel.</al>"
+        "<table><tgroup><tbody><row><entry/><entry/></row></tbody></tgroup></table>"
+        "</artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    artikel = parser.parse(pad).losse_artikelen[0]
+
+    assert artikel.tekst == "Tekst zonder relevante tabel."
+
+
 def test_parse_artikel_zonder_leden(tmp_path: Path) -> None:
     parser = ToestandParser()
     xml = (

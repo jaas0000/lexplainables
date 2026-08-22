@@ -13,7 +13,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.models import Artikel, ImportSummary, Onderdeel, Structuurdeel, Verwijzing, Wet
+from app.models import (
+    Artikel,
+    Illustratie,
+    ImportSummary,
+    Onderdeel,
+    Structuurdeel,
+    Verwijzing,
+    Wet,
+)
 from app.references import jci_doel_ref_key, jci_to_ref_key
 
 STRUCT_REL = {
@@ -118,10 +126,18 @@ class _Collector:
                     "label": artikel.label,
                     "tekst": artikel.tekst,
                     "label_id": artikel.label_id,
+                    "inwerking": artikel.inwerking,
+                    "bron": artikel.bron,
+                    "effect": artikel.effect,
+                    "status": artikel.status,
+                    "terugwerkend_tot": artikel.terugwerkend_tot,
+                    "wijzigingsbronnen": artikel.wijzigingsbronnen,
+                    "voetnoot": artikel.voetnoten,
                 },
             )
             self.batch.rel(ouder_ent, "HEEFT_ARTIKEL", "Artikel", ouder_id, artikel.id)
             self.summary.artikelen += 1
+            self._illustraties("Artikel", artikel.id, artikel.illustraties)
             self._verwijzingen(ref_key, artikel.verwijzingen)
             self._leden(artikel, ref_key)
             self._onderdelen(artikel.onderdelen, artikel.id, "Artikel", ref_key)
@@ -133,10 +149,19 @@ class _Collector:
                 lid_ref = f"{artikel_ref_key}#lid={lid.nummer}"
             self.batch.node(
                 "Lid",
-                {"id": lid.id, "ref_key": lid_ref, "nummer": lid.nummer, "tekst": lid.tekst},
+                {
+                    "id": lid.id,
+                    "ref_key": lid_ref,
+                    "nummer": lid.nummer,
+                    "tekst": lid.tekst,
+                    "terugwerkend_tot": lid.terugwerkend_tot,
+                    "voetnoot": lid.voetnoten,
+                    "definieert_begrip": lid.definieert_begrippen,
+                },
             )
             self.batch.rel("Artikel", "HEEFT_LID", "Lid", artikel.id, lid.id)
             self.summary.leden += 1
+            self._illustraties("Lid", lid.id, lid.illustraties)
             bron = lid_ref or artikel_ref_key
             self._verwijzingen(bron, lid.verwijzingen)
             self._onderdelen(lid.onderdelen, lid.id, "Lid", bron)
@@ -153,13 +178,32 @@ class _Collector:
                     "ref_key": ref_key,
                     "nummer": onderdeel.nummer,
                     "tekst": onderdeel.tekst,
+                    "voetnoot": onderdeel.voetnoten,
+                    "definieert_begrip": onderdeel.definieert_begrippen,
                 },
             )
             self.batch.rel(ouder_ent, "HEEFT_ONDERDEEL", "Onderdeel", ouder_id, onderdeel.id)
             self.summary.onderdelen += 1
+            self._illustraties("Onderdeel", onderdeel.id, onderdeel.illustraties)
             bron = ref_key or erf_ref_key
             self._verwijzingen(bron, onderdeel.verwijzingen)
             self._onderdelen(onderdeel.subonderdelen, onderdeel.id, "Onderdeel", bron)
+
+    def _illustraties(self, ouder_ent: str, ouder_id: str, illustraties: list[Illustratie]) -> None:
+        for illustratie in illustraties:
+            self.batch.node(
+                "Illustratie",
+                {
+                    "id": illustratie.id,
+                    "naam": illustratie.naam,
+                    "formaat": illustratie.formaat,
+                    "breedte": illustratie.breedte,
+                    "hoogte": illustratie.hoogte,
+                    "alt": illustratie.alt,
+                },
+            )
+            self.batch.rel(ouder_ent, "BEVAT_ILLUSTRATIE", "Illustratie", ouder_id, illustratie.id)
+            self.summary.illustraties += 1
 
     def _verwijzingen(self, bron_ref_key: str, verwijzingen: list[Verwijzing]) -> None:
         """Elke verwijzing met een jci-`doc` wordt een graafrelatie. Zonder `doc` (bv. een

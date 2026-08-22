@@ -48,13 +48,14 @@ Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in
 `tools/bwb-import` heeft een werkende kernpijplijn: SRU-discovery + download (024),
 XSD-validatie + kernparser (025), onderdelen + verwijzingen (026), RDF/GraphDB-writer (027),
 CLI + FastAPI-service + Dockerfile + CI-publish (028), WTI-verrijking (030: citeertitels,
-thesaurustermen, grondslagen, opt-in via `BWB_IMPORT_WTI`). GraphDB-licentie is geregeld (Free,
-Licensee: Belastingdienst, dev/test — zie `ai-notes/licenties-en-juridisch.md`); een echte import
-(`python -m app.main BWBR0004770`, de actuele Invorderingswet 1990) is end-to-end geverifieerd
-tegen de live GraphDB, inclusief WTI-verrijking (afkorting/eerstverantwoordelijke/citeertitel/
-uitgegevenDoor-triples geverifieerd via SPARQL). Nog niet gebouwd: divisies/bijlagen/
-illustraties/tabellen — zie `docs/project/stories/027-bwb-import-graphdb-writer.md` §Buiten
-scope.
+thesaurustermen, grondslagen, opt-in via `BWB_IMPORT_WTI`), artikel/lid/onderdeel-verrijking
+(031: provenance, voetnoten, definities, illustraties, tabellen-als-tekst). GraphDB-licentie is
+geregeld (Free, Licensee: Belastingdienst, dev/test — zie `ai-notes/licenties-en-juridisch.md`);
+een echte import (`python -m app.main BWBR0004770`, de actuele Invorderingswet 1990) is
+end-to-end geverifieerd tegen de live GraphDB, inclusief WTI- en artikel-verrijking
+(afkorting/eerstverantwoordelijke/citeertitel/uitgegevenDoor- en bron/effect/status-triples
+geverifieerd via SPARQL). Nog niet gebouwd: divisies/bijlagen/ondertekenaars — zie
+`docs/project/stories/027-bwb-import-graphdb-writer.md` §Buiten scope.
 `tools/graph-qa` is gestart (story 029: projectskelet + poorten `GraphPort`/`LLMPort` + fakes,
 21 tests) — de agent-loop zelf (orkestrator, supervisor, toollaag, annotatieketen, ~25-35 stories
 geschat) moet nog gebouwd worden, zie `ai-notes/fase-4-aparte-services-plan.md` §Service 3.
@@ -118,7 +119,8 @@ naar een aparte werkwijze-repo triviaal (`.claude/skills/` + `docs/project/werkw
 ## Volgende stap
 
 Story 017 (2FA/TOTP, laag) is de enige resterende API/frontend-story. `tools/bwb-import` heeft nu
-een werkende kernpijplijn incl. WTI-verrijking (stories 024-028, 030, zie hierboven) — vervolg:
-divisies/bijlagen/illustraties/tabellen, of verder naar `tools/graph-qa` (service 3, zie
-`ai-notes/fase-4-aparte-services-plan.md`). Daarna
+een werkende kernpijplijn incl. WTI- en artikel-verrijking (stories 024-028, 030-031, zie
+hierboven) — vervolg: ondertekenaars + wet-brondata (032), bijlagen (033), divisies/circulaires
+(034), of verder naar `tools/graph-qa` (service 3, zie `ai-notes/fase-4-aparte-services-plan.md`).
+Daarna
 `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
