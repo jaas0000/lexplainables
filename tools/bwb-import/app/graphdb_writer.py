@@ -184,6 +184,7 @@ class GraphDbWriter:
         password: str | None = None,
         session: requests.Session | None = None,
         timeout: float = 60.0,
+        tekstuele_refs: bool = True,
     ) -> None:
         self._url = url.rstrip("/")
         self._repo = repository
@@ -191,6 +192,7 @@ class GraphDbWriter:
         self._auth = (user, password) if user else None
         self._http = session or requests.Session()
         self._timeout = timeout
+        self._tekstuele_refs = tekstuele_refs
 
     @property
     def _statements(self) -> str:
@@ -222,7 +224,7 @@ class GraphDbWriter:
 
     def build_graph(self, wet: Wet, wti: WtiInfo | None = None) -> tuple[Graph, ImportSummary]:
         """Bouw de RDF-graaf voor één wet uit de `Batch` (geen HTTP)."""
-        batch, summary = collect(wet)
+        batch, summary = collect(wet, tekstuele_refs=self._tekstuele_refs)
         v = self._vocab
         g = Graph()
         g.bind("bwb", v.ns)
@@ -298,6 +300,7 @@ class GraphDbWriter:
                 ("doc", v.ns.doc),
                 ("doel_pad", v.ns.doelPad),
                 ("verwijzing_id", v.ns.verwijzingId),
+                ("betrouwbaarheid", v.ns.betrouwbaarheid),
             ):
                 if row.get(key):
                     g.add((vw, prop, Literal(row[key])))

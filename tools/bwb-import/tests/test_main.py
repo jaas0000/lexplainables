@@ -48,6 +48,7 @@ def settings(tmp_path: Path) -> Settings:
         sru_base_url="https://sru.test/Search",
         validate_xsd=False,
         import_wti=False,
+        detect_tekstuele_refs=True,
         graphdb_url="http://graphdb.test",
         graphdb_repository="inning",
         graphdb_user=None,

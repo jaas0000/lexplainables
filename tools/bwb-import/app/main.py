@@ -28,6 +28,7 @@ def maak_writer(settings: Settings) -> GraphDbWriter:
         vocab=Vocab(),
         user=settings.graphdb_user,
         password=settings.graphdb_password,
+        tekstuele_refs=settings.detect_tekstuele_refs,
     )
 
 

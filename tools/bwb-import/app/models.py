@@ -28,7 +28,8 @@ class ToestandRef:
 
 
 class VerwijzingSoort(StrEnum):
-    """Interne verwijzing (binnen dezelfde wet) of externe (andere regeling).
+    """Interne verwijzing (binnen dezelfde wet), externe (andere regeling), of tekstueel
+    gedetecteerd (ongetagd, fallback — story 036).
 
     De string-waarde is de brontag — handig bij debuggen/logging. Een `extref` naar de eigen wet
     telt als `INTERN` (zie `references.extract_references`), ongeacht de brontag.
@@ -36,16 +37,19 @@ class VerwijzingSoort(StrEnum):
 
     INTERN = "intref"
     EXTERN = "extref"
+    TEKSTUEEL = "tekstueel"
 
 
 @dataclass(slots=True)
 class Verwijzing:
-    """Een gestructureerde verwijzing (`<intref>`/`<extref>`) vanuit een tekstdeel."""
+    """Een gestructureerde (`<intref>`/`<extref>`) of tekstueel gedetecteerde verwijzing vanuit
+    een tekstdeel."""
 
     soort: VerwijzingSoort
     tekst: str
     doel_bwb_id: str | None = None
     doel_pad: str | None = None  # bwb-ng-variabel-deel van het doel
+    doel_artikel: str | None = None  # artikelnummer bij tekstuele detectie (story 036)
     doc: str | None = None  # jci-verwijzing, bv. "jci1.3:c:BWBR0004770&artikel=4"
     verwijzing_id: str | None = None  # bron-id van de <intref>/<extref>
 

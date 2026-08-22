@@ -44,6 +44,7 @@ class Settings:
     sru_base_url: str
     validate_xsd: bool
     import_wti: bool
+    detect_tekstuele_refs: bool
     graphdb_url: str
     graphdb_repository: str
     graphdb_user: str | None
@@ -60,6 +61,10 @@ class Settings:
             validate_xsd=os.environ.get("BWB_VALIDATE_XSD", "true").strip().lower()
             not in {"0", "false", "nee", "no"},
             import_wti=os.environ.get("BWB_IMPORT_WTI", "false").strip().lower()
+            not in {"0", "false", "nee", "no"},
+            detect_tekstuele_refs=os.environ.get("BWB_DETECT_TEKSTUELE_REFS", "true")
+            .strip()
+            .lower()
             not in {"0", "false", "nee", "no"},
             graphdb_url=os.environ.get("GRAPHDB_URL", "http://graphdb:7200"),
             graphdb_repository=os.environ.get("GRAPHDB_REPOSITORY", "inning"),
