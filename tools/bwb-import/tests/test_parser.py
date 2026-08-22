@@ -179,8 +179,9 @@ def test_parse_zonder_wetgeving_geeft_parse_error(tmp_path: Path) -> None:
         parser.parse(pad)
 
 
-def test_parse_zonder_wettekst_geeft_parse_error(tmp_path: Path) -> None:
-    """Circulaires (<circulaire>/<circulaire-tekst>) zijn nog niet ondersteund."""
+def test_parse_circulaire_zonder_divisies_parseert_leeg(tmp_path: Path) -> None:
+    """Sinds story 034 is een circulaire zonder wettekst een geldig, succesvol parse-pad —
+    geen ParseError meer (was zo t/m story 025-033)."""
     parser = ToestandParser()
     xml = (
         "<toestand bwb-id='BWBR9999'>"
@@ -191,7 +192,26 @@ def test_parse_zonder_wettekst_geeft_parse_error(tmp_path: Path) -> None:
         "</toestand>"
     )
     pad = _schrijf(tmp_path, xml)
-    with pytest.raises(ParseError, match="circulaires zijn nog niet ondersteund"):
+
+    wet = parser.parse(pad)
+
+    assert wet.divisies == []
+
+
+def test_parse_geen_wettekst_en_geen_circulaire_geeft_parse_error(tmp_path: Path) -> None:
+    """Het écht-onherkende restgeval blijft een harde fout (bewuste afwijking van de
+    referentie, zie story 034 §Verhaal)."""
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='onbekend'>"
+        "<citeertitel>Test</citeertitel>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    with pytest.raises(ParseError, match="circulaire"):
         parser.parse(pad)
 
 
@@ -518,6 +538,50 @@ def test_parse_lege_tabel_levert_niets_op(tmp_path: Path) -> None:
     artikel = parser.parse(pad).losse_artikelen[0]
 
     assert artikel.tekst == "Tekst zonder relevante tabel."
+
+
+def test_parse_circulaire_divisie_volledig(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='circulaire'>"
+        "<citeertitel>Test</citeertitel>"
+        "<circulaire><circulaire-tekst>"
+        "<circulaire.divisie inwerking='2020-01-01' bron='Stcrt.2020-1' effect='wijziging' "
+        "status='goed' label='1'>"
+        "<kop><nr>1</nr><titel>Inleiding</titel></kop>"
+        "<tekst>"
+        "<al>Dit is de inleiding.</al>"
+        "<table><tgroup><tbody><row><entry>A</entry><entry>B</entry></row></tbody></tgroup>"
+        "</table>"
+        "</tekst>"
+        "<circulaire.divisie label='1.1'><kop><nr>1.1</nr><titel>Sub</titel></kop>"
+        "<tekst><al>Subtekst.</al></tekst></circulaire.divisie>"
+        "</circulaire.divisie>"
+        "</circulaire-tekst></circulaire>"
+        "<ondertekening><functie>De Directeur</functie><naam><achternaam>Jansen</achternaam>"
+        "</naam></ondertekening>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    wet = parser.parse(pad)
+
+    assert len(wet.divisies) == 1
+    divisie = wet.divisies[0]
+    assert divisie.nummer == "1"
+    assert divisie.titel == "Inleiding"
+    assert divisie.bron == "Stcrt.2020-1"
+    assert divisie.effect == "wijziging"
+    assert divisie.status == "goed"
+    assert divisie.inwerking == "2020-01-01"
+    assert "Dit is de inleiding." in divisie.tekst
+    assert "A | B" in divisie.tekst
+    assert "Subtekst." not in divisie.tekst  # hoort bij de subdivisie, niet bij de ouder
+    assert [s.nummer for s in divisie.subdivisies] == ["1.1"]
+    assert divisie.subdivisies[0].tekst == "Subtekst."
+    assert wet.ondertekenaars[0].functie == "De Directeur"
 
 
 def test_parse_bijlage_volledig(tmp_path: Path) -> None:
