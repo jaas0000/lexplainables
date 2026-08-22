@@ -2,8 +2,9 @@
 
 `build_ontology` levert de schema-graaf die naast de instance-data wordt geladen (eigen named
 graph). Scoped tot de entiteiten die dit project parset (Regeling, Structuurdeel, Artikel, Lid,
-Onderdeel, Verwijzing) — divisies, bijlagen, illustraties en ondertekenaars volgen zodra hun
-parser-onderdeel bestaat (zie docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope).
+Onderdeel, Verwijzing) plus de WTI-verrijking (Organisatie, grondslag-/wetsfamilie-relaties,
+story 030) — divisies, bijlagen, illustraties en ondertekenaars volgen zodra hun parser-onderdeel
+bestaat (zie docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope).
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from rdflib import OWL, RDF, RDFS, XSD, Graph, Literal, Namespace, URIRef
 from app.rdf_vocab import Vocab
 
 ELI = Namespace("http://data.europa.eu/eli/ontology#")
+FOAF = Namespace("http://xmlns.com/foaf/0.1/")
 
 # Klasse -> (label, toelichting, superklassen: bwb-naam (str) of externe URIRef).
 _KLASSEN: dict[str, tuple[str, str, tuple[str | URIRef, ...]]] = {
@@ -57,6 +59,11 @@ _KLASSEN: dict[str, tuple[str, str, tuple[str | URIRef, ...]]] = {
         (ELI.LegalResourceSubdivision,),
     ),
     "Verwijzing": ("Verwijzing", "Gereïficeerde verwijzing met soort/doel-metadata.", ()),
+    "Organisatie": (
+        "Organisatie",
+        "Verantwoordelijke organisatie/ministerie van een regeling (uit de WTI).",
+        (FOAF.Agent,),
+    ),
 }
 
 # Objectproperty -> (label, toelichting, superproperties, rdfs:range of None).
@@ -81,6 +88,42 @@ _OBJECT_PROPS: dict[str, tuple[str, str, tuple[URIRef, ...], str | None]] = {
         "Verwijzing",
     ),
     "naar": ("naar", "Doel van de gereïficeerde verwijzing.", (), "Citeerbaar"),
+    "heeftGrondslag": (
+        "heeft grondslag",
+        "Regeling waarop deze regeling (mede) is gebaseerd (uit de WTI).",
+        (ELI.based_on,),
+        "Regeling",
+    ),
+    "uitgegevenDoor": (
+        "uitgegeven door",
+        "Verantwoordelijke organisatie/ministerie van de regeling (uit de WTI).",
+        (ELI.responsibility_of,),
+        "Organisatie",
+    ),
+    "inFamilie": (
+        "in familie",
+        "Verwante regeling binnen dezelfde wetsfamilie (uit de WTI).",
+        (),
+        "Regeling",
+    ),
+    "grondslagVoor": (
+        "grondslag voor",
+        "Regeling die (mede) op dit tekstdeel is gebaseerd (WTI-regelingelement).",
+        (),
+        "Regeling",
+    ),
+    "bevoegdheidVoor": (
+        "bevoegdheid voor",
+        "Regeling waarvoor dit tekstdeel de wettelijke bevoegdheid geeft (WTI).",
+        (),
+        "Regeling",
+    ),
+    "verwijzingDoor": (
+        "verwijzing door",
+        "Regeling die naar dit tekstdeel verwijst (WTI-regelingelement).",
+        (),
+        "Regeling",
+    ),
 }
 
 # Datatypeproperty -> (label, toelichting, superproperties, rdfs:range of None).
@@ -110,6 +153,20 @@ _DATA_PROPS: dict[str, tuple[str, str, tuple[URIRef, ...], URIRef | None]] = {
     "doelPad": ("doel-pad", "bwb-ng-variabel-deel van het verwijsdoel.", (), None),
     "ankerTekst": ("ankertekst", "Tekst waarmee de verwijzing in de bron staat.", (), None),
     "verwijzingId": ("verwijzing-id", "Bron-id van de verwijzing.", (), XSD.string),
+    "afkorting": ("afkorting", "Gangbare afkorting van de regeling (uit de WTI).", (), None),
+    "alternatieveTitel": (
+        "alternatieve titel",
+        "Niet-officiële titel van de regeling (uit de WTI).",
+        (ELI.title_alternative,),
+        None,
+    ),
+    "eerstverantwoordelijke": (
+        "eerstverantwoordelijke",
+        "Eerstverantwoordelijk ministerie (uit de WTI).",
+        (),
+        None,
+    ),
+    "naam": ("naam", "Naam van een gedeelde entiteit (bv. een organisatie).", (), None),
 }
 
 

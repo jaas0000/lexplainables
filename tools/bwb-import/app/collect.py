@@ -76,6 +76,7 @@ class _Collector:
                 "opschrift": wet.opschrift,
                 "soort": wet.soort,
                 "geldig_vanaf": wet.geldig_vanaf,
+                "label_id": wet.label_id,
             },
         )
         for deel in wet.structuurdelen:
@@ -95,6 +96,7 @@ class _Collector:
                 "nummer": deel.nummer,
                 "label": deel.label,
                 "titel": deel.titel,
+                "label_id": deel.label_id,
             },
         )
         self.batch.rel(ouder_ent, STRUCT_REL[deel.soort], entiteit, ouder_id, deel.id)
@@ -115,6 +117,7 @@ class _Collector:
                     "nummer": artikel.nummer,
                     "label": artikel.label,
                     "tekst": artikel.tekst,
+                    "label_id": artikel.label_id,
                 },
             )
             self.batch.rel(ouder_ent, "HEEFT_ARTIKEL", "Artikel", ouder_id, artikel.id)

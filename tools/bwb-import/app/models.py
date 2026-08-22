@@ -2,10 +2,11 @@
 
 Dekt tot nu toe: SRU-discovery (`ToestandRef`, story 024), de kernstructuur van een
 wet-besluit-document (`Wet`/`Structuurdeel`/`Artikel`/`Lid`, story 025), onderdelen (genestelde
-`<lijst>/<li>`) + gestructureerde verwijzingen (`Onderdeel`/`Verwijzing`, story 026), en de
-`jci`-identiteit per node + import-tellingen (`ImportSummary`/`ImportResult`, story 027).
-Illustraties, voetnoten, definities, tabellen, ondertekenaars, bijlagen, circulaires en
-WTI-verrijking komen in latere stories.
+`<lijst>/<li>`) + gestructureerde verwijzingen (`Onderdeel`/`Verwijzing`, story 026), de
+`jci`-identiteit per node + import-tellingen (`ImportSummary`/`ImportResult`, story 027), en de
+`label_id`/`locatie_wti`-join-sleutels voor WTI-verrijking (story 030).
+Illustraties, voetnoten, definities, tabellen, ondertekenaars, bijlagen en circulaires komen in
+latere stories.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ class ToestandRef:
     locatie_toestand: str
     geldig_vanaf: str | None = None
     geldig_tot: str | None = None
+    locatie_wti: str | None = None
 
 
 class VerwijzingSoort(StrEnum):
@@ -81,6 +83,7 @@ class Artikel:
     label: str
     tekst: str
     jci: str | None = None
+    label_id: str | None = None  # WTI-join-sleutel (label-id-attribuut)
     leden: list[Lid] = field(default_factory=list)
     verwijzingen: list[Verwijzing] = field(default_factory=list)
     onderdelen: list[Onderdeel] = field(default_factory=list)
@@ -96,6 +99,7 @@ class Structuurdeel:
     label: str
     titel: str
     jci: str | None = None
+    label_id: str | None = None  # WTI-join-sleutel (label-id-attribuut)
     subdelen: list[Structuurdeel] = field(default_factory=list)
     artikelen: list[Artikel] = field(default_factory=list)
 
@@ -109,6 +113,7 @@ class Wet:
     opschrift: str
     soort: str
     geldig_vanaf: str | None = None
+    label_id: str | None = None  # WTI-join-sleutel (label-id van <wetgeving>)
     structuurdelen: list[Structuurdeel] = field(default_factory=list)
     losse_artikelen: list[Artikel] = field(default_factory=list)
 

@@ -36,7 +36,10 @@ WETTEN_BASE = "https://wetten.overheid.nl/"
 _BWB_ID = re.compile(r"BWB[RV]\d+")
 
 # Node-prop-sleutels die niet als literal worden weggeschreven (zitten in de IRI of intern).
-_SKIP_PROPS = {"id", "ref_key", "jci"}
+# `label_id` is de WTI-join-sleutel (story 030): puur intern voor het opbouwen van de
+# label_id->IRI-map tijdens het schrijven, geen zinvolle data op zichzelf zodra de WTI-relaties
+# als eigen predicaten (grondslagVoor/bevoegdheidVoor/verwijzingDoor) gematerialiseerd zijn.
+_SKIP_PROPS = {"id", "ref_key", "jci", "label_id"}
 
 _PROP_DATATYPES: dict[str, URIRef] = {
     "geldig_vanaf": XSD.date,
@@ -134,6 +137,21 @@ class Vocab:
                 return self._iri("ref", digest)
             segmenten.extend((sleutel, waarde))
         return self._iri(bwb, *segmenten)
+
+    def begrip(self, label: str) -> URIRef:
+        """IRI voor een thesaurusterm (rechtsgebied/overheidsdomein uit de WTI) op slug."""
+        slug = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
+        return self._iri("begrip", slug)
+
+    def entiteit(self, soort: str, sleutel: str) -> URIRef:
+        """Deterministische, wet-overstijgende IRI voor een gedeelde entiteit (bv. de
+        WTI-verantwoordelijke organisatie) op slug.
+
+        Zo valt dezelfde organisatie over wetten heen samen tot één node (open-world; elke
+        wet-graaf her-assert de node, net als thesaurustermen).
+        """
+        slug = re.sub(r"[^a-z0-9]+", "-", sleutel.lower()).strip("-")
+        return self._iri(soort, slug)
 
     def verwijzing(self, bron: URIRef, doel: URIRef, soort: str) -> URIRef:
         """Deterministische IRI voor de tussenresource van één verwijzing."""

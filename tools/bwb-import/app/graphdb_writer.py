@@ -8,7 +8,8 @@ Cross-referenties (`verwijstNaar`) wijzen naar de ref_key-afgeleide doel-IRI. Di
 nog niet te bestaan: RDF is open-world, dus de node krijgt vanzelf inhoud zodra de doelwet later
 wordt geïmporteerd.
 
-WTI-verrijking en de Lucene-FTS-connector zijn nog niet gebouwd — zie
+WTI-verrijking (story 030) schrijft mee in dezelfde named graph als de wet, dus wordt atomair
+mee-vervangen bij her-import. De Lucene-FTS-connector is nog niet gebouwd — zie
 docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope.
 """
 
@@ -17,12 +18,16 @@ from __future__ import annotations
 import logging
 
 import requests
-from rdflib import OWL, RDF, RDFS, Graph, Literal, URIRef
+from rdflib import OWL, RDF, RDFS, Graph, Literal, Namespace, URIRef
 
 from app.collect import collect
 from app.models import ImportSummary, Wet
 from app.ontology import build_ontology
 from app.rdf_vocab import Vocab
+from app.wti_parser import WtiInfo
+
+DCTERMS = Namespace("http://purl.org/dc/terms/")
+SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
 
 logger = logging.getLogger(__name__)
 
@@ -146,21 +151,27 @@ class GraphDbWriter:
         create.raise_for_status()
         logger.info("GraphDB-repository %s aangemaakt", self._repo)
 
-    def build_graph(self, wet: Wet) -> tuple[Graph, ImportSummary]:
+    def build_graph(self, wet: Wet, wti: WtiInfo | None = None) -> tuple[Graph, ImportSummary]:
         """Bouw de RDF-graaf voor één wet uit de `Batch` (geen HTTP)."""
         batch, summary = collect(wet)
         v = self._vocab
         g = Graph()
         g.bind("bwb", v.ns)
+        g.bind("dcterms", DCTERMS)
+        g.bind("skos", SKOS)
 
         # 1) Nodes -> klassen + literals; onthoud id -> IRI voor de relaties.
         iri_by_id: dict[str, URIRef] = {}
+        # label-id -> IRI, voor het koppelen van WTI-regelingelementen aan hun node.
+        label_iri: dict[str, URIRef] = {}
         for entiteit, rows in batch.nodes.items():
             klasse = v.klasse(entiteit)
             for row in rows:
                 ref_key = row.get("ref_key")
                 iri = v.by_ref_key(ref_key) if ref_key else v.by_id(wet.bwb_id, row["id"])
                 iri_by_id[row["id"]] = iri
+                if row.get("label_id"):
+                    label_iri[row["label_id"]] = iri
                 g.add((iri, RDF.type, klasse))
                 if entiteit == "Regeling":
                     subklasse = _SOORT_KLASSE.get(row.get("soort") or "")
@@ -176,6 +187,12 @@ class GraphDbWriter:
                     if v.skip_prop(key) or value is None or value == "":
                         continue
                     g.add((iri, v.predicaat_prop(key), v.literal(key, value)))
+
+        # WTI-verrijking (citeertitels, thesaurustermen, grondslagen) — in dezelfde named graph,
+        # dus atomair mee-vervangen bij her-import.
+        if wti is not None:
+            self._wti_verrijking(g, v.wet(wet.bwb_id), wti)
+            self._wti_element_relaties(g, label_iri, wti)
 
         # 2) Structuur- en volgrelaties.
         for (_src, rel_type, _dst), rows in batch.rels.items():
@@ -214,6 +231,64 @@ class GraphDbWriter:
 
         return g, summary
 
+    def _wti_verrijking(self, g: Graph, wet_iri: URIRef, wti: WtiInfo) -> None:
+        """WTI-triples op de wet-node: titels, thesaurustermen, grondslagen."""
+        v = self._vocab
+        for titel in wti.citeertitels:
+            g.add((wet_iri, v.ns.citeertitel, Literal(titel, lang="nl")))
+        for titel in wti.niet_officiele_titels:
+            g.add((wet_iri, v.ns.alternatieveTitel, Literal(titel, lang="nl")))
+        for afkorting in wti.afkortingen:
+            g.add((wet_iri, v.ns.afkorting, Literal(afkorting)))
+        if wti.eerstverantwoordelijke:
+            g.add((wet_iri, v.ns.eerstverantwoordelijke, Literal(wti.eerstverantwoordelijke)))
+        if wti.authority:
+            # Verantwoordelijke organisatie als wet-overstijgende node (dezelfde organisatie
+            # valt over regelingen heen samen op de slug-IRI).
+            org = v.entiteit("organisatie", wti.authority)
+            g.add((org, RDF.type, v.klasse("Organisatie")))
+            g.add((org, RDFS.label, Literal(wti.authority, lang="nl")))
+            g.add((org, v.ns.naam, Literal(wti.authority, lang="nl")))
+            g.add((wet_iri, v.ns.uitgegevenDoor, org))
+        for bwb_id in wti.wetsfamilie:
+            g.add((wet_iri, v.ns.inFamilie, v.wet(bwb_id)))
+        for hoofd, specifiek in wti.rechtsgebieden:
+            hoofd_iri = self._begrip(g, hoofd)
+            g.add((wet_iri, DCTERMS.subject, hoofd_iri))
+            if specifiek:
+                specifiek_iri = self._begrip(g, specifiek)
+                g.add((specifiek_iri, SKOS.broader, hoofd_iri))
+                g.add((wet_iri, DCTERMS.subject, specifiek_iri))
+        for domein in wti.overheidsdomeinen:
+            g.add((wet_iri, DCTERMS.subject, self._begrip(g, domein)))
+        for bwb_id in wti.grondslagen:
+            g.add((wet_iri, v.ns.heeftGrondslag, v.wet(bwb_id)))
+
+    def _wti_element_relaties(self, g: Graph, label_iri: dict[str, URIRef], wti: WtiInfo) -> None:
+        """Per-regelingelement uitgaande relaties uit de WTI: koppel het tekstdeel (via
+        `label-id`) aan de regelingen waarvoor het grondslag/bevoegdheid is, of die ernaar
+        verwijzen. Doelen zijn open-world wet-IRI's."""
+        v = self._vocab
+        for label_id, rel in wti.element_relaties.items():
+            bron = label_iri.get(label_id)
+            if bron is None:
+                continue  # geen node met dit label-id in deze wet
+            for pred, bwb_ids in (
+                (v.ns.grondslagVoor, rel.grondslag_voor),
+                (v.ns.bevoegdheidVoor, rel.bevoegdheid_voor),
+                (v.ns.verwijzingDoor, rel.verwijzing_door),
+            ):
+                for bwb_id in bwb_ids:
+                    g.add((bron, pred, v.wet(bwb_id)))
+
+    def _begrip(self, g: Graph, label: str) -> URIRef:
+        """skos:Concept voor een thesaurusterm; convergeert open-world op slug-IRI."""
+        iri = self._vocab.begrip(label)
+        g.add((iri, RDF.type, SKOS.Concept))
+        g.add((iri, SKOS.prefLabel, Literal(label, lang="nl")))
+        g.add((iri, RDFS.label, Literal(label, lang="nl")))
+        return iri
+
     def write_ontology(self) -> None:
         """Vervang de ontologie-graaf (T-Box) in GraphDB (PUT = idempotent)."""
         graph = build_ontology(self._vocab)
@@ -232,9 +307,9 @@ class GraphDbWriter:
         )
         resp.raise_for_status()
 
-    def write_wet(self, wet: Wet) -> ImportSummary:
+    def write_wet(self, wet: Wet, wti: WtiInfo | None = None) -> ImportSummary:
         """Bouw de graaf en vervang de named graph van deze wet in GraphDB."""
-        graph, summary = self.build_graph(wet)
+        graph, summary = self.build_graph(wet, wti=wti)
         self._put_graph(self._vocab.graph(wet.bwb_id), graph)
         logger.info("Wet %s naar GraphDB geschreven: %s", wet.bwb_id, summary.as_dict())
         return summary

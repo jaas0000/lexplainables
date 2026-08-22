@@ -1,8 +1,8 @@
-"""Download van BWB-bronbestanden: SRU-discovery + toestand-XML, met lokale caching.
+"""Download van BWB-bronbestanden: SRU-discovery + toestand-XML + WTI, met lokale caching.
 
 `BwbDownloader` ontdekt beschikbare toestanden via de SRU-zoekdienst en haalt de gewenste
-toestand-XML op. Een `requests.Session` is injecteerbaar (DI) zodat tests geen echt
-netwerkverkeer doen.
+toestand-XML (en optioneel het WTI-verrijkingsdocument, story 030) op. Een `requests.Session` is
+injecteerbaar (DI) zodat tests geen echt netwerkverkeer doen.
 """
 
 from __future__ import annotations
@@ -83,6 +83,7 @@ class BwbDownloader:
             locatie_toestand=locatie,
             geldig_vanaf=gzd.findtext(".//bwb:geldigheidsperiode_startdatum", namespaces=_SRU_NS),
             geldig_tot=gzd.findtext(".//bwb:geldigheidsperiode_einddatum", namespaces=_SRU_NS),
+            locatie_wti=gzd.findtext(".//bwb:locatie_wti", namespaces=_SRU_NS),
         )
 
     def latest_toestand(self, bwb_id: str) -> ToestandRef:
@@ -97,6 +98,14 @@ class BwbDownloader:
         ref = ref or self.latest_toestand(bwb_id)
         target = self._cache_path(bwb_id, ref.locatie_toestand)
         return self._download_to(ref.locatie_toestand, target)
+
+    def download_wti(self, ref: ToestandRef) -> Path | None:
+        """Download (en cache) het WTI-document, of `None` zonder netwerkcall als de SRU-
+        discovery geen locatie voor deze regeling heeft geleverd (normale toestand, geen fout)."""
+        if not ref.locatie_wti:
+            return None
+        target = self._cache_path(ref.bwb_id, ref.locatie_wti)
+        return self._download_to(ref.locatie_wti, target)
 
     def _cache_path(self, bwb_id: str, url: str) -> Path:
         return self._settings.data_dir / bwb_id / url.rsplit("/", 1)[-1]
