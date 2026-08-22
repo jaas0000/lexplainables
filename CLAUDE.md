@@ -35,7 +35,7 @@ achtergrond staan in dit repo zelf onder [`docs/project/werkwijze/`](docs/projec
 - `/projecten/{id}/rapport` — rapport bekijken + Markdown-download (PR #19, story 013)
 - `/beheer/llm-calls` — LLM-calls log per analyse (PR #20, story 021)
 - `/beheer/api-tokens` — API-tokens aanmaken + intrekken (PR #18, story 018)
-- `/werkplek/`, `/werkplek/{slug}` — annotatie-werkplek: documentenlijst + beslissingen per element (PR #22, story 023)
+- `/werkplek/`, `/werkplek/{slug}` — annotatie-werkplek: documentenlijst + beslissingen per element, incl. echte wetsartikeltekst via GraphDB-SPARQL (PR #22 story 023, PR #68 story 037)
 - `app/mockup/` — resterende interactieve mockups (nog niet gepromoveerd)
 
 **`tools/wetsanalyse-admin-mcp/`** — Admin-MCP (PR #6, story 007)
@@ -132,7 +132,10 @@ naar een aparte werkwijze-repo triviaal (`.claude/skills/` + `docs/project/werkw
 
 ## Volgende stap
 
-Geen resterende API/frontend-story meer (story 017 bleek al gebouwd). `tools/bwb-import` heeft
+Geen resterende API/frontend-story meer (story 017 bleek al gebouwd; story 023's laatste open
+acceptatiecriterium — echte wetsartikeltekst i.p.v. placeholder — is gesloten via story 037,
+PR #68: nieuw GraphDB-SPARQL-leesendpoint `GET /v1/annotatie/documenten/{slug}/wetsartikel`).
+`tools/bwb-import` heeft
 zijn volledige scope uit story 027 §Buiten scope afgerond (stories 024-028, 030-036, zie
 hierboven) — inhoudelijk klaar. Vervolg: `tools/graph-qa` (service 3, zie
 `ai-notes/fase-4-aparte-services-plan.md`) zodra de Azure Foundry-key beschikbaar is, daarna
