@@ -1,0 +1,13 @@
+# Root .dockerignore — geldt voor elke `docker build` vanaf de repo-root (elke service bouwt
+# hiervandaan, zie ADR-0007). Voorkomt dat elke service-image de hele monorepo (incl. andere
+# services' node_modules/.venv) in zijn build-context meesleept.
+
+.git/
+**/.venv/
+**/node_modules/
+**/__pycache__/
+**/.next/
+**/dist/
+**/.pytest_cache/
+**/.ruff_cache/
+tools/bwb-import/data/

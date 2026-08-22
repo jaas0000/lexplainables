@@ -51,11 +51,14 @@ def _sru_xml(*records: tuple[str, str, str]) -> bytes:
 def settings(tmp_path: Path) -> Settings:
     return Settings(
         data_dir=tmp_path,
+        schemas_dir=tmp_path,
         sru_base_url="https://sru.test/Search",
+        validate_xsd=False,
         graphdb_url="http://graphdb:7200",
         graphdb_repository="inning",
         graphdb_user=None,
         graphdb_password=None,
+        service_api_key=None,
     )
 
 
