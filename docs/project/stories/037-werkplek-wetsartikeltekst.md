@@ -213,3 +213,55 @@ Geen enkele binding (het artikel bestaat niet als `bwb:Artikel`-resource) → ni
 BWBR0004770, art. 1 — een artikel met twee leden en géén eigen `bwb:tekst`, exact het geval dat
 de query-fix vereiste): echte artikel-/ledentekst zichtbaar in `/werkplek/{slug}`, gemarkeerd
 lid klopt, 404 op een niet-bestaand artikel bevestigd.
+
+## Uitbreiding — parity met wetsanalyse-ai (na vergelijking op gebruikersverzoek)
+
+Na oplevering vergeleken met `wetsanalyse-ai/tools/graph-qa/agent/artikel.py`+`graph/queries.py`
+(de referentie-app lost hetzelfde probleem op, maar in de `graph-qa`-agent — nog niet gebouwd in
+dit project). Doel: de werkplek-weergave moet er hetzelfde uitzien, ook al zit de logica
+architecturaal ergens anders (rechtstreeks in `api/` i.p.v. via `graph-qa`, dat straks een aparte
+agent met Foundry-toegang bouwt).
+
+**Gevonden gat, direct met live data bevestigd:** onderdelen (a/b/c-opsommingen) onder een lid
+ontbraken volledig. Invorderingswet art. 2 lid 1 toonde alleen "Deze wet verstaat onder:" — de
+24 onderdelen met de eigenlijke definities (a t/m ..., plus vier romeinse) waren niet
+opgehaald, terwijl ze wél in de graaf staan (`bwb:heeftOnderdeel`, bevestigd via SPARQL vóór de
+fix).
+
+**Toegevoegd:**
+- **Onderdelen onder een lid**, via een `bwb:heeftOnderdeel+`-property-path (lexplainables
+  nestelt onderdelen recursief via hetzelfde predicaat, dus geen schemawijziging nodig — anders
+  dan de referentie, die een platte `bwb:bevat`-kopie gebruikt omdat haar eigen agent-tool-laag
+  geen property-path-traversal in de resultaatvorm doet).
+- **Onderdelen direct onder een artikel zonder leden** (a/b/c rechtstreeks onder het artikel) —
+  aparte fallback-query, alleen aangeroepen als de hoofdquery geen leden opleverde.
+- **Numerieke lid-sortering** (`_sorteersleutel`, poort van de referentie's `_lidsleutel`) —
+  SPARQL's `ORDER BY` op de string is lexicaal (1, 10, 11, 2, …); dit sorteert op het numerieke
+  voorvoegsel.
+- **Bepaling-fallback voor decimale nummers** (`_haal_bepaling_op`, poort van de referentie's
+  `get_bepaling`) — circulaires/beleidsregels (bv. "9.1", zie story 034/`Divisie`) volgen niet
+  het artikel/lid-IRI-patroon; als de eerste query niets oplevert, wordt op `bwb:nummer` binnen
+  de eigen regeling gezocht. Niet live geverifieerd (de Invorderingswet-fixture heeft geen
+  circulaires) — wel unit-getest met een gefakete respons.
+
+**Bewust niet overgenomen:** de referentie's `OngeldigeVindplaats`-validatie (onderscheidt een
+tikfout in het artikelnummer van "echt niet gevonden", vóórdat er een SPARQL-call gebeurt). Dat
+is een detail voor de agent-tool-laag (een LLM die een verkeerd geformatteerd argument doorgeeft)
+— een jurist die in de werkplek-UI een niet-bestaand artikelnummer intypt ziet in beide gevallen
+toch gewoon "niet gevonden"; het onderscheid voegt niets toe aan wat zichtbaar is.
+
+**Nieuwe modellen:** `WetsartikelOnderdeel` (`nummer`/`tekst`); `WetsartikelLid` en `Wetsartikel`
+kregen beide een `onderdelen`-veld.
+
+**Testcases (toegevoegd aan `test_graphdb.py`):** numerieke sortering (10 vóór 2 fout, 1-2-10
+correct); onderdelen onder een lid (gededupliceerd op IRI, gesorteerd); onderdelen direct onder
+een artikel zonder leden (aparte fallback-call, geteld via een aanroepteller); bepaling-fallback
+bij een decimaal nummer. Router-test (`test_annotatie.py`) bijgewerkt voor het nieuwe
+`onderdelen: []`-veld in de serialisatie.
+
+**Frontend:** nieuwe `OnderdeelLijst`-component (`page.tsx`) toont onderdelen ingesprongen onder
+een lid, of direct onder het artikel als er geen leden zijn. Nieuwe e2e-test: "onderdelen onder
+een lid worden getoond (definitieartikel)".
+
+**Live geverifieerd (2026-08-22):** Invorderingswet art. 2 — lid 1 toont nu 24 onderdelen
+(voorheen 0), lid 2 toont 5, lid 3 toont 2, leden 4-6 tonen terecht 0 (geen definitieleden).

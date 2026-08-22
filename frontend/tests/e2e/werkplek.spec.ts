@@ -375,6 +375,61 @@ test("wetsartikeltekst wordt getoond met gemarkeerd lid (story 037)", async ({
   await expect(page.getByText("Tweede lid van het artikel.")).toBeVisible();
 });
 
+test("onderdelen onder een lid worden getoond (definitieartikel)", async ({
+  page,
+}) => {
+  await page.route(
+    `/api/annotatie/documenten/${DUMMY_DOCUMENT.slug}`,
+    (route) => {
+      void route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(DUMMY_DOCUMENT),
+      });
+    },
+  );
+
+  await page.route(
+    `/api/annotatie/documenten/${DUMMY_DOCUMENT.slug}/wetsartikel`,
+    (route) => {
+      void route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          bwb_id: DUMMY_DOCUMENT.bwb_id,
+          artikel: DUMMY_DOCUMENT.artikel,
+          opschrift: null,
+          tekst: "",
+          onderdelen: [],
+          leden: [
+            {
+              nummer: "1",
+              tekst: "Deze wet verstaat onder:",
+              onderdelen: [
+                {
+                  nummer: "a.",
+                  tekst:
+                    "rijksbelastingen: belastingen als bedoeld in artikel 1.",
+                },
+                {
+                  nummer: "b.",
+                  tekst: "belastingrente: de rente, bedoeld in hoofdstuk VA.",
+                },
+              ],
+            },
+          ],
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/werkplek/${DUMMY_DOCUMENT.slug}`);
+
+  await expect(page.getByText("Deze wet verstaat onder:")).toBeVisible();
+  await expect(page.getByText(/rijksbelastingen: belastingen/)).toBeVisible();
+  await expect(page.getByText(/belastingrente: de rente/)).toBeVisible();
+});
+
 test("wetsartikelfout blokkeert de elementenkolom niet (story 037)", async ({
   page,
 }) => {

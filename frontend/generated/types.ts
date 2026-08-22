@@ -1717,6 +1717,8 @@ export interface components {
             bwb_id: string;
             /** Leden */
             leden?: components["schemas"]["WetsartikelLid"][];
+            /** Onderdelen */
+            onderdelen?: components["schemas"]["WetsartikelOnderdeel"][];
             /** Opschrift */
             opschrift: string | null;
             /** Tekst */
@@ -1724,6 +1726,15 @@ export interface components {
         };
         /** WetsartikelLid */
         WetsartikelLid: {
+            /** Nummer */
+            nummer: string | null;
+            /** Onderdelen */
+            onderdelen?: components["schemas"]["WetsartikelOnderdeel"][];
+            /** Tekst */
+            tekst: string;
+        };
+        /** WetsartikelOnderdeel */
+        WetsartikelOnderdeel: {
             /** Nummer */
             nummer: string | null;
             /** Tekst */

@@ -9,6 +9,7 @@ import { AuditlogTabblad } from "@/components/annotatie/AuditlogTabblad";
 type AnnotatieDocument = components["schemas"]["AnnotatieDocument"];
 type AuditRegel = components["schemas"]["AuditRegel"];
 type Wetsartikel = components["schemas"]["Wetsartikel"];
+type WetsartikelOnderdeel = components["schemas"]["WetsartikelOnderdeel"];
 
 type Tabblad = "elementen" | "auditlog";
 
@@ -16,6 +17,42 @@ const TABBLAD_LABELS: Record<Tabblad, string> = {
   elementen: "Elementen",
   auditlog: "Auditlog",
 };
+
+/** Opsommings-/definitieonderdelen (a/b/c) onder een lid of rechtstreeks onder een artikel
+ * zonder leden — zonder dit was een definitieartikel nagenoeg leeg (alleen de inleidende zin
+ * van het lid, bv. "Deze wet verstaat onder:", zonder de a-t.-definities zelf). */
+function OnderdeelLijst({
+  onderdelen,
+}: {
+  onderdelen: WetsartikelOnderdeel[];
+}) {
+  if (onderdelen.length === 0) return null;
+  return (
+    <div
+      style={{
+        marginTop: "0.375rem",
+        marginLeft: "1rem",
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.25rem",
+      }}
+    >
+      {onderdelen.map((onderdeel, i) => (
+        <p
+          key={onderdeel.nummer ?? i}
+          style={{ fontSize: "0.8125rem", lineHeight: 1.6, margin: 0 }}
+        >
+          {onderdeel.nummer && (
+            <strong style={{ marginRight: "0.375rem" }}>
+              {onderdeel.nummer}
+            </strong>
+          )}
+          {onderdeel.tekst}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 export default function WerkplekDetailPagina({
   params,
@@ -334,11 +371,23 @@ export default function WerkplekDetailPagina({
                     {wetsartikel.opschrift}
                   </h4>
                 )}
-                {(wetsartikel.leden ?? []).length === 0 ? (
-                  <p style={{ fontSize: "0.8125rem", lineHeight: 1.6 }}>
+                {wetsartikel.tekst && (
+                  <p
+                    style={{
+                      fontSize: "0.8125rem",
+                      lineHeight: 1.6,
+                      marginBottom:
+                        (wetsartikel.leden ?? []).length > 0 ||
+                        (wetsartikel.onderdelen ?? []).length > 0
+                          ? "0.5rem"
+                          : 0,
+                    }}
+                  >
                     {wetsartikel.tekst}
                   </p>
-                ) : (
+                )}
+
+                {(wetsartikel.leden ?? []).length > 0 && (
                   <div
                     style={{
                       display: "flex",
@@ -350,12 +399,11 @@ export default function WerkplekDetailPagina({
                       const gemarkeerd =
                         document_.lid && lid.nummer === document_.lid;
                       return (
-                        <p
+                        <div
                           key={lid.nummer ?? i}
                           style={{
                             fontSize: "0.8125rem",
                             lineHeight: 1.6,
-                            margin: 0,
                             padding: gemarkeerd ? "0.375rem 0.5rem" : 0,
                             borderLeft: gemarkeerd
                               ? "3px solid rgb(var(--lint))"
@@ -365,16 +413,23 @@ export default function WerkplekDetailPagina({
                               : "transparent",
                           }}
                         >
-                          {lid.nummer && (
-                            <strong style={{ marginRight: "0.375rem" }}>
-                              {lid.nummer}.
-                            </strong>
-                          )}
-                          {lid.tekst}
-                        </p>
+                          <p style={{ margin: 0 }}>
+                            {lid.nummer && (
+                              <strong style={{ marginRight: "0.375rem" }}>
+                                {lid.nummer}.
+                              </strong>
+                            )}
+                            {lid.tekst}
+                          </p>
+                          <OnderdeelLijst onderdelen={lid.onderdelen ?? []} />
+                        </div>
                       );
                     })}
                   </div>
+                )}
+
+                {(wetsartikel.leden ?? []).length === 0 && (
+                  <OnderdeelLijst onderdelen={wetsartikel.onderdelen ?? []} />
                 )}
               </div>
             )}
