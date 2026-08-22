@@ -11,13 +11,13 @@ Als beheerder wil ik een bestaand account kunnen bewerken (rol en actief-status)
 
 ## Acceptatiecriteria
 
-- [ ] Een beheerder kan de rol (`beheerder` | `analist`) en de actief-status van een bestaand account wijzigen via een PATCH-verzoek.
-- [ ] Een beheerder kan een tijdelijk wachtwoord genereren voor een account; dit wachtwoord wordt éénmalig teruggegeven en is daarna niet meer opvraagbaar.
-- [ ] Een beheerder kan een account verwijderen.
-- [ ] De laatste actieve beheerder mag niet worden gedeactiveerd of verwijderd — de API weigert dit met een 409.
-- [ ] Frontend: de gebruikerslijst op `/beheer` toont per rij een "Bewerk"-actie (inline rol/actief-formulier), een "Reset wachtwoord"-knop, en een "Verwijder"-knop.
-- [ ] Na een geslaagde wachtwoord-reset toont de frontend het tijdelijke wachtwoord eenmalig in een modal — de gebruiker wordt gevraagd het te noteren.
-- [ ] Bij verwijderen vraagt de frontend om bevestiging ("Weet je zeker dat je ... wilt verwijderen?").
+- [x] Een beheerder kan de rol (`beheerder` | `analist`) en de actief-status van een bestaand account wijzigen via een PATCH-verzoek.
+- [x] Een beheerder kan een tijdelijk wachtwoord genereren voor een account; dit wachtwoord wordt éénmalig teruggegeven en is daarna niet meer opvraagbaar.
+- [x] Een beheerder kan een account verwijderen.
+- [x] De laatste actieve beheerder mag niet worden gedeactiveerd of verwijderd — de API weigert dit met een 409.
+- [x] Frontend: de gebruikerslijst op `/beheer` toont per rij een "Bewerk"-actie (inline rol/actief-formulier), een "Reset wachtwoord"-knop, en een "Verwijder"-knop.
+- [x] Na een geslaagde wachtwoord-reset toont de frontend het tijdelijke wachtwoord eenmalig in een modal — de gebruiker wordt gevraagd het te noteren.
+- [x] Bij verwijderen vraagt de frontend om bevestiging ("Weet je zeker dat je ... wilt verwijderen?").
 
 ## Schemabeslissing
 

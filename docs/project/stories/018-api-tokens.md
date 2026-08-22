@@ -10,13 +10,13 @@ Als beheerder wil ik programmatische API-toegangstokens kunnen aanmaken en intre
 
 ## Acceptatiecriteria
 
-- [ ] Een beheerder kan een lijst van actieve API-tokens inzien; de lijst toont nooit het volledige token — alleen het prefix (eerste 8 tekens) voor identificatie.
-- [ ] Een beheerder kan een nieuw token aanmaken met een optioneel label; het volledige token wordt éénmalig teruggegeven en is daarna niet meer opvraagbaar.
-- [ ] Een beheerder kan een token intrekken; het token werkt onmiddellijk niet meer.
-- [ ] Tokens zijn hoge-entropie random strings (≥ 32 bytes); de hash (SHA-256) staat in de database, nooit het plaintext-token.
-- [ ] De API accepteert naast de statische `API_TOKEN` uit de omgeving ook geldige DB-tokens; de verificatielaag (`shared/auth.py`) controleert beide bronnen.
-- [ ] Frontend: `/beheer/api-tokens/` toont de tokenlijst met label, prefix, aanmaakdatum en "Intrekken"-actie; een "Nieuw token aanmaken"-formulier staat bovenaan.
-- [ ] Op `/beheer` staat een navigatieknop "API-tokens →" met het aantal actieve tokens als teller.
+- [x] Een beheerder kan een lijst van actieve API-tokens inzien; de lijst toont nooit het volledige token — alleen het prefix (eerste 8 tekens) voor identificatie.
+- [x] Een beheerder kan een nieuw token aanmaken met een optioneel label; het volledige token wordt éénmalig teruggegeven en is daarna niet meer opvraagbaar.
+- [x] Een beheerder kan een token intrekken; het token werkt onmiddellijk niet meer.
+- [x] Tokens zijn hoge-entropie random strings (≥ 32 bytes); de hash (SHA-256) staat in de database, nooit het plaintext-token.
+- [x] De API accepteert naast de statische `API_TOKEN` uit de omgeving ook geldige DB-tokens; de verificatielaag (`shared/auth.py`) controleert beide bronnen.
+- [x] Frontend: `/beheer/api-tokens/` toont de tokenlijst met label, prefix, aanmaakdatum en "Intrekken"-actie; een "Nieuw token aanmaken"-formulier staat bovenaan.
+- [x] Op `/beheer` staat een navigatieknop "API-tokens →" met het aantal actieve tokens als teller.
 
 ## Schemabeslissing
 
@@ -93,4 +93,4 @@ Tokenlogica kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/api_tokens.py`
 - **`/beheer/api-tokens/`**: tabel met kolommen label, prefix, aangemaakt door, datum, laatste gebruik; "Intrekken"-knop per rij. Bovenaan een compact formulier "Label (optioneel)" + knop "Nieuw token aanmaken". Na aanmaken verschijnt het token eenmalig in een modal (zelfde patroon als wachtwoord-reset, story 014).
 - **Sectie op `/beheer`**: navigatieknop "API-tokens →" met het aantal actieve tokens als badge.
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #18)

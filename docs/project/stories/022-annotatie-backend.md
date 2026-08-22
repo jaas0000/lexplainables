@@ -10,14 +10,14 @@ Als ingelogde gebruiker wil ik een wetsartikel als annotatie-document kunnen aan
 
 ## Acceptatiecriteria
 
-- [ ] Een ingelogde gebruiker kan een annotatie-document aanmaken voor een combinatie van werkgebied, bwb-id, artikel en optioneel lid.
-- [ ] Een agent (of de engine) kan voorgestelde elementen (JAS-klasse + tekst + toelichting + vindplaats) in bulk plaatsen via een PUT-verzoek; ongeldige klassen en lege tekst worden verworpen.
-- [ ] Een gebruiker kan per element een beslissing registreren: goedkeuren, bewerken (met verplichte reden en gewijzigde velden), afwijzen (met verplichte reden), of een opmerking plaatsen.
-- [ ] Elke schrijfactie (document aanmaken, elementen zetten, beslissing) schrijft een regel naar het append-only auditlog.
-- [ ] De gebruiker kan het volledige auditlog van een document opvragen.
-- [ ] Een document is client-gescopet: een gebruiker kan alleen zijn eigen documenten inzien en bewerken; een onbekend of andermans document geeft een 404 (niet 403) om het bestaan niet te lekken.
-- [ ] Een gebruiker kan zijn eigen document verwijderen.
-- [ ] JAS-klassen worden gevalideerd tegen de centrale lijst van geldige klassen (`shared/validation.py`).
+- [x] Een ingelogde gebruiker kan een annotatie-document aanmaken voor een combinatie van werkgebied, bwb-id, artikel en optioneel lid.
+- [x] Een agent (of de engine) kan voorgestelde elementen (JAS-klasse + tekst + toelichting + vindplaats) in bulk plaatsen via een PUT-verzoek; ongeldige klassen en lege tekst worden verworpen.
+- [x] Een gebruiker kan per element een beslissing registreren: goedkeuren, bewerken (met verplichte reden en gewijzigde velden), afwijzen (met verplichte reden), of een opmerking plaatsen.
+- [x] Elke schrijfactie (document aanmaken, elementen zetten, beslissing) schrijft een regel naar het append-only auditlog.
+- [x] De gebruiker kan het volledige auditlog van een document opvragen.
+- [x] Een document is client-gescopet: een gebruiker kan alleen zijn eigen documenten inzien en bewerken; een onbekend of andermans document geeft een 404 (niet 403) om het bestaan niet te lekken.
+- [x] Een gebruiker kan zijn eigen document verwijderen.
+- [x] JAS-klassen worden gevalideerd tegen de centrale lijst van geldige klassen (`shared/validation.py`).
 
 ## Schemabeslissing
 
@@ -123,4 +123,4 @@ Geen BFF-routes in deze story — de frontend (story 023) voegt die toe.
 
 Contracten kopiëren en aanpassen vanuit `wetsanalyse-ai/api/app/annotatie_contracts.py`; routerlogica vanuit `wetsanalyse-ai/api/app/routers/annotatie.py`; storelogica vanuit `wetsanalyse-ai/api/app/annotatie_store.py`. Hernoem waar nodig naar Nederlandse termen (zie de modellen hierboven). De `elementen`-kolom slaat Pydantic-objecten op als JSON; de store serialiseert en deserialiseert via `model_dump()` / `model_validate()`. Zorg dat de annotatie-store een aparte `AnnotatieStore`-klasse is (niet gedeeld met de projecten-store) zodat de domein-grenzen helder blijven.
 
-**Gebouwd:** nee
+**Gebouwd:** ja (PR #21)

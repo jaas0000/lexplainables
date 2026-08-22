@@ -10,13 +10,13 @@ Als eerste gebruiker van een verse installatie wil ik direct in de app een behee
 
 ## Acceptatiecriteria
 
-- [ ] `GET /v1/auth/setup-status` geeft `{"needs_setup": true}` terug zolang de `gebruikers`-tabel leeg is, en `{"needs_setup": false}` zodra er minstens één gebruiker bestaat.
-- [ ] `POST /v1/auth/setup` maakt de eerste beheerder aan en geeft het account terug; als er al gebruikers zijn, geeft de API 409 terug.
-- [ ] De frontend controleert bij het laden van `/login` of setup nodig is en redirect naar `/setup` als dat zo is.
-- [ ] De setuproute `/setup` toont een formulier met gebruikersnaam, e-mailadres en wachtwoord (bevestiging); na een geslaagde setup redirect de pagina naar `/login`.
-- [ ] Een ingelogde gebruiker die `/setup` bezoekt, wordt omgeleid naar `/` (setup is al gedaan).
-- [ ] Na de setup is de seed-procedure (`maak_gebruiker_indien_ontbreekt`) niet meer nodig voor verse installaties; het seed-script blijft beschikbaar voor CI/dev-omgevingen.
-- [ ] Alembic-migratie voegt het kolom `email` (TEXT NOT NULL DEFAULT '') toe aan de `gebruikers`-tabel; bestaande rijen krijgen een lege e-mail.
+- [x] `GET /v1/auth/setup-status` geeft `{"needs_setup": true}` terug zolang de `gebruikers`-tabel leeg is, en `{"needs_setup": false}` zodra er minstens één gebruiker bestaat.
+- [x] `POST /v1/auth/setup` maakt de eerste beheerder aan en geeft het account terug; als er al gebruikers zijn, geeft de API 409 terug.
+- [x] De frontend controleert bij het laden van `/login` of setup nodig is en redirect naar `/setup` als dat zo is.
+- [x] De setuproute `/setup` toont een formulier met gebruikersnaam, e-mailadres en wachtwoord (bevestiging); na een geslaagde setup redirect de pagina naar `/login`.
+- [x] Een ingelogde gebruiker die `/setup` bezoekt, wordt omgeleid naar `/` (setup is al gedaan).
+- [x] Na de setup is de seed-procedure (`maak_gebruiker_indien_ontbreekt`) niet meer nodig voor verse installaties; het seed-script blijft beschikbaar voor CI/dev-omgevingen.
+- [x] Alembic-migratie voegt het kolom `email` (TEXT NOT NULL DEFAULT '') toe aan de `gebruikers`-tabel; bestaande rijen krijgen een lege e-mail.
 
 ## Schemabeslissing
 

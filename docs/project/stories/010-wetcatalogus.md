@@ -10,12 +10,12 @@ Als analist wil ik een lijst van beschikbare wetten kunnen opvragen en de artike
 
 ## Acceptatiecriteria
 
-- [ ] Een ingelogde gebruiker kan een lijst van beschikbare wetten opvragen (bwb-id + naam).
-- [ ] Een ingelogde gebruiker kan de artikel-structuur van een specifieke wet opvragen (bwb-id → genummerde artikelen met padnotatie).
-- [ ] De frontend biedt een herbruikbaar `WetSelector`-component dat wetten laadt, een wet laat kiezen, en vervolgens de artikel-structuur toont zodat de gebruiker één of meer artikelen kan selecteren.
-- [ ] De wetcatalogus levert statische data voor de eerste PoC: wetten zijn geseed in de database of hardcoded in de router.
-- [ ] Bij een onbekend `bwb_id` geeft de API een 404 terug; de frontend toont een foutmelding.
-- [ ] Bij een lege wettenlijst toont de frontend "Geen wetten beschikbaar."
+- [x] Een ingelogde gebruiker kan een lijst van beschikbare wetten opvragen (bwb-id + naam).
+- [x] Een ingelogde gebruiker kan de artikel-structuur van een specifieke wet opvragen (bwb-id → genummerde artikelen met padnotatie).
+- [x] De frontend biedt een herbruikbaar `WetSelector`-component dat wetten laadt, een wet laat kiezen, en vervolgens de artikel-structuur toont zodat de gebruiker één of meer artikelen kan selecteren.
+- [x] De wetcatalogus levert statische data voor de eerste PoC: wetten zijn geseed in de database of hardcoded in de router.
+- [x] Bij een onbekend `bwb_id` geeft de API een 404 terug; de frontend toont een foutmelding.
+- [x] Bij een lege wettenlijst toont de frontend "Geen wetten beschikbaar."
 
 ## Schemabeslissing
 

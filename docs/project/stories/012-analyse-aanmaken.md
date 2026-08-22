@@ -11,19 +11,19 @@ Als analist wil ik een analyse kunnen starten door een werkgebied-naam, één of
 
 ## Acceptatiecriteria
 
-- [ ] Een ingelogde gebruiker kan een nieuwe analyse aanmaken met naam (optioneel), bronartikelen (wet-dropdown + artikel-input + lid-input), omschrijving/context (optioneel), hoofdvraag/analysefocus (optioneel), en een bestaande begrippenlijst (optioneel, inklapbaar blok).
-- [ ] Het model-profiel is te kiezen via een dropdown; bij ontbreken van profielen valt het formulier terug op een vrij tekstveld.
-- [ ] Human-in-the-loop review is instelbaar via een checkbox (default aangevinkt); uit = volautomatisch tot het rapport.
-- [ ] Na aanmaken geeft de API direct 202 terug met het job-id; de analyse draait asynchroon op de achtergrond.
-- [ ] De frontend navigeert direct naar de detailpagina van de nieuwe analyse.
-- [ ] De detailpagina toont de huidige status live via SSE (`GET /v1/projecten/{id}/events`).
-- [ ] De analyselijst (`/projecten`) toont alle analyses van de ingelogde gebruiker met naam, bronnen-samenvatting, status (dot + tekst) en datum.
-- [ ] De analyselijst heeft een zoekbalk (naam/BWB-id/artikel), status-dropdown en wet-dropdown als filters.
-- [ ] Een ingelogde gebruiker kan een analyse verwijderen vanuit de lijst of de detailpagina.
-- [ ] Statussen: `wachtrij`, `actief`, `review`, `klaar`, `fout`.
-- [ ] Bij status `klaar` verschijnt een knop "Bekijk rapport →" die linkt naar `/projecten/{id}/rapport` (story 013).
-- [ ] Bij status `fout` wordt een foutmelding getoond op de detailpagina.
-- [ ] Minimaal 1 bronartikel is verplicht (wet + artikel); het aanmaken-formulier blokkeert verzenden bij lege bronnenlijst (client-side).
+- [x] Een ingelogde gebruiker kan een nieuwe analyse aanmaken met naam (optioneel), bronartikelen (wet-dropdown + artikel-input + lid-input), omschrijving/context (optioneel), hoofdvraag/analysefocus (optioneel), en een bestaande begrippenlijst (optioneel, inklapbaar blok).
+- [x] Het model-profiel is te kiezen via een dropdown; bij ontbreken van profielen valt het formulier terug op een vrij tekstveld.
+- [x] Human-in-the-loop review is instelbaar via een checkbox (default aangevinkt); uit = volautomatisch tot het rapport.
+- [x] Na aanmaken geeft de API direct 202 terug met het job-id; de analyse draait asynchroon op de achtergrond.
+- [x] De frontend navigeert direct naar de detailpagina van de nieuwe analyse.
+- [x] De detailpagina toont de huidige status live via SSE (`GET /v1/projecten/{id}/events`).
+- [x] De analyselijst (`/projecten`) toont alle analyses van de ingelogde gebruiker met naam, bronnen-samenvatting, status (dot + tekst) en datum.
+- [x] De analyselijst heeft een zoekbalk (naam/BWB-id/artikel), status-dropdown en wet-dropdown als filters.
+- [x] Een ingelogde gebruiker kan een analyse verwijderen vanuit de lijst of de detailpagina.
+- [x] Statussen: `wachtrij`, `actief`, `review`, `klaar`, `fout`.
+- [x] Bij status `klaar` verschijnt een knop "Bekijk rapport →" die linkt naar `/projecten/{id}/rapport` (story 013).
+- [x] Bij status `fout` wordt een foutmelding getoond op de detailpagina.
+- [x] Minimaal 1 bronartikel is verplicht (wet + artikel); het aanmaken-formulier blokkeert verzenden bij lege bronnenlijst (client-side).
 
 ## Schemabeslissing
 

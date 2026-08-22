@@ -12,17 +12,17 @@ Als beheerder wil ik ingezonden feedback kunnen inzien en verwijderen via het be
 
 ## Acceptatiecriteria
 
-- [ ] Elke ingelogde gebruiker ziet rechtsonder een zwevende knop waarmee een feedbackformulier geopend kan worden.
-- [ ] Het formulier bevat: categorie (verbeteridee / probleemmelding / compliment / vraag), vrije tekst (verplicht, max 4000 tekens), en een verzendknop. De huidige `pagina` wordt automatisch meegestuurd via `window.location.pathname`.
-- [ ] Lege tekst of categorie buiten de toegestane set blokkeert verzenden (client-side validatie).
-- [ ] Na succesvol verzenden sluit het formulier en ziet de gebruiker een korte bevestiging.
-- [ ] Bij een netwerk- of serverfout blijft het formulier open met een foutmelding.
-- [ ] Een beheerder ziet op `/beheer` in de sectie "Gebruikersfeedback" een knop "Bekijk feedback →" met het ongelezen-aantal als badge. De knop navigeert naar `/beheer/feedback`.
-- [ ] `/beheer/feedback` toont alle ingezonden feedbackitems (nieuwste eerst, gepagineerd met max 50 items).
-- [ ] Een beheerder kan een feedbackitem verwijderen op `/beheer/feedback`.
-- [ ] Als de feedbacksectie geladen wordt, roept de frontend automatisch `POST /api/admin/feedback/markeer-gezien` aan (vergelijkbaar met hoe berichten werken in de popover).
-- [ ] Het ongelezen-aantal verschijnt als badge of teller zichtbaar voor de beheerder in de `/beheer` sectie-header.
-- [ ] Bij een lege feedbacklijst staat "Nog geen feedback ontvangen."
+- [x] Elke ingelogde gebruiker ziet rechtsonder een zwevende knop waarmee een feedbackformulier geopend kan worden.
+- [x] Het formulier bevat: categorie (verbeteridee / probleemmelding / compliment / vraag), vrije tekst (verplicht, max 4000 tekens), en een verzendknop. De huidige `pagina` wordt automatisch meegestuurd via `window.location.pathname`.
+- [x] Lege tekst of categorie buiten de toegestane set blokkeert verzenden (client-side validatie).
+- [x] Na succesvol verzenden sluit het formulier en ziet de gebruiker een korte bevestiging.
+- [x] Bij een netwerk- of serverfout blijft het formulier open met een foutmelding.
+- [x] Een beheerder ziet op `/beheer` in de sectie "Gebruikersfeedback" een knop "Bekijk feedback →" met het ongelezen-aantal als badge. De knop navigeert naar `/beheer/feedback`.
+- [x] `/beheer/feedback` toont alle ingezonden feedbackitems (nieuwste eerst, gepagineerd met max 50 items).
+- [x] Een beheerder kan een feedbackitem verwijderen op `/beheer/feedback`.
+- [x] Als de feedbacksectie geladen wordt, roept de frontend automatisch `POST /api/admin/feedback/markeer-gezien` aan (vergelijkbaar met hoe berichten werken in de popover).
+- [x] Het ongelezen-aantal verschijnt als badge of teller zichtbaar voor de beheerder in de `/beheer` sectie-header.
+- [x] Bij een lege feedbacklijst staat "Nog geen feedback ontvangen."
 
 ## Schemabeslissing
 

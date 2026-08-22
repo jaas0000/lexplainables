@@ -11,12 +11,12 @@ Als beheerder wil ik de LLM-aanroepen van een analyse kunnen inzien — inclusie
 
 ## Acceptatiecriteria
 
-- [ ] Wanneer de `capture_llm_calls`-instelling (story 019) is ingeschakeld, legt de engine elke LLM-aanroep vast in de database (systeem-prompt, gebruikersprompt, ruwe respons, model, tokens, tijdstip, analyse-slug).
-- [ ] `GET /v1/admin/analyses/{slug}/llm-calls` geeft alle vastgelegde aanroepen van één analyse terug, gesorteerd op tijdstip.
-- [ ] Het vastleggen faalt nooit de analyse: schrijffouten worden gelogd maar niet naar de aanroeper gepropageerd.
-- [ ] Frontend: een beheerder ziet op de rapport-pagina (`/analyse/{id}/rapport`, story 013) een uitklapbare sectie "LLM-calls" die de tabel toont; of een aparte pagina `/beheer/llm-log/` met een overzicht per analyse.
-- [ ] De capture is standaard uitgeschakeld; de beheerder schakelt hem in via story 019.
-- [ ] De response-inhoud en de prompts kunnen gevoelige (wets)tekst bevatten — toegang is bewust beperkt tot beheerders.
+- [x] Wanneer de `capture_llm_calls`-instelling (story 019) is ingeschakeld, legt de engine elke LLM-aanroep vast in de database (systeem-prompt, gebruikersprompt, ruwe respons, model, tokens, tijdstip, analyse-slug).
+- [x] `GET /v1/admin/analyses/{slug}/llm-calls` geeft alle vastgelegde aanroepen van één analyse terug, gesorteerd op tijdstip.
+- [x] Het vastleggen faalt nooit de analyse: schrijffouten worden gelogd maar niet naar de aanroeper gepropageerd.
+- [x] Frontend: een beheerder ziet op de rapport-pagina (`/analyse/{id}/rapport`, story 013) een uitklapbare sectie "LLM-calls" die de tabel toont; of een aparte pagina `/beheer/llm-log/` met een overzicht per analyse.
+- [x] De capture is standaard uitgeschakeld; de beheerder schakelt hem in via story 019.
+- [x] De response-inhoud en de prompts kunnen gevoelige (wets)tekst bevatten — toegang is bewust beperkt tot beheerders.
 
 ## Schemabeslissing
 

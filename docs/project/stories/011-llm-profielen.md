@@ -10,15 +10,15 @@ Als beheerder wil ik LLM-profielen kunnen aanmaken, bewerken en verwijderen, en 
 
 ## Acceptatiecriteria
 
-- [ ] Een beheerder kan een lijst van alle LLM-profielen inzien.
-- [ ] Een beheerder kan een nieuw profiel aanmaken (naam, provider, model, api_base, api_versie, temperatuur, api_sleutel, is_standaard).
-- [ ] Een beheerder kan een bestaand profiel bewerken (alle velden behalve naam; naam is de stabiele identifier).
-- [ ] Een beheerder kan een profiel verwijderen, mits het niet het enige profiel is.
-- [ ] De API-sleutel wordt Fernet-versleuteld opgeslagen; bij opvragen staat `sleutel_ingesteld: bool` in de response — de plaintext-sleutel verlaat de API nooit.
-- [ ] Er is altijd maximaal één standaard-profiel: bij het instellen van een nieuw standaard wordt het vorige automatisch omgezet naar niet-standaard.
-- [ ] Bij het aanmaken van een analyse (story 012) wordt het standaard-profiel automatisch gebruikt.
-- [ ] Frontend: op `/beheer` staat een sectie "LLM-profielen" met een navigatieknop naar `/beheer/llm-profielen`.
-- [ ] `/beheer/llm-profielen` toont de profielenlijst met aanmaken-formulier en bewerk/verwijder-actie per profiel.
+- [x] Een beheerder kan een lijst van alle LLM-profielen inzien.
+- [x] Een beheerder kan een nieuw profiel aanmaken (naam, provider, model, api_base, api_versie, temperatuur, api_sleutel, is_standaard).
+- [x] Een beheerder kan een bestaand profiel bewerken (alle velden behalve naam; naam is de stabiele identifier).
+- [x] Een beheerder kan een profiel verwijderen, mits het niet het enige profiel is.
+- [x] De API-sleutel wordt Fernet-versleuteld opgeslagen; bij opvragen staat `sleutel_ingesteld: bool` in de response — de plaintext-sleutel verlaat de API nooit.
+- [x] Er is altijd maximaal één standaard-profiel: bij het instellen van een nieuw standaard wordt het vorige automatisch omgezet naar niet-standaard.
+- [x] Bij het aanmaken van een analyse (story 012) wordt het standaard-profiel automatisch gebruikt.
+- [x] Frontend: op `/beheer` staat een sectie "LLM-profielen" met een navigatieknop naar `/beheer/llm-profielen`.
+- [x] `/beheer/llm-profielen` toont de profielenlijst met aanmaken-formulier en bewerk/verwijder-actie per profiel.
 
 ## Schemabeslissing
 

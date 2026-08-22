@@ -10,11 +10,11 @@ Als beheerder wil ik runtime-configuratie van de applicatie kunnen lezen en wijz
 
 ## Acceptatiecriteria
 
-- [ ] `GET /v1/admin/instellingen` geeft de huidige waarde van alle runtime-instellingen terug als een getypt object.
-- [ ] `PUT /v1/admin/instellingen` past één of meer instellingen aan; weggelaten velden blijven ongewijzigd.
-- [ ] De instelling `capture_llm_calls` (bool) bepaalt of de LLM-calls per analyse worden opgeslagen (story 021); de waarde is na een herstart persistent (opgeslagen in de database).
-- [ ] Waarden worden gecachet met een korte TTL (≤ 10 seconden) om de database niet bij elke LLM-call te bevragen.
-- [ ] Frontend: op `/beheer` staat een sectie "Instellingen" met een schakelaar voor `capture_llm_calls` en een opslaan-knop; of een aparte pagina `/beheer/instellingen/`.
+- [x] `GET /v1/admin/instellingen` geeft de huidige waarde van alle runtime-instellingen terug als een getypt object.
+- [x] `PUT /v1/admin/instellingen` past één of meer instellingen aan; weggelaten velden blijven ongewijzigd.
+- [x] De instelling `capture_llm_calls` (bool) bepaalt of de LLM-calls per analyse worden opgeslagen (story 021); de waarde is na een herstart persistent (opgeslagen in de database).
+- [x] Waarden worden gecachet met een korte TTL (≤ 10 seconden) om de database niet bij elke LLM-call te bevragen.
+- [x] Frontend: op `/beheer` staat een sectie "Instellingen" met een schakelaar voor `capture_llm_calls` en een opslaan-knop; of een aparte pagina `/beheer/instellingen/`.
 
 ## Schemabeslissing
 

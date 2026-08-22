@@ -11,15 +11,15 @@ Als analist wil ik een wetsartikel kunnen selecteren, de door de agent voorgeste
 
 ## Acceptatiecriteria
 
-- [ ] De werkplek (`/werkplek/`) toont een lijst van eigen annotatie-documenten met bwb-id, artikel, werkgebied, status en datum.
-- [ ] Een analist kan een nieuw annotatie-document aanmaken via een formulier (werkgebied-naam, bwb-id, artikel, optioneel lid).
-- [ ] Het documentdetailscherm (`/werkplek/{slug}`) toont de volledige wetsartikeltekst (opgehaald via de Wettenbank-MCP of de API) en de voorgestelde elementen.
-- [ ] Per element is de klasse, tekst, toelichting en aandachtsniveau (`groen`/`geel`/`rood`) zichtbaar; de levenscyclus-status (voorgesteld, goedgekeurd, bewerkt, afgewezen) is als badge zichtbaar.
-- [ ] Een analist kan per element op "Goedkeuren", "Bewerken" of "Afwijzen" klikken; bij bewerken en afwijzen is een verplichte reden selecteerbaar.
-- [ ] Na een beslissing wordt het element direct bijgewerkt in de UI (optimistisch of na een API-antwoord).
-- [ ] De analist kan het auditlog van een document opvragen (tijdlijn van alle acties).
-- [ ] Een analist kan een document verwijderen; er wordt om bevestiging gevraagd.
-- [ ] De UI is toegankelijk voor analisten én beheerders (geen rolbeperking); elk ziet alleen zijn eigen documenten.
+- [x] De werkplek (`/werkplek/`) toont een lijst van eigen annotatie-documenten met bwb-id, artikel, werkgebied, status en datum.
+- [x] Een analist kan een nieuw annotatie-document aanmaken via een formulier (werkgebied-naam, bwb-id, artikel, optioneel lid).
+- [ ] Het documentdetailscherm (`/werkplek/{slug}`) toont de volledige wetsartikeltekst (opgehaald via de Wettenbank-MCP of de API) en de voorgestelde elementen. **Nog niet gebouwd**: de linkerkolom toont een placeholder ("Wettenbank-koppeling nog niet ingebouwd in deze versie" — `frontend/app/werkplek/[slug]/page.tsx:264`); voorgestelde elementen wél. Wettenbank-MCP bestaat inmiddels niet meer (vervangen door `bwb-import`+GraphDB, zie ADR-0001) — dit moet dus alsnog via een nieuw endpoint op `api/` dat SPARQL tegen GraphDB doet, niet via de oorspronkelijke MCP-route.
+- [x] Per element is de klasse, tekst, toelichting en aandachtsniveau (`groen`/`geel`/`rood`) zichtbaar; de levenscyclus-status (voorgesteld, goedgekeurd, bewerkt, afgewezen) is als badge zichtbaar.
+- [x] Een analist kan per element op "Goedkeuren", "Bewerken" of "Afwijzen" klikken; bij bewerken en afwijzen is een verplichte reden selecteerbaar.
+- [x] Na een beslissing wordt het element direct bijgewerkt in de UI (optimistisch of na een API-antwoord).
+- [x] De analist kan het auditlog van een document opvragen (tijdlijn van alle acties).
+- [x] Een analist kan een document verwijderen; er wordt om bevestiging gevraagd.
+- [x] De UI is toegankelijk voor analisten én beheerders (geen rolbeperking); elk ziet alleen zijn eigen documenten.
 
 ## Schemabeslissing
 
@@ -73,4 +73,5 @@ De werkplek kopiëren en aanpassen vanuit `wetsanalyse-ai/frontend/app/workbench
   - "Auditlog"-tabblad: tijdlijn van acties (actie, actor, element, tijdstip).
 - Mockup-varianten: lege documentenlijst, document met mix van besliste en onbesliste elementen, bewerken-formulier open, auditlog-tabblad.
 
-**Gebouwd:** nee
+**Gebouwd:** grotendeels (PR #22) — één acceptatiecriterium nog open, zie hierboven
+(wetsartikeltekst is een placeholder).

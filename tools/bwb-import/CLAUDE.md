@@ -17,7 +17,8 @@ ETL-pipeline: BWB (Basiswettenbestand) → GraphDB-kennisgraaf. Losse Python-ser
   een platte env-var-waarde. Dit wijkt bewust af van de referentie-app (`wetsanalyse-ai`), die
   `GRAPHDB_PASSWORD` rechtstreeks als env-var leest.
 - **DI voor netwerkcode**: `BwbDownloader` accepteert een `requests.Session` — tests injecteren
-  een fake, geen echt netwerkverkeer. Zelfde patroon geldt voor de nog te bouwen GraphDB-writer.
+  een fake, geen echt netwerkverkeer. Zelfde patroon geldt voor `GraphDbWriter` (bestaat sinds
+  story 027).
 - **Brongetrouwheid**: SRU-discovery zonder resultaten of een lege/onleesbare respons is een
   `DownloadError`, nooit een stille lege lijst — doorgaan met "niets gevonden" alsof dat een
   geldig antwoord is, is verboden (zelfde principe als de wetsanalyse-skill elders in dit
@@ -29,8 +30,8 @@ ETL-pipeline: BWB (Basiswettenbestand) → GraphDB-kennisgraaf. Losse Python-ser
 cd tools/bwb-import && uv run pytest -q
 ```
 
-Geen `integration`-marker/echte-GraphDB-tests in deze story — komt zodra de GraphDB-writer
-gebouwd wordt (tegen de lokale stack in `deploy/graphdb/`, niet tegen een mock).
+`@pytest.mark.integration`-tests draaien tegen de echte lokale GraphDB-stack
+(`deploy/graphdb/`), niet tegen een mock — sinds story 027 (`GraphDbWriter`).
 
 ## Codestandaard
 

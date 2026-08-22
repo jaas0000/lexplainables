@@ -11,13 +11,13 @@ Als ingelogde gebruiker wil ik mijn eigen accountgegevens kunnen inzien en mijn 
 
 ## Acceptatiecriteria
 
-- [ ] `GET /v1/auth/me` geeft de eigen accountgegevens terug: gebruikersnaam, e-mail, rol en of 2FA aanstaat.
-- [ ] `POST /v1/auth/wijzig-wachtwoord` accepteert het huidige en het nieuwe wachtwoord; bij een verkeerd huidig wachtwoord geeft de API een 400 terug.
-- [ ] Het nieuwe wachtwoord moet minimaal 8 tekens zijn; de API valideert dit en de frontend valideert voor verzenden.
-- [ ] De frontend-route `/account` toont gebruikersnaam, e-mail en rol als alleen-lezen, met daaronder een sectie "Wachtwoord wijzigen".
-- [ ] Na een geslaagde wachtwoord-wijziging toont de frontend een succesmelding; het formulier wordt gereset.
-- [ ] Een niet-ingelogde gebruiker die `/account` bezoekt, wordt omgeleid naar `/login`.
-- [ ] De navigatiebalk heeft een link naar `/account` (of een accountmenu achter de gebruikersnaam).
+- [x] `GET /v1/auth/me` geeft de eigen accountgegevens terug: gebruikersnaam, e-mail, rol en of 2FA aanstaat.
+- [x] `POST /v1/auth/wijzig-wachtwoord` accepteert het huidige en het nieuwe wachtwoord; bij een verkeerd huidig wachtwoord geeft de API een 400 terug.
+- [x] Het nieuwe wachtwoord moet minimaal 8 tekens zijn; de API valideert dit en de frontend valideert voor verzenden.
+- [x] De frontend-route `/account` toont gebruikersnaam, e-mail en rol als alleen-lezen, met daaronder een sectie "Wachtwoord wijzigen".
+- [x] Na een geslaagde wachtwoord-wijziging toont de frontend een succesmelding; het formulier wordt gereset.
+- [x] Een niet-ingelogde gebruiker die `/account` bezoekt, wordt omgeleid naar `/login`.
+- [x] De navigatiebalk heeft een link naar `/account` (of een accountmenu achter de gebruikersnaam).
 
 ## Schemabeslissing
 

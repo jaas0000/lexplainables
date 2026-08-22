@@ -11,14 +11,14 @@ Als beheerder wil ik wetten aan de catalogus kunnen toevoegen, verwijderen, en d
 
 ## Acceptatiecriteria
 
-- [ ] Een beheerder kan een wet toevoegen of bijwerken via een PUT-verzoek (bwb-id + naam).
-- [ ] Een beheerder kan een wet verwijderen; de API geeft 404 als het bwb-id onbekend is.
-- [ ] Een beheerder kan de officiële citeertitel van een wet ophalen via `/resolve`; de API spreekt de Wettenbank-MCP aan om de naam op te vragen.
-- [ ] De wetcatalogus is nu database-backed (SQLAlchemy Core `Table`); de hardgecodeerde store (`HardgecodeerdeWetcatalogusStore`) wordt vervangen.
-- [ ] De bestaande analist-endpoints `GET /v1/wetten` en `GET /v1/wetten/{bwb_id}/structuur` (story 010) lezen voortaan uit de database; de structuurdata komt nog steeds uit de Wettenbank-MCP.
-- [ ] Migratie: bestaande hardgecodeerde wetten worden via een seed-script of migratie naar de database geschreven.
-- [ ] Frontend: `/beheer/wetten/` toont de cataloguslijst met bewerk- en verwijderacties; een formulier maakt nieuwe wetten aan of past bestaande bij.
-- [ ] Op `/beheer` staat een navigatieknop "Wetten →" met het aantal wetten als teller.
+- [x] Een beheerder kan een wet toevoegen of bijwerken via een PUT-verzoek (bwb-id + naam).
+- [x] Een beheerder kan een wet verwijderen; de API geeft 404 als het bwb-id onbekend is.
+- [x] Een beheerder kan de officiële citeertitel van een wet ophalen via `/resolve`; de API spreekt de Wettenbank-MCP aan om de naam op te vragen.
+- [x] De wetcatalogus is nu database-backed (SQLAlchemy Core `Table`); de hardgecodeerde store (`HardgecodeerdeWetcatalogusStore`) wordt vervangen.
+- [x] De bestaande analist-endpoints `GET /v1/wetten` en `GET /v1/wetten/{bwb_id}/structuur` (story 010) lezen voortaan uit de database; de structuurdata komt nog steeds uit de Wettenbank-MCP.
+- [x] Migratie: bestaande hardgecodeerde wetten worden via een seed-script of migratie naar de database geschreven.
+- [x] Frontend: `/beheer/wetten/` toont de cataloguslijst met bewerk- en verwijderacties; een formulier maakt nieuwe wetten aan of past bestaande bij.
+- [x] Op `/beheer` staat een navigatieknop "Wetten →" met het aantal wetten als teller.
 
 ## Schemabeslissing
 
