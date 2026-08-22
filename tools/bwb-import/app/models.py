@@ -3,10 +3,10 @@
 Dekt tot nu toe: SRU-discovery (`ToestandRef`, story 024), de kernstructuur van een
 wet-besluit-document (`Wet`/`Structuurdeel`/`Artikel`/`Lid`, story 025), onderdelen (genestelde
 `<lijst>/<li>`) + gestructureerde verwijzingen (`Onderdeel`/`Verwijzing`, story 026), de
-`jci`-identiteit per node + import-tellingen (`ImportSummary`/`ImportResult`, story 027), en de
-`label_id`/`locatie_wti`-join-sleutels voor WTI-verrijking (story 030).
-Illustraties, voetnoten, definities, tabellen, ondertekenaars, bijlagen en circulaires komen in
-latere stories.
+`jci`-identiteit per node + import-tellingen (`ImportSummary`/`ImportResult`, story 027), de
+`label_id`/`locatie_wti`-join-sleutels voor WTI-verrijking (story 030), en provenance/voetnoten/
+definities/illustraties op artikel/lid/onderdeel (`Illustratie`, story 031).
+Ondertekenaars, bijlagen en circulaires komen in latere stories.
 """
 
 from __future__ import annotations
@@ -50,6 +50,19 @@ class Verwijzing:
 
 
 @dataclass(slots=True)
+class Illustratie:
+    """Een `<illustratie>` (binnen `<plaatje>`): een afbeelding met alleen attributen (geen
+    tekst). Hangt aan de dichtstbijzijnde tekstdrager (artikel/lid/onderdeel)."""
+
+    id: str
+    naam: str | None = None  # bestandsnaam, bv. "123954.png"
+    formaat: str | None = None  # bv. "png"
+    breedte: str | None = None  # bv. "1417px"
+    hoogte: str | None = None  # bv. "364px"
+    alt: str | None = None  # alternatieve tekst/bijschrift, indien aanwezig
+
+
+@dataclass(slots=True)
 class Onderdeel:
     """Een onderdeel (`<li>`) binnen een `<lijst>`; bv. een definitie of opsommingspunt. Kan
     genest zijn (sub-lijsten, bv. "aa." met een genest "1°./2°./…")."""
@@ -60,6 +73,9 @@ class Onderdeel:
     jci: str | None = None
     verwijzingen: list[Verwijzing] = field(default_factory=list)
     subonderdelen: list[Onderdeel] = field(default_factory=list)
+    voetnoten: list[str] = field(default_factory=list)
+    definieert_begrippen: list[str] = field(default_factory=list)
+    illustraties: list[Illustratie] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -70,8 +86,12 @@ class Lid:
     nummer: str
     tekst: str
     jci: str | None = None
+    terugwerkend_tot: str | None = None  # retroactieve ingangsdatum (ISO), indien aanwezig
     verwijzingen: list[Verwijzing] = field(default_factory=list)
     onderdelen: list[Onderdeel] = field(default_factory=list)
+    voetnoten: list[str] = field(default_factory=list)
+    definieert_begrippen: list[str] = field(default_factory=list)
+    illustraties: list[Illustratie] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -84,9 +104,18 @@ class Artikel:
     tekst: str
     jci: str | None = None
     label_id: str | None = None  # WTI-join-sleutel (label-id-attribuut)
+    # Provenance/temporaliteit uit de artikel-attributen.
+    inwerking: str | None = None  # datum inwerkingtreding (ISO)
+    bron: str | None = None  # bv. "Stb.2009-265"
+    effect: str | None = None  # "wijziging" | "nieuwe-regeling" | ...
+    status: str | None = None  # bv. "goed"
+    terugwerkend_tot: str | None = None  # retroactieve ingangsdatum (ISO), indien aanwezig
+    wijzigingsbronnen: list[str] = field(default_factory=list)  # <juncto> Stb-refs
     leden: list[Lid] = field(default_factory=list)
     verwijzingen: list[Verwijzing] = field(default_factory=list)
     onderdelen: list[Onderdeel] = field(default_factory=list)
+    voetnoten: list[str] = field(default_factory=list)
+    illustraties: list[Illustratie] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -131,6 +160,7 @@ class ImportSummary:
     artikelen: int = 0
     leden: int = 0
     onderdelen: int = 0
+    illustraties: int = 0
     relaties: int = 0
 
     def as_dict(self) -> dict[str, int | str]:
@@ -144,6 +174,7 @@ class ImportSummary:
             "artikelen": self.artikelen,
             "leden": self.leden,
             "onderdelen": self.onderdelen,
+            "illustraties": self.illustraties,
             "relaties": self.relaties,
         }
 

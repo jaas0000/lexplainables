@@ -7,7 +7,7 @@ import pytest
 from rdflib import OWL, RDF, RDFS, URIRef
 
 from app.graphdb_writer import GraphDbWriter
-from app.models import Artikel, Lid, Wet
+from app.models import Artikel, Illustratie, Lid, Wet
 from app.parser import ToestandParser
 from app.rdf_vocab import Vocab
 
@@ -125,6 +125,36 @@ def test_build_graph_onderdeel_zonder_nummer_geen_ref_key() -> None:
     onderdeel_iri = URIRef("urn:bwb:BWBR9999:id:BWBR9999%2FArt1%2FO1")
     assert (onderdeel_iri, RDF.type, URIRef("urn:bwb-ns:Onderdeel")) in g
     assert (onderdeel_iri, RDF.type, URIRef("urn:bwb-ns:Citeerbaar")) not in g
+
+
+def test_build_graph_illustratie_en_provenance_triples() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        losse_artikelen=[
+            Artikel(
+                id="BWBR9999/Art1",
+                nummer="1",
+                label="Artikel 1",
+                tekst="tekst",
+                bron="Stb.2020-1",
+                effect="wijziging",
+                illustraties=[Illustratie(id="IL1", naam="foto.png")],
+            )
+        ],
+    )
+    g, _ = _writer().build_graph(wet)
+
+    artikel_iri = URIRef("urn:bwb:BWBR9999:id:BWBR9999%2FArt1")
+    illustratie_iri = URIRef("urn:bwb:BWBR9999:id:IL1")
+    bevat_illustratie = URIRef("urn:bwb-ns:bevatIllustratie")
+    assert (artikel_iri, URIRef("urn:bwb-ns:bron"), None) in g
+    assert (artikel_iri, URIRef("urn:bwb-ns:effect"), None) in g
+    assert (artikel_iri, bevat_illustratie, illustratie_iri) in g
+    assert (illustratie_iri, RDF.type, URIRef("urn:bwb-ns:Illustratie")) in g
+    assert (illustratie_iri, URIRef("urn:bwb-ns:naam"), None) in g
 
 
 def test_build_graph_onbekende_soort_geen_subklasse() -> None:

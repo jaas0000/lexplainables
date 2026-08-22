@@ -2,9 +2,10 @@
 
 `build_ontology` levert de schema-graaf die naast de instance-data wordt geladen (eigen named
 graph). Scoped tot de entiteiten die dit project parset (Regeling, Structuurdeel, Artikel, Lid,
-Onderdeel, Verwijzing) plus de WTI-verrijking (Organisatie, grondslag-/wetsfamilie-relaties,
-story 030) — divisies, bijlagen, illustraties en ondertekenaars volgen zodra hun parser-onderdeel
-bestaat (zie docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope).
+Onderdeel, Illustratie, Verwijzing) plus de WTI-verrijking (Organisatie, grondslag-/
+wetsfamilie-relaties, story 030) en artikel/lid/onderdeel-verrijking (provenance, voetnoten,
+definities, illustraties, story 031) — divisies, bijlagen en ondertekenaars volgen zodra hun
+parser-onderdeel bestaat (zie docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope).
 """
 
 from __future__ import annotations
@@ -64,6 +65,11 @@ _KLASSEN: dict[str, tuple[str, str, tuple[str | URIRef, ...]]] = {
         "Verantwoordelijke organisatie/ministerie van een regeling (uit de WTI).",
         (FOAF.Agent,),
     ),
+    "Illustratie": (
+        "Illustratie",
+        "Afbeelding (uit <plaatje>/<illustratie>) binnen een tekstdrager.",
+        (),
+    ),
 }
 
 # Objectproperty -> (label, toelichting, superproperties, rdfs:range of None).
@@ -75,6 +81,12 @@ _OBJECT_PROPS: dict[str, tuple[str, str, tuple[URIRef, ...], str | None]] = {
     "heeftArtikel": ("heeft artikel", "Bevat artikel.", (ELI.has_part,), "Artikel"),
     "heeftLid": ("heeft lid", "Artikel bevat lid.", (ELI.has_part,), "Lid"),
     "heeftOnderdeel": ("heeft onderdeel", "Bevat lijstonderdeel.", (ELI.has_part,), "Onderdeel"),
+    "bevatIllustratie": (
+        "bevat illustratie",
+        "Tekstdrager bevat een afbeelding.",
+        (),
+        "Illustratie",
+    ),
     "verwijstNaar": (
         "verwijst naar",
         "Citatie naar een ander citeerbaar tekstdeel (open-world doel).",
@@ -166,7 +178,34 @@ _DATA_PROPS: dict[str, tuple[str, str, tuple[URIRef, ...], URIRef | None]] = {
         (),
         None,
     ),
-    "naam": ("naam", "Naam van een gedeelde entiteit (bv. een organisatie).", (), None),
+    "naam": (
+        "naam",
+        "Naam van een gedeelde entiteit (bv. een organisatie) of bestandsnaam van een illustratie.",
+        (),
+        None,
+    ),
+    "inwerking": ("inwerking", "Datum inwerkingtreding van dit tekstdeel.", (), XSD.date),
+    "terugwerkendTot": (
+        "terugwerkend tot",
+        "Retroactieve ingangsdatum van de wijziging die dit tekstdeel zijn huidige inhoud gaf.",
+        (),
+        XSD.date,
+    ),
+    "bron": ("bron", "Publicatiebron (bv. Stb.2009-265).", (), None),
+    "effect": ("effect", "Effect van de laatste wijziging.", (), None),
+    "status": ("status", "Redactionele status.", (), None),
+    "wijzigingsbronnen": ("wijzigingsbron", "Stb-bron van een wijziging (<juncto>).", (), None),
+    "voetnoot": ("voetnoot", "Voetnoot bij het tekstdeel.", (), None),
+    "definieertBegrip": (
+        "definieert begrip",
+        "Begrip dat in dit tekstdeel wordt gedefinieerd.",
+        (),
+        None,
+    ),
+    "formaat": ("formaat", "Bestandsformaat van een illustratie (bv. png).", (), None),
+    "breedte": ("breedte", "Breedte van een illustratie (bv. 1417px).", (), None),
+    "hoogte": ("hoogte", "Hoogte van een illustratie (bv. 364px).", (), None),
+    "alt": ("alt-tekst", "Alternatieve tekst/bijschrift van een illustratie.", (), None),
 }
 
 
