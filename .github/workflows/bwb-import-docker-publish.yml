@@ -40,7 +40,7 @@ jobs:
       # kwetsbaarheden in de image blokkeren de publish, in plaats van ze pas bij een
       # productie-incident te ontdekken.
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/bwb-import:${{ github.sha }}
           severity: CRITICAL,HIGH
