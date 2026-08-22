@@ -123,6 +123,7 @@ class ToestandParser:
             nummer=self._tekst(kop.find("nr")) if kop is not None else "",
             label=self._tekst(kop.find("label")) if kop is not None else "",
             titel=self._tekst(kop.find("titel")) if kop is not None else "",
+            jci=self._element_jci(element),
         )
         for child in element:
             tag = child.tag if isinstance(child.tag, str) else ""
@@ -139,6 +140,7 @@ class ToestandParser:
             nummer=self._tekst(kop.find("nr")) if kop is not None else "",
             label=element.get("label", ""),
             tekst=self._lichaamstekst(element, binnen_lid=False),
+            jci=self._element_jci(element),
             verwijzingen=extract_references(
                 element,
                 eigen_bwb_id=bwb_id,
@@ -155,6 +157,7 @@ class ToestandParser:
             id=self._knoop_id(bwb_id, element),
             nummer=self._tekst(element.find("lidnr")),
             tekst=self._lichaamstekst(element, binnen_lid=True),
+            jci=self._element_jci(element),
             verwijzingen=extract_references(
                 element, eigen_bwb_id=bwb_id, extra_excl=" and not(ancestor::li)"
             ),
@@ -180,6 +183,7 @@ class ToestandParser:
             id=self._knoop_id(bwb_id, li),
             nummer=self._tekst(nr) if nr is not None else "",
             tekst=re.sub(r"\s+", " ", " ".join(tekst_delen)).strip(),
+            jci=self._element_jci(li),
             verwijzingen=extract_references(li, eigen_bwb_id=bwb_id, base="./al//*"),
             subonderdelen=self._parse_onderdelen(li, bwb_id),
         )
@@ -191,6 +195,14 @@ class ToestandParser:
         GraphDB-writer stabiele IRI's per node moet genereren (latere story)."""
         pad = element.get("bwb-ng-variabel-deel")
         return f"{bwb_id}{pad}" if pad else f"{bwb_id}/{element.tag}"
+
+    @staticmethod
+    def _element_jci(element: etree._Element) -> str | None:
+        """De canonieke `jci1.3`-verwijzing van een node uit zijn eigen `meta-data`."""
+        for jci in element.xpath("./meta-data/jcis/jci/@verwijzing"):
+            if jci.startswith("jci1.3:"):
+                return jci
+        return None
 
     @staticmethod
     def _tekst(element: etree._Element | None) -> str:

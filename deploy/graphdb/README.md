@@ -26,14 +26,43 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8004/mcp          # 40
 curl -s -o /dev/null -w '%{http_code}\n' -H 'Authorization: Bearer lex-dev-mcp-token' http://localhost:8004/mcp
 ```
 
-**Repository `inning` moet je zelf aanmaken** (deze compose-stack doet dat niet automatisch) —
-via de workbench-UI op `http://localhost:7200` (inloggen met `lex` / `lex-dev-wachtwoord`,
-"Create new repository", ID `inning`) of via de REST-API. `tools/bwb-import` schrijft ernaartoe
-zodra die er is.
+**Repository `inning` moet je zelf aanmaken** (deze compose-stack doet dat niet automatisch, al
+doet `tools/bwb-import`'s `GraphDbWriter.ensure_constraints()` dat ook programmatisch) — via de
+workbench-UI op `http://localhost:7200` (inloggen met `lex` / `lex-dev-wachtwoord`, "Create new
+repository", ID `inning`) of via de REST-API.
 
 Netwerk `graphdb_default` bestaat na het starten van deze stack; `tools/bwb-import` en
 `tools/graph-qa` joinen er later als extern netwerk op en bereiken GraphDB intern op
 `http://graphdb:7200`.
+
+## Licentie (blokkeert alle schrijfacties zonder deze stap)
+
+**GraphDB ≥ 11.x weigert elke schrijfactie zonder licentie** — lezen (SPARQL SELECT, workbench
+bekijken) werkt zonder licentie prima, maar elke `PUT`/`POST`/SPARQL-`UPDATE` (repository
+aanmaken lukt nog wel; de eerste triple-write faalt) geeft een `500` met
+`"No license was set"` in de container-logs (`podman logs lex-graphdb`).
+
+**Oplossing:**
+1. Registreer gratis op <https://www.ontotext.com/products/graphdb/graphdb-free/> (Ontotext-account,
+   geen kosten) en download het licentiebestand.
+2. Zet het bestand ergens buiten deze repo (bv. `~/.secrets/graphdb.license` — **niet committen**).
+3. Maak lokaal een `deploy/graphdb/docker-compose.override.yml` (genegeerd door git — zet 'm in
+   `.gitignore` als dat nog niet zo is) met:
+   ```yaml
+   services:
+     graphdb:
+       volumes:
+         - ~/.secrets/graphdb.license:/opt/graphdb/home/conf/graphdb.license:ro
+   ```
+4. `podman compose up -d` opnieuw (of `podman compose restart graphdb`).
+
+Geen default-mount in het gedeelde `docker-compose.yml`: een bind-mount naar een niet-bestaand
+bestand wordt door Docker/Podman als lege map aangemaakt, wat GraphDB's configmap breekt voor
+iedereen die nog geen licentie heeft. Zonder licentie kun je nog steeds de stack starten,
+`ensure_constraints()` een repository laten aanmaken en (in-memory, via rdflib) RDF-graven
+bouwen/inspecteren — alleen de daadwerkelijke `write_wet`/`write_ontology`-HTTP-call naar GraphDB
+faalt. Zie `tools/bwb-import/tests/test_graphdb_writer.py`: de `@pytest.mark.integration`-test
+(standaard geskipt) is de enige test die dit nodig heeft; de rest test tegen een in-memory graaf.
 
 ## Env-vars (lokale defaults, override via `.env` in deze map)
 

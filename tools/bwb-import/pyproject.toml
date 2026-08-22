@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "requests>=2.32",
     "lxml>=5.3",
+    "rdflib>=7.0",
 ]
 
 [dependency-groups]
@@ -16,6 +17,9 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: tests die een echte GraphDB-instance vereisen (standaard geskipt, zie CI: -m 'not integration')",
+]
 
 [tool.ruff]
 line-length = 100

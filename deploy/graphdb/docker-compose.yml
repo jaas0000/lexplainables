@@ -42,6 +42,11 @@ services:
       GDB_PASSWORD: ${GRAPHDB_SVC_PASSWORD:-lex-dev-wachtwoord}
     volumes:
       - lex-graphdb-data:/opt/graphdb/home
+      # GraphDB >= 11.x weigert schrijfacties zonder licentie ("No license was set", 500 op elke
+      # PUT/SPARQL-update — lezen werkt nog wel). Geen default-mount hier: een niet-bestaand
+      # bind-mount-bestand wordt door Docker/Podman als lege map aangemaakt, wat de container
+      # breekt. Zie README.md §Licentie voor hoe je 'm toevoegt via een lokale
+      # docker-compose.override.yml zodra je een licentie hebt.
     healthcheck:
       # Met GraphDB-security aan geeft /rest/repositories 401 zonder credentials — de healthcheck
       # zou de container dan onterecht als unhealthy markeren. **curl, geen wget**: GraphDB

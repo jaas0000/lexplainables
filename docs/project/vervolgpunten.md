@@ -258,3 +258,16 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 ## Gevonden tijdens story 024 (bwb-import setup)
 
 - **`api/app/shared/crypto.py:29` schendt werkwijze-ADR-0006**: `FERNET_KEY` wordt rechtstreeks uit een env-var gelezen (`os.environ.get("FERNET_KEY", "")`), niet via het `*_FILE`-pad-patroon dat de ADR voorschrijft. `tools/bwb-import`'s nieuwe `Settings` volgt de ADR wél voor `GRAPHDB_PASSWORD`; `crypto.py` retrofitten is een aparte, kleine story.
+
+---
+
+## Gevonden tijdens story 027 (bwb-import GraphDB-writer)
+
+- **GraphDB ≥ 11.x vereist een licentie voor elke schrijfactie** ("No license was set", 500 op
+  elke PUT/SPARQL-update). Blokkeert `tools/bwb-import/tests/test_graphdb_writer.py`'s
+  `@pytest.mark.integration`-test (standaard geskipt) én elke echte import totdat er een licentie
+  is. Registratie is gratis maar vereist een Ontotext-account — buiten wat een agent zelfstandig
+  kan regelen. Zie `deploy/graphdb/README.md` §Licentie voor de stappen (download +
+  `docker-compose.override.yml`). De schrijflogica zelf is wél volledig getest (51 unit-tests
+  tegen in-memory RDF-graven, incl. tegen een echt fragment van de Invorderingswet 1990) — alleen
+  de HTTP-PUT naar een echte GraphDB-instance is nog niet end-to-end geverifieerd.
