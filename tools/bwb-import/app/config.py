@@ -40,20 +40,27 @@ class Settings:
     """Onveranderlijke runtime-configuratie."""
 
     data_dir: Path
+    schemas_dir: Path
     sru_base_url: str
+    validate_xsd: bool
     graphdb_url: str
     graphdb_repository: str
     graphdb_user: str | None
     graphdb_password: str | None
+    service_api_key: str | None
 
     @classmethod
     def from_env(cls) -> Settings:
         """Laad instellingen uit de omgeving."""
         return cls(
             data_dir=Path(os.environ.get("BWB_DATA_DIR", str(PROJECT_ROOT / "data"))),
+            schemas_dir=Path(os.environ.get("BWB_SCHEMAS_DIR", str(PROJECT_ROOT / "schemas"))),
             sru_base_url=os.environ.get("BWB_SRU_URL", DEFAULT_SRU_BASE_URL),
+            validate_xsd=os.environ.get("BWB_VALIDATE_XSD", "true").strip().lower()
+            not in {"0", "false", "nee", "no"},
             graphdb_url=os.environ.get("GRAPHDB_URL", "http://graphdb:7200"),
             graphdb_repository=os.environ.get("GRAPHDB_REPOSITORY", "inning"),
             graphdb_user=os.environ.get("GRAPHDB_USER") or None,
             graphdb_password=_read_secret("GRAPHDB_PASSWORD_FILE"),
+            service_api_key=_read_secret("BWB_SERVICE_API_KEY_FILE"),
         )
