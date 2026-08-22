@@ -10,11 +10,12 @@ wordt geïmporteerd.
 
 WTI-verrijking (story 030) en wet-brondata/ondertekenaars (story 032) schrijven mee in dezelfde
 named graph als de wet, dus worden atomair mee-vervangen bij her-import. De Lucene-FTS-connector
-is nog niet gebouwd — zie docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope.
+(story 035) waarborgt een full-text-index over de tekstvelden, los van de per-wet named graphs.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 
 import requests
@@ -32,6 +33,74 @@ SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
 logger = logging.getLogger(__name__)
 
 _STRUCTUUR = {"Hoofdstuk", "Titeldeel", "Afdeling", "Paragraaf"}
+
+# Ontotext Lucene-connector-namespaces (GraphDB-specifiek, geen RDF-vocabulaire van dit project).
+_LUC = "http://www.ontotext.com/connectors/lucene#"
+_LUC_INST = "http://www.ontotext.com/connectors/lucene/instance#"
+_FTS_CONNECTOR_NAAM = "bwb_tekst"
+
+# Entiteiten en tekstprops die full-text doorzoekbaar moeten zijn. Subtypes (Wet/AMvB/…) en
+# tekstloze entiteiten (Illustratie/Organisatie/Ondertekenaar) dragen geen eigen doorzoekbare
+# tekst en blijven buiten de index.
+_FTS_TYPES = (
+    "Regeling",
+    "Hoofdstuk",
+    "Titeldeel",
+    "Afdeling",
+    "Paragraaf",
+    "Artikel",
+    "Lid",
+    "Onderdeel",
+    "Divisie",
+    "Bijlage",
+)
+_FTS_VELDEN = (
+    "tekst",
+    "titel",
+    "citeertitel",
+    "opschrift",
+    "aanhef",
+    "considerans",
+    "voetnoot",
+    "definieertBegrip",
+)
+
+
+def _fts_connector_config(vocab: Vocab) -> dict:
+    """createConnector-JSON voor de Lucene-index over de BWB-tekstvelden."""
+    ns = str(vocab.ns)
+    velden = [
+        {"fieldName": naam, "propertyChain": [f"{ns}{naam}"], "analyzed": True}
+        for naam in _FTS_VELDEN
+    ]
+    velden.append({"fieldName": "label", "propertyChain": [str(RDFS.label)], "analyzed": True})
+    return {
+        "types": [f"{ns}{t}" for t in _FTS_TYPES],
+        "fields": velden,
+        # Zowel @nl-getagde als ongetagde literals indexeren.
+        "languages": ["nl", ""],
+        "analyzer": "org.apache.lucene.analysis.nl.DutchAnalyzer",
+    }
+
+
+def _config_omvat(gewenst: object, bestaand: object) -> bool:
+    """Is de gewenste config (recursief) vervat in de bestaande?
+
+    GraphDB's `listConnectors` geeft de config terug aangevuld met defaults (per veld o.a.
+    `indexed`/`multivalued`); die extra sleutels mogen geen herindexering triggeren.
+    """
+    if isinstance(gewenst, dict):
+        return isinstance(bestaand, dict) and all(
+            _config_omvat(waarde, bestaand.get(sleutel)) for sleutel, waarde in gewenst.items()
+        )
+    if isinstance(gewenst, list):
+        return (
+            isinstance(bestaand, list)
+            and len(gewenst) == len(bestaand)
+            and all(_config_omvat(a, b) for a, b in zip(gewenst, bestaand, strict=True))
+        )
+    return gewenst == bestaand
+
 
 # bwb:soort (letterlijke bronwaarde) -> subklasse van bwb:Regeling. Onbekende soorten krijgen
 # alleen het generieke type bwb:Regeling.
@@ -343,3 +412,75 @@ class GraphDbWriter:
         self._put_graph(self._vocab.graph(wet.bwb_id), graph)
         logger.info("Wet %s naar GraphDB geschreven: %s", wet.bwb_id, summary.as_dict())
         return summary
+
+    def ensure_fts_connector(self) -> None:
+        """Waarborg de Lucene-FTS-connector (zelfherstellend, idempotent).
+
+        Bestaat de connector niet, dan wordt hij aangemaakt; wijkt zijn configuratie af van de
+        gewenste, dan wordt hij opnieuw aangemaakt (drop + create = volledige herindexering,
+        gelogd als waarschuwing).
+        """
+        gewenst = _fts_connector_config(self._vocab)
+        bestaand = self._fts_bestaande_config()
+        # Subset-vergelijking: GraphDB vult de opgeslagen config aan met defaults; alleen
+        # afwijkingen in wat wíj instellen tellen.
+        if bestaand is not None and _config_omvat(gewenst, bestaand):
+            logger.info("FTS-connector %s bestaat al (config actueel)", _FTS_CONNECTOR_NAAM)
+            return
+        if bestaand is not None:
+            logger.warning(
+                "FTS-connector %s heeft een verouderde config; opnieuw aanmaken "
+                "(volledige herindexering)",
+                _FTS_CONNECTOR_NAAM,
+            )
+            self._sparql_update(
+                f"INSERT DATA {{ <{_LUC_INST}{_FTS_CONNECTOR_NAAM}> <{_LUC}dropConnector> [] }}"
+            )
+        config_json = json.dumps(gewenst)
+        self._sparql_update(
+            f"INSERT DATA {{ <{_LUC_INST}{_FTS_CONNECTOR_NAAM}> "
+            f"<{_LUC}createConnector> '''{config_json}''' }}"
+        )
+        logger.info("FTS-connector %s aangemaakt", _FTS_CONNECTOR_NAAM)
+
+    def _fts_bestaande_config(self) -> dict | None:
+        """Huidige createConnector-config van de connector, of `None` als hij niet bestaat."""
+        query = (
+            f"SELECT ?createString {{ <{_LUC_INST}{_FTS_CONNECTOR_NAAM}> "
+            f"<{_LUC}listConnectors> ?createString }}"
+        )
+        resp = self._http.post(
+            f"{self._url}/repositories/{self._repo}",
+            data={"query": query},
+            headers={"Accept": "application/sparql-results+json"},
+            auth=self._auth,
+            timeout=self._timeout,
+        )
+        resp.raise_for_status()
+        bindings = resp.json().get("results", {}).get("bindings", [])
+        if not bindings:
+            return None
+        raw = bindings[0].get("createString", {}).get("value", "")
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            # Sommige GraphDB-versies geven via listConnectors niet de JSON-config maar bv. de
+            # connector-naam terug. De connector bestáát dan wél, maar we weten niet wáárop hij
+            # indexeert — stille zoekuitval (nul treffers zonder foutmelding) is erger dan een
+            # herindexering van enkele seconden, dus bij twijfel bouwen we hem opnieuw.
+            logger.warning(
+                "FTS-connector %s bestaat maar de config is niet uitleesbaar (%r); "
+                "opnieuw aanmaken om te voorkomen dat hij op verouderde predicaten blijft staan",
+                _FTS_CONNECTOR_NAAM,
+                raw,
+            )
+            return {}
+
+    def _sparql_update(self, update: str) -> None:
+        resp = self._http.post(
+            self._statements,
+            data={"update": update},
+            auth=self._auth,
+            timeout=self._timeout,
+        )
+        resp.raise_for_status()

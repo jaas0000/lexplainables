@@ -60,9 +60,11 @@ tegen de live GraphDB, inclusief WTI-, artikel- en wet-brondata-verrijking (afko
 eerstverantwoordelijke/citeertitel/uitgegevenDoor-, bron/effect/status- en publicatiejaar/
 dossier/toestandUrl/ondertekendDoor-triples geverifieerd via SPARQL); bijlagen en circulaires
 zijn los geverifieerd met een synthetische `Wet` (de Invorderingswet-fixture heeft geen van
-beide) — `heeftBijlage`/`heeftDivisie`/`volgtOp`/geneste-relaties bevestigd. Daarmee is de
-kernscope uit story 027 §Buiten scope volledig afgerond, op de Lucene-FTS-connector en
-tekstuele verwijzingsdetectie na.
+beide) — `heeftBijlage`/`heeftDivisie`/`volgtOp`/geneste-relaties bevestigd. Lucene-FTS-connector
+(035, `ensure_fts_connector` in `prepare()`) draait tegen de live GraphDB en geeft echte,
+gerankte zoekresultaten (bv. "invordering" → artikel 1 lid 1). Daarmee is de kernscope uit
+story 027 §Buiten scope volledig afgerond, op tekstuele verwijzingsdetectie na (036 — vereist
+eerst afstemming over een acceptabele foutmarge, botst met het brongetrouwheidsprincipe).
 `tools/graph-qa` is gestart (story 029: projectskelet + poorten `GraphPort`/`LLMPort` + fakes,
 21 tests) — de agent-loop zelf (orkestrator, supervisor, toollaag, annotatieketen, ~25-35 stories
 geschat) moet nog gebouwd worden, zie `ai-notes/fase-4-aparte-services-plan.md` §Service 3.
@@ -126,9 +128,8 @@ naar een aparte werkwijze-repo triviaal (`.claude/skills/` + `docs/project/werkw
 ## Volgende stap
 
 Story 017 (2FA/TOTP, laag) is de enige resterende API/frontend-story. `tools/bwb-import` heeft nu
-de volledige kernscope uit story 027 §Buiten scope afgerond: WTI-, artikel-, wet-brondata-,
-bijlage- en circulaire-verrijking (stories 024-028, 030-034, zie hierboven) — vervolg:
-Lucene-FTS-connector (035, perf/zoek-UX, niet correctheids-kritiek), tekstuele
-fallback-verwijzingsdetectie (036), of verder naar `tools/graph-qa` (service 3, zie
-`ai-notes/fase-4-aparte-services-plan.md`). Daarna
+de volledige kernscope uit story 027 §Buiten scope afgerond, inclusief de Lucene-FTS-connector
+(stories 024-028, 030-035, zie hierboven) — vervolg: tekstuele fallback-verwijzingsdetectie
+(036, vraagt eerst afstemming over een acceptabele foutmarge), of verder naar `tools/graph-qa`
+(service 3, zie `ai-notes/fase-4-aparte-services-plan.md`). Daarna
 `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).

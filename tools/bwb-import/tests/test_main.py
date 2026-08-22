@@ -29,6 +29,9 @@ class FakeWriter:
     def write_ontology(self) -> None:
         self.ontology_calls += 1
 
+    def ensure_fts_connector(self) -> None:
+        pass
+
     def write_wet(self, wet, wti: WtiInfo | None = None) -> ImportSummary:  # noqa: ANN001
         if wet.bwb_id == self.fail_bwb_id:
             raise RuntimeError(f"gesimuleerde fout voor {wet.bwb_id}")
