@@ -4,13 +4,12 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
-## PR #68 — werkplek: echte wetsartikeltekst via GraphDB (story 037)
+## PR #68 — werkplek: echte wetsartikeltekst via GraphDB (story 037) ✅ opgelost in PR #69
 
-- **`httpx.AsyncClient` per aanroep in `annotatie/graphdb.py`**: `haal_wetsartikel_op` maakt
-  zonder geïnjecteerde client een nieuwe `AsyncClient` per call — zelfde patroon als de al
-  bestaande vervolgpunten bij PR #15 (`wetcatalogus/router.py`) en PR #17
-  (`shared/wettenbank.py`). Overwegen om alle drie tegelijk op een gedeelde lifespan-scoped
-  client aan te sluiten via FastAPI's `lifespan`.
+`httpx.AsyncClient` per aanroep in `annotatie/graphdb.py` — opgelost via een proces-brede,
+lazily aangemaakte client (`_get_client()`, zelfde patroon als `db.py::get_engine`), tijdens de
+retroactieve simplify-sweep over stories 030-037. De vergelijkbare gevallen bij PR #15
+(`wetcatalogus/router.py`) en PR #17 (`shared/wettenbank.py`) staan nog open.
 
 ---
 

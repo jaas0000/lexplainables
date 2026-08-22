@@ -134,7 +134,9 @@ naar een aparte werkwijze-repo triviaal (`.claude/skills/` + `docs/project/werkw
 
 Geen resterende API/frontend-story meer (story 017 bleek al gebouwd; story 023's laatste open
 acceptatiecriterium — echte wetsartikeltekst i.p.v. placeholder — is gesloten via story 037,
-PR #68: nieuw GraphDB-SPARQL-leesendpoint `GET /v1/annotatie/documenten/{slug}/wetsartikel`).
+PR #68: nieuw GraphDB-SPARQL-leesendpoint `GET /v1/annotatie/documenten/{slug}/wetsartikel`;
+PR #70 bracht die weergave op parity met wetsanalyse-ai's `graph-qa`-agent: onderdelen a/b/c
+onder een lid, numerieke lid-sortering, bepaling-fallback voor decimale circulaire-nummers).
 `tools/bwb-import` heeft
 zijn volledige scope uit story 027 §Buiten scope afgerond (stories 024-028, 030-036, zie
 hierboven) — inhoudelijk klaar. Vervolg: `tools/graph-qa` (service 3, zie
