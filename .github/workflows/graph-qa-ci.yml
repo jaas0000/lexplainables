@@ -1,0 +1,38 @@
+name: graph-qa-ci
+
+# Eén workflow per service (werkwijze-ADR-0016) — triggert alleen op wijzigingen binnen
+# tools/graph-qa/.
+on:
+  pull_request:
+    paths:
+      - "tools/graph-qa/**"
+      - ".github/workflows/graph-qa-ci.yml"
+  push:
+    branches: [master, main]
+    paths:
+      - "tools/graph-qa/**"
+      - ".github/workflows/graph-qa-ci.yml"
+
+jobs:
+  test-graph-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Tests
+        working-directory: tools/graph-qa
+        # -m "not integration": vereist een echte GraphDB-MCP- of LLM-provider, draait hier niet.
+        run: |
+          uv sync --extra dev
+          uv run pytest -q -m "not integration"
+
+  check-python-style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: ruff
+        working-directory: tools/graph-qa
+        run: |
+          uv run --no-project --with ruff ruff check .
+          uv run --no-project --with ruff ruff format --check .

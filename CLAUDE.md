@@ -44,13 +44,16 @@ Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in
 
 **Alembic-migraties:** 0001–0011 draaien clean op SQLite.
 
-**Nog te bouwen:** 2FA/TOTP (story 017, laag). Services: `frontend-chat`, `tools/graph-qa`.
-`tools/bwb-import` heeft nu een werkende kernpijplijn: SRU-discovery + download (024),
+**Nog te bouwen:** 2FA/TOTP (story 017, laag). Service `frontend-chat` nog niet gestart.
+`tools/bwb-import` heeft een werkende kernpijplijn: SRU-discovery + download (024),
 XSD-validatie + kernparser (025), onderdelen + verwijzingen (026), RDF/GraphDB-writer (027),
 CLI + FastAPI-service + Dockerfile + CI-publish (028). Gebouwd en manueel geverifieerd
 (`podman build` + `/health`); een echte import blokkeert nog op een GraphDB-licentie (zie
 `deploy/graphdb/README.md` §Licentie). Nog niet gebouwd: WTI-verrijking, divisies/bijlagen/
 illustraties/tabellen — zie `docs/project/stories/027-bwb-import-graphdb-writer.md` §Buiten scope.
+`tools/graph-qa` is gestart (story 029: projectskelet + poorten `GraphPort`/`LLMPort` + fakes,
+21 tests) — de agent-loop zelf (orkestrator, supervisor, toollaag, annotatieketen, ~25-35 stories
+geschat) moet nog gebouwd worden, zie `ai-notes/fase-4-aparte-services-plan.md` §Service 3.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
