@@ -3,9 +3,9 @@
 Kernstructuur: ``toestand -> wetgeving -> wet-besluit/wettekst (of regeling/regeling-tekst) ->
 hoofdstuk/afdeling/paragraaf (generiek genest) -> artikel -> lid``, elk met onderdelen
 (genestelde ``<lijst>/<li>``), gestructureerde verwijzingen (``<intref>``/``<extref>``),
-provenance-attributen, voetnoten, definities, illustraties en tabellen (story 031). Circulaires
-(``circulaire/circulaire-tekst``), ondertekenaars, bijlagen en tekstuele verwijzingsdetectie
-volgen in latere stories — zie
+provenance-attributen, voetnoten, definities, illustraties en tabellen (story 031), en wet-niveau
+brondata/aanhef/considerans/ondertekenaars (story 032). Circulaires (``circulaire/
+circulaire-tekst``), bijlagen en tekstuele verwijzingsdetectie volgen in latere stories — zie
 docs/project/stories/026-bwb-import-onderdelen-en-verwijzingen.md §Buiten scope.
 """
 
@@ -17,7 +17,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from app.models import Artikel, Illustratie, Lid, Onderdeel, Structuurdeel, Wet
+from app.models import Artikel, Illustratie, Lid, Onderdeel, Ondertekenaar, Structuurdeel, Wet
 from app.references import extract_references
 
 logger = logging.getLogger(__name__)
@@ -87,6 +87,9 @@ class ToestandParser:
             soort=wetgeving.get("soort", ""),
             geldig_vanaf=root.get("inwerkingtreding"),
             label_id=wetgeving.get("label-id"),
+            vast_deel_url=root.get("bwb-ng-vast-deel"),
+            **self._wet_aanhef(wetgeving),
+            **self._wet_brondata(wetgeving),
         )
 
         # Ministeriële regelingen dragen dezelfde bouwstenen als een wettekst, maar onder
@@ -107,11 +110,14 @@ class ToestandParser:
             elif tag == "artikel":
                 wet.losse_artikelen.append(self._parse_artikel(child, bwb_id))
 
+        wet.ondertekenaars = self._parse_ondertekenaars(wetgeving)
+
         logger.info(
-            "Parse klaar voor %s: %d structuurdelen, %d losse artikelen",
+            "Parse klaar voor %s: %d structuurdelen, %d losse artikelen, %d ondertekenaars",
             bwb_id,
             len(wet.structuurdelen),
             len(wet.losse_artikelen),
+            len(wet.ondertekenaars),
         )
         return wet
 
@@ -286,6 +292,81 @@ class ToestandParser:
                 )
             )
         return out
+
+    def _parse_ondertekenaars(self, wetgeving: etree._Element) -> list[Ondertekenaar]:
+        """Ondertekenaars uit de `<ondertekening>`-blokken van de regeling.
+
+        Een ondertekening bevat een `<functie>` en een `<naam>` (met `<voornaam>`/
+        `<achternaam>`). Ontdubbelt op (functie, naam, achternaam)."""
+        gezien: set[tuple[str, str, str]] = set()
+        out: list[Ondertekenaar] = []
+        for ondt in wetgeving.iter("ondertekening"):
+            naam_el = ondt.find("naam")
+            functie = self._tekst(ondt.find("functie")) or None
+            voornaam = self._tekst(naam_el.find("voornaam")) if naam_el is not None else ""
+            achternaam = self._tekst(naam_el.find("achternaam")) if naam_el is not None else ""
+            naam = self._tekst(naam_el) if naam_el is not None else ""
+            if not (functie or naam):
+                continue
+            sleutel = (functie or "", naam, achternaam)
+            if sleutel in gezien:
+                continue
+            gezien.add(sleutel)
+            out.append(
+                Ondertekenaar(
+                    functie=functie,
+                    naam=naam or None,
+                    voornaam=voornaam or None,
+                    achternaam=achternaam or None,
+                    plaats=self._tekst(ondt.find("plaats")) or None,
+                    datum=None,
+                )
+            )
+        return out
+
+    def _wet_aanhef(self, wetgeving: etree._Element) -> dict[str, str | None]:
+        """Aanhef en considerans (`wet-besluit/aanhef` of `regeling/aanhef`)."""
+        aanhef_el = wetgeving.find("wet-besluit/aanhef")
+        if aanhef_el is None:
+            aanhef_el = wetgeving.find("regeling/aanhef")
+        if aanhef_el is None:
+            return {"aanhef": None, "considerans": None}
+        aanhef_delen = [
+            # Wetten/besluiten openen met <wij>, ministeriële regelingen met <wie>.
+            self._tekst(aanhef_el.find("wij")),
+            self._tekst(aanhef_el.find("wie")),
+            self._tekst(aanhef_el.find("afkondiging")),
+        ]
+        aanhef = " ".join(d for d in aanhef_delen if d).strip() or None
+        considerans_delen = [
+            "".join(al.xpath(".//text()[not(ancestor::noot)]"))
+            for al in aanhef_el.xpath("./considerans/considerans.al")
+        ]
+        considerans = re.sub(r"\s+", " ", " ".join(considerans_delen)).strip() or None
+        return {"aanhef": aanhef, "considerans": considerans}
+
+    @staticmethod
+    def _wet_brondata(wetgeving: etree._Element) -> dict[str, str | None]:
+        """Brondata van de oorspronkelijke regeling (wetgeving/meta-data/brondata)."""
+        pub = wetgeving.find("meta-data/brondata/oorspronkelijk/publicatie")
+        if pub is None:
+            return {
+                "publicatiejaar": None,
+                "publicatienr": None,
+                "ondertekeningsdatum": None,
+                "uitgiftedatum": None,
+                "dossier": None,
+            }
+        ondt = pub.find("ondertekeningsdatum")
+        uitg = pub.find("uitgiftedatum")
+        doss = pub.find("dossierref")
+        return {
+            "publicatiejaar": pub.findtext("publicatiejaar"),
+            "publicatienr": pub.findtext("publicatienr"),
+            "ondertekeningsdatum": ondt.get("isodatum") if ondt is not None else None,
+            "uitgiftedatum": uitg.get("isodatum") if uitg is not None else None,
+            "dossier": doss.get("dossier") if doss is not None else None,
+        }
 
     @staticmethod
     def _tekst(element: etree._Element | None) -> str:

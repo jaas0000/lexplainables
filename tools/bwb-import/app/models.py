@@ -4,9 +4,10 @@ Dekt tot nu toe: SRU-discovery (`ToestandRef`, story 024), de kernstructuur van 
 wet-besluit-document (`Wet`/`Structuurdeel`/`Artikel`/`Lid`, story 025), onderdelen (genestelde
 `<lijst>/<li>`) + gestructureerde verwijzingen (`Onderdeel`/`Verwijzing`, story 026), de
 `jci`-identiteit per node + import-tellingen (`ImportSummary`/`ImportResult`, story 027), de
-`label_id`/`locatie_wti`-join-sleutels voor WTI-verrijking (story 030), en provenance/voetnoten/
-definities/illustraties op artikel/lid/onderdeel (`Illustratie`, story 031).
-Ondertekenaars, bijlagen en circulaires komen in latere stories.
+`label_id`/`locatie_wti`-join-sleutels voor WTI-verrijking (story 030), provenance/voetnoten/
+definities/illustraties op artikel/lid/onderdeel (`Illustratie`, story 031), en wet-niveau
+brondata/aanhef/considerans/ondertekenaars (`Ondertekenaar`, story 032).
+Bijlagen en circulaires komen in latere stories.
 """
 
 from __future__ import annotations
@@ -134,6 +135,20 @@ class Structuurdeel:
 
 
 @dataclass(slots=True)
+class Ondertekenaar:
+    """Een ondertekenaar van de regeling (uit `<ondertekening>`): de functie en de naam van de
+    persoon die de regeling heeft ondertekend. Wordt over wetten heen ontdubbeld op
+    (functie, naam)."""
+
+    functie: str | None = None  # bv. "De Staatssecretaris van Financiën"
+    naam: str | None = None  # volledige naam
+    voornaam: str | None = None
+    achternaam: str | None = None
+    plaats: str | None = None
+    datum: str | None = None  # ondertekeningsdatum (ISO), indien aanwezig
+
+
+@dataclass(slots=True)
 class Wet:
     """Een regeling (wet, besluit of ministeriële regeling — geen circulaires, zie story 025)."""
 
@@ -143,8 +158,20 @@ class Wet:
     soort: str
     geldig_vanaf: str | None = None
     label_id: str | None = None  # WTI-join-sleutel (label-id van <wetgeving>)
+    # Toestand-identiteit (root-attr bwb-ng-vast-deel), bv.
+    # "http://wetten.overheid.nl/id/BWBR0004770/2026-01-01/0".
+    vast_deel_url: str | None = None
+    aanhef: str | None = None  # <wij>/<wie> + <afkondiging>
+    considerans: str | None = None  # overwegingen uit de aanhef
+    # Brondata van de oorspronkelijke regeling (wetgeving/meta-data/brondata).
+    publicatiejaar: str | None = None
+    publicatienr: str | None = None
+    ondertekeningsdatum: str | None = None  # ISO
+    uitgiftedatum: str | None = None  # ISO
+    dossier: str | None = None
     structuurdelen: list[Structuurdeel] = field(default_factory=list)
     losse_artikelen: list[Artikel] = field(default_factory=list)
+    ondertekenaars: list[Ondertekenaar] = field(default_factory=list)
 
 
 @dataclass(slots=True)

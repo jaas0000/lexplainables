@@ -195,6 +195,86 @@ def test_parse_zonder_wettekst_geeft_parse_error(tmp_path: Path) -> None:
         parser.parse(pad)
 
 
+def test_parse_wet_brondata_en_aanhef_uit_fixture() -> None:
+    parser = ToestandParser()
+    wet = parser.parse(FIXTURES / "sample_toestand.xml")
+
+    assert wet.vast_deel_url == "http://wetten.overheid.nl/id/BWBR0004770/2026-01-01/0"
+    assert wet.publicatiejaar == "2018"
+    assert wet.publicatienr == "75"
+    assert wet.dossier == "34753"
+    assert wet.ondertekeningsdatum == "2018-02-21"
+    assert wet.uitgiftedatum == "2018-03-16"
+    assert wet.aanhef is not None
+    assert "Beatrix" in wet.aanhef
+    assert wet.considerans is not None
+    assert "Alzo Wij" in wet.considerans
+
+
+def test_parse_wet_brondata_ontbrekend_geeft_none(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit><wettekst>"
+        "<artikel label='Artikel 1'><kop><nr>1</nr></kop><al>Tekst.</al></artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    wet = parser.parse(pad)
+
+    assert wet.publicatiejaar is None
+    assert wet.publicatienr is None
+    assert wet.dossier is None
+    assert wet.ondertekeningsdatum is None
+    assert wet.uitgiftedatum is None
+    assert wet.aanhef is None
+    assert wet.considerans is None
+
+
+def test_parse_ondertekenaars_uit_fixture() -> None:
+    parser = ToestandParser()
+    wet = parser.parse(FIXTURES / "sample_toestand.xml")
+
+    assert len(wet.ondertekenaars) == 3
+    eerste = wet.ondertekenaars[0]
+    assert eerste.functie == "De Staatssecretaris van Financiën,"
+    assert eerste.achternaam == "M. J. J. van Amelsvoort"
+    assert eerste.voornaam is None
+
+
+def test_parse_ondertekenaars_dedupliceert(tmp_path: Path) -> None:
+    parser = ToestandParser()
+    xml = (
+        "<toestand bwb-id='BWBR9999'>"
+        "<wetgeving soort='wet'>"
+        "<citeertitel>Test</citeertitel>"
+        "<wet-besluit>"
+        "<aanhef>"
+        "<ondertekening><functie>De Minister</functie><naam><achternaam>Jansen</achternaam>"
+        "</naam></ondertekening>"
+        "<ondertekening><functie>De Minister</functie><naam><achternaam>Jansen</achternaam>"
+        "</naam></ondertekening>"
+        "<ondertekening/>"
+        "</aanhef>"
+        "<wettekst>"
+        "<artikel label='Artikel 1'><kop><nr>1</nr></kop><al>Tekst.</al></artikel>"
+        "</wettekst></wet-besluit>"
+        "</wetgeving>"
+        "</toestand>"
+    )
+    pad = _schrijf(tmp_path, xml)
+
+    wet = parser.parse(pad)
+
+    assert len(wet.ondertekenaars) == 1
+    assert wet.ondertekenaars[0].achternaam == "Jansen"
+
+
 def test_parse_artikel_provenance_uit_fixture() -> None:
     """Artikel 2 in de fixture draagt echte provenance-attributen."""
     parser = ToestandParser()

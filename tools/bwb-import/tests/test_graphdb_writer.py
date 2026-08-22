@@ -7,7 +7,7 @@ import pytest
 from rdflib import OWL, RDF, RDFS, URIRef
 
 from app.graphdb_writer import GraphDbWriter
-from app.models import Artikel, Illustratie, Lid, Wet
+from app.models import Artikel, Illustratie, Lid, Ondertekenaar, Wet
 from app.parser import ToestandParser
 from app.rdf_vocab import Vocab
 
@@ -125,6 +125,68 @@ def test_build_graph_onderdeel_zonder_nummer_geen_ref_key() -> None:
     onderdeel_iri = URIRef("urn:bwb:BWBR9999:id:BWBR9999%2FArt1%2FO1")
     assert (onderdeel_iri, RDF.type, URIRef("urn:bwb-ns:Onderdeel")) in g
     assert (onderdeel_iri, RDF.type, URIRef("urn:bwb-ns:Citeerbaar")) not in g
+
+
+def test_build_graph_toestand_url_en_brondata_uit_fixture() -> None:
+    wet = ToestandParser().parse(FIXTURE)
+    g, _ = _writer().build_graph(wet)
+
+    wet_iri = URIRef("urn:bwb:BWBR0004770")
+    toestand_url = URIRef("http://wetten.overheid.nl/id/BWBR0004770/2026-01-01/0")
+    assert (wet_iri, URIRef("urn:bwb-ns:toestandUrl"), toestand_url) in g
+    assert (wet_iri, URIRef("urn:bwb-ns:publicatiejaar"), None) in g
+    assert (wet_iri, URIRef("urn:bwb-ns:dossier"), None) in g
+
+
+def test_build_graph_zonder_vast_deel_url_geen_toestand_url_triple() -> None:
+    wet = Wet(bwb_id="BWBR9999", citeertitel="Test", opschrift="Test", soort="wet")
+    g, _ = _writer().build_graph(wet)
+
+    assert (None, URIRef("urn:bwb-ns:toestandUrl"), None) not in g
+
+
+def test_build_graph_ondertekenaar_node_en_relatie() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="wet",
+        ondertekenaars=[Ondertekenaar(functie="De Minister", achternaam="Jansen")],
+    )
+    g, _ = _writer().build_graph(wet)
+
+    wet_iri = URIRef("urn:bwb:BWBR9999")
+    ondertekend_door = URIRef("urn:bwb-ns:ondertekendDoor")
+    doelen = list(g.objects(wet_iri, ondertekend_door))
+    assert len(doelen) == 1
+    ondt_iri = doelen[0]
+    assert (ondt_iri, RDF.type, URIRef("urn:bwb-ns:Ondertekenaar")) in g
+    assert (ondt_iri, URIRef("urn:bwb-ns:functie"), None) in g
+
+
+def test_build_graph_ondertekenaar_dedupliceert_over_wetten() -> None:
+    """Dezelfde ondertekenaar in twee wetten valt open-world samen op één IRI."""
+    ondertekenaar = Ondertekenaar(functie="De Minister", achternaam="Jansen")
+    wet1 = Wet(
+        bwb_id="BWBR0001",
+        citeertitel="Wet 1",
+        opschrift="Wet 1",
+        soort="wet",
+        ondertekenaars=[ondertekenaar],
+    )
+    wet2 = Wet(
+        bwb_id="BWBR0002",
+        citeertitel="Wet 2",
+        opschrift="Wet 2",
+        soort="wet",
+        ondertekenaars=[ondertekenaar],
+    )
+    g1, _ = _writer().build_graph(wet1)
+    g2, _ = _writer().build_graph(wet2)
+
+    ondt_iri1 = next(g1.objects(URIRef("urn:bwb:BWBR0001"), URIRef("urn:bwb-ns:ondertekendDoor")))
+    ondt_iri2 = next(g2.objects(URIRef("urn:bwb:BWBR0002"), URIRef("urn:bwb-ns:ondertekendDoor")))
+    assert ondt_iri1 == ondt_iri2
 
 
 def test_build_graph_illustratie_en_provenance_triples() -> None:

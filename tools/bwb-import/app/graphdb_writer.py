@@ -8,9 +8,9 @@ Cross-referenties (`verwijstNaar`) wijzen naar de ref_key-afgeleide doel-IRI. Di
 nog niet te bestaan: RDF is open-world, dus de node krijgt vanzelf inhoud zodra de doelwet later
 wordt geïmporteerd.
 
-WTI-verrijking (story 030) schrijft mee in dezelfde named graph als de wet, dus wordt atomair
-mee-vervangen bij her-import. De Lucene-FTS-connector is nog niet gebouwd — zie
-docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope.
+WTI-verrijking (story 030) en wet-brondata/ondertekenaars (story 032) schrijven mee in dezelfde
+named graph als de wet, dus worden atomair mee-vervangen bij her-import. De Lucene-FTS-connector
+is nog niet gebouwd — zie docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import requests
 from rdflib import OWL, RDF, RDFS, Graph, Literal, Namespace, URIRef
 
 from app.collect import collect
-from app.models import ImportSummary, Wet
+from app.models import ImportSummary, Ondertekenaar, Wet
 from app.ontology import build_ontology
 from app.rdf_vocab import Vocab
 from app.wti_parser import WtiInfo
@@ -194,6 +194,13 @@ class GraphDbWriter:
             self._wti_verrijking(g, v.wet(wet.bwb_id), wti)
             self._wti_element_relaties(g, label_iri, wti)
 
+        # Toestand-identiteit (versie) op wetten.overheid.nl: ander FRBR-niveau dan de wet zelf,
+        # dus een eigen property i.p.v. owl:sameAs.
+        if wet.vast_deel_url:
+            g.add((v.wet(wet.bwb_id), v.ns.toestandUrl, URIRef(wet.vast_deel_url)))
+
+        self._ondertekenaars(g, v.wet(wet.bwb_id), wet.ondertekenaars)
+
         # 2) Structuur- en volgrelaties.
         for (_src, rel_type, _dst), rows in batch.rels.items():
             pred = v.predicaat_rel(rel_type)
@@ -288,6 +295,29 @@ class GraphDbWriter:
         g.add((iri, SKOS.prefLabel, Literal(label, lang="nl")))
         g.add((iri, RDFS.label, Literal(label, lang="nl")))
         return iri
+
+    def _ondertekenaars(
+        self, g: Graph, wet_iri: URIRef, ondertekenaars: list[Ondertekenaar]
+    ) -> None:
+        """Ondertekenaars als wet-overstijgende nodes (dezelfde persoon valt over regelingen
+        heen samen op de slug-IRI, zelfde open-world-patroon als de WTI-Organisatie-node)."""
+        v = self._vocab
+        for ondt in ondertekenaars:
+            sleutel = f"{ondt.functie or ''}|{ondt.naam or ''}"
+            iri = v.entiteit("ondertekenaar", sleutel)
+            g.add((iri, RDF.type, v.klasse("Ondertekenaar")))
+            label = ondt.naam or ondt.functie or "Ondertekenaar"
+            g.add((iri, RDFS.label, Literal(label, lang="nl")))
+            for prop, value in (
+                (v.ns.naam, ondt.naam),
+                (v.ns.functie, ondt.functie),
+                (v.ns.voornaam, ondt.voornaam),
+                (v.ns.achternaam, ondt.achternaam),
+                (v.ns.plaats, ondt.plaats),
+            ):
+                if value:
+                    g.add((iri, prop, Literal(value, lang="nl")))
+            g.add((wet_iri, v.ns.ondertekendDoor, iri))
 
     def write_ontology(self) -> None:
         """Vervang de ontologie-graaf (T-Box) in GraphDB (PUT = idempotent)."""

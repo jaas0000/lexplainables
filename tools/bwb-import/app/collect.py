@@ -85,6 +85,13 @@ class _Collector:
                 "soort": wet.soort,
                 "geldig_vanaf": wet.geldig_vanaf,
                 "label_id": wet.label_id,
+                "aanhef": wet.aanhef,
+                "considerans": wet.considerans,
+                "publicatiejaar": wet.publicatiejaar,
+                "publicatienr": wet.publicatienr,
+                "ondertekeningsdatum": wet.ondertekeningsdatum,
+                "uitgiftedatum": wet.uitgiftedatum,
+                "dossier": wet.dossier,
             },
         )
         for deel in wet.structuurdelen:
