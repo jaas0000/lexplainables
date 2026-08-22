@@ -37,6 +37,17 @@ import httpx
 WETTENBANK_MCP_URL = os.getenv("WETTENBANK_MCP_URL", "http://localhost:8000")
 _TIMEOUT = 30.0
 
+_client: httpx.AsyncClient | None = None
+
+
+def _get_client() -> httpx.AsyncClient:
+    """Proces-brede client, lazily aangemaakt — zelfde patroon als `db.py::get_engine` (geen
+    nieuwe `AsyncClient` per aanvraag aanmaken/sluiten)."""
+    global _client
+    if _client is None:
+        _client = httpx.AsyncClient(timeout=_TIMEOUT)
+    return _client
+
 
 class WettenbankFout(RuntimeError):
     """Ophalen mislukte of leverde niets bruikbaars — analyse moet stoppen."""
@@ -64,12 +75,11 @@ async def _jsonrpc_call(method: str, arguments: dict, *, foutcontext: str) -> li
         "id": 1,
     }
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            resp = await client.post(
-                f"{WETTENBANK_MCP_URL}/",
-                json=payload,
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
-            )
+        resp = await _get_client().post(
+            f"{WETTENBANK_MCP_URL}/",
+            json=payload,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+        )
     except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as exc:
         raise WettenbankNietBereikbaar(
             f"Wettenbank niet bereikbaar voor {foutcontext}: {exc}"
