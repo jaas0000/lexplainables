@@ -175,6 +175,19 @@ class BeslissingInvoer(BaseModel):
         return self
 
 
+class WetsartikelLid(BaseModel):
+    nummer: str | None
+    tekst: str
+
+
+class Wetsartikel(BaseModel):
+    bwb_id: str
+    artikel: str
+    opschrift: str | None
+    tekst: str
+    leden: list[WetsartikelLid] = Field(default_factory=list)
+
+
 class DocumentSamenvatting(BaseModel):
     slug: str
     bwb_id: str
