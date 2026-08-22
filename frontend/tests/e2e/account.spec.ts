@@ -93,10 +93,13 @@ test("foutpad: verkeerd huidig wachtwoord toont foutmelding bij het veld", async
   await expect(foutmelding).toContainText("klopt niet");
 });
 
-test("Account-link in de navigatie is zichtbaar en navigeert naar /account", async ({
+test("Account-link in het gebruikersmenu is bereikbaar en navigeert naar /account", async ({
   page,
 }) => {
   await page.goto("/");
+  // "Account" zit achter het gebruikersmenu onderin de sidebar (zelfde patroon als
+  // wetsanalyse-ai's GesprekSidebar), niet als direct zichtbare navlink.
+  await page.getByRole("button", { name: "Gebruikersmenu" }).click();
   const link = page.getByRole("link", { name: "Account" });
   await expect(link).toBeVisible();
   await link.click();

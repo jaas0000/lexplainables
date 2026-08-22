@@ -191,6 +191,7 @@ function SidebarInhoud({
           type="button"
           onClick={() => setMenuOpen((o) => !o)}
           aria-expanded={menuOpen}
+          aria-label="Gebruikersmenu"
           className="flex min-h-[44px] w-full items-center gap-2.5 rounded-kaart px-2 py-2 text-left transition-colors hover:bg-paper"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lint text-xs font-semibold text-paper">
