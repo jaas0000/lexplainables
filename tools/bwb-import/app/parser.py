@@ -4,9 +4,10 @@ Kernstructuur: ``toestand -> wetgeving -> wet-besluit/wettekst (of regeling/rege
 hoofdstuk/afdeling/paragraaf (generiek genest) -> artikel -> lid``, elk met onderdelen
 (genestelde ``<lijst>/<li>``), gestructureerde verwijzingen (``<intref>``/``<extref>``),
 provenance-attributen, voetnoten, definities, illustraties en tabellen (story 031), wet-niveau
-brondata/aanhef/considerans/ondertekenaars (story 032), en bijlagen (``<bijlage>``, story 033).
-Circulaires (``circulaire/circulaire-tekst``) en tekstuele verwijzingsdetectie volgen in latere
-stories — zie docs/project/stories/026-bwb-import-onderdelen-en-verwijzingen.md §Buiten scope.
+brondata/aanhef/considerans/ondertekenaars (story 032), bijlagen (``<bijlage>``, story 033), en
+circulaires (``circulaire/circulaire-tekst`` -> ``<circulaire.divisie>``-boom, story 034), voor
+regelingen zonder wettekst. Tekstuele verwijzingsdetectie volgt in een latere story — zie
+docs/project/stories/026-bwb-import-onderdelen-en-verwijzingen.md §Buiten scope.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from lxml import etree
 from app.models import (
     Artikel,
     Bijlage,
+    Divisie,
     Illustratie,
     Lid,
     Onderdeel,
@@ -106,36 +108,44 @@ class ToestandParser:
         wettekst = wetgeving.find("wet-besluit/wettekst")
         if wettekst is None:
             wettekst = wetgeving.find("regeling/regeling-tekst")
-        if wettekst is None:
-            raise ParseError(
-                f"Geen <wet-besluit>/<wettekst> of <regeling>/<regeling-tekst> gevonden voor "
-                f"{bwb_id} (circulaires zijn nog niet ondersteund, zie story 025 §Buiten scope)"
-            )
 
-        for child in wettekst:
-            tag = child.tag if isinstance(child.tag, str) else ""
-            if tag in _STRUCTUUR_TAGS:
-                wet.structuurdelen.append(self._parse_structuurdeel(child, bwb_id))
-            elif tag == "artikel":
-                wet.losse_artikelen.append(self._parse_artikel(child, bwb_id))
+        if wettekst is not None:
+            for child in wettekst:
+                tag = child.tag if isinstance(child.tag, str) else ""
+                if tag in _STRUCTUUR_TAGS:
+                    wet.structuurdelen.append(self._parse_structuurdeel(child, bwb_id))
+                elif tag == "artikel":
+                    wet.losse_artikelen.append(self._parse_artikel(child, bwb_id))
 
-        # Bijlagen staan náást de wettekst: kind van <wet-besluit>/<regeling>, dus van de ouder
-        # van <wettekst>/<regeling-tekst>. Een losstaand wettekst-fragment (bv. in een test) heeft
-        # geen ouder — dan is er simpelweg niets te scannen.
-        houder = wettekst.getparent()
-        if houder is not None:
-            for bijlage_el in houder.iterfind("bijlage"):
-                wet.bijlagen.append(self._parse_bijlage(bijlage_el, bwb_id))
+            # Bijlagen staan náást de wettekst: kind van <wet-besluit>/<regeling>, dus van de
+            # ouder van <wettekst>/<regeling-tekst>. Een losstaand wettekst-fragment (bv. in een
+            # test) heeft geen ouder — dan is er simpelweg niets te scannen.
+            houder = wettekst.getparent()
+            if houder is not None:
+                for bijlage_el in houder.iterfind("bijlage"):
+                    wet.bijlagen.append(self._parse_bijlage(bijlage_el, bwb_id))
+        else:
+            # Circulaires/beleidsregels dragen geen wettekst maar een recursieve
+            # <circulaire.divisie>-boom.
+            circulaire = wetgeving.find("circulaire/circulaire-tekst")
+            if circulaire is None:
+                raise ParseError(
+                    f"Geen <wet-besluit>/<wettekst>, <regeling>/<regeling-tekst> of "
+                    f"<circulaire>/<circulaire-tekst> gevonden voor {bwb_id}"
+                )
+            for child in circulaire.iterfind("circulaire.divisie"):
+                wet.divisies.append(self._parse_divisie(child, bwb_id))
 
         wet.ondertekenaars = self._parse_ondertekenaars(wetgeving)
 
         logger.info(
             "Parse klaar voor %s: %d structuurdelen, %d losse artikelen, %d bijlagen, "
-            "%d ondertekenaars",
+            "%d divisies, %d ondertekenaars",
             bwb_id,
             len(wet.structuurdelen),
             len(wet.losse_artikelen),
             len(wet.bijlagen),
+            len(wet.divisies),
             len(wet.ondertekenaars),
         )
         return wet
@@ -159,6 +169,42 @@ class ToestandParser:
             elif tag == "artikel":
                 deel.artikelen.append(self._parse_artikel(child, bwb_id))
         return deel
+
+    def _parse_divisie(self, element: etree._Element, bwb_id: str) -> Divisie:
+        """Parse een `<circulaire.divisie>` (recursief) uit een circulaire.
+
+        De divisie draagt een eigen tekst (`./tekst`) én kan subdivisies bevatten; onderdelen
+        (`<lijst>/<li>`) en verwijzingen komen uit die `./tekst`. Verwijzingen binnen onderdelen
+        worden op divisie-niveau uitgesloten (die horen bij het onderdeel-node) om dubbeling te
+        vermijden."""
+        kop = element.find("kop")
+        tekst_el = element.find("tekst")
+        excl = " and not(ancestor::li)"
+        divisie = Divisie(
+            id=self._knoop_id(bwb_id, element),
+            nummer=self._tekst(kop.find("nr")) if kop is not None else "",
+            label=element.get("label", ""),
+            titel=self._tekst(kop.find("titel")) if kop is not None else "",
+            tekst=_divisie_tekst(element),
+            jci=self._element_jci(element),
+            inwerking=element.get("inwerking"),
+            bron=element.get("bron"),
+            effect=element.get("effect"),
+            status=element.get("status"),
+            terugwerkend_tot=self._terugwerkend(element),
+            wijzigingsbronnen=self._wijzigingsbronnen(element),
+            verwijzingen=extract_references(
+                element, eigen_bwb_id=bwb_id, base="./tekst//*", extra_excl=excl
+            ),
+            onderdelen=self._parse_onderdelen(tekst_el, bwb_id) if tekst_el is not None else [],
+            voetnoten=[
+                self._noot_tekst(noot) for noot in element.xpath("./tekst//noot[not(ancestor::li)]")
+            ],
+            illustraties=self._illustraties(element, base="./tekst//illustratie", extra_excl=excl),
+        )
+        for sub in element.iterfind("circulaire.divisie"):
+            divisie.subdivisies.append(self._parse_divisie(sub, bwb_id))
+        return divisie
 
     def _parse_bijlage(self, element: etree._Element, bwb_id: str) -> Bijlage:
         """Parse een `<bijlage>` (kind van `<wet-besluit>`/`<regeling>`).
@@ -448,6 +494,25 @@ class ToestandParser:
         if tabellen:
             tekst = "\n".join([tekst, *tabellen]).strip()
         return tekst
+
+
+def _divisie_tekst(element: etree._Element) -> str:
+    """Lopende tekst van een divisie: alinea's in `./tekst`, exclusief alinea's binnen
+    onderdelen (`<li>`), voetnoten en meta-data; geneste subdivisies staan buiten `./tekst` en
+    tellen dus niet mee. Tabellen worden — net als bij `_lichaamstekst`/`_bijlage_tekst` — als
+    leesbare rijen ná de lopende tekst toegevoegd (bewuste aanvulling t.o.v. de referentie, zie
+    story 034 §Acceptatiecriteria)."""
+    scope = "not(ancestor::li) and not(ancestor::meta-data) and not(ancestor::table)"
+    delen = [
+        "".join(al.xpath(".//text()[not(ancestor::noot)]"))
+        for al in element.xpath(f"./tekst//al[{scope}]")
+    ]
+    tekst = re.sub(r"\s+", " ", " ".join(delen)).strip()
+    tabellen = [_tabel_tekst(t) for t in element.xpath("./tekst//table[not(ancestor::li)]")]
+    tabellen = [t for t in tabellen if t]
+    if tabellen:
+        tekst = "\n".join([tekst, *tabellen]).strip()
+    return tekst
 
 
 def _bijlage_tekst(element: etree._Element) -> str:

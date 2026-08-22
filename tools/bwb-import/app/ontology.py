@@ -2,11 +2,12 @@
 
 `build_ontology` levert de schema-graaf die naast de instance-data wordt geladen (eigen named
 graph). Scoped tot de entiteiten die dit project parset (Regeling, Structuurdeel, Artikel, Lid,
-Onderdeel, Illustratie, Ondertekenaar, Bijlage, Verwijzing) plus de WTI-verrijking (Organisatie,
-grondslag-/wetsfamilie-relaties, story 030), artikel/lid/onderdeel-verrijking (provenance,
-voetnoten, definities, illustraties, story 031), wet-brondata/aanhef/considerans/ondertekenaars
-(story 032) en bijlagen (story 033) — divisies volgen zodra hun parser-onderdeel bestaat (zie
-docs/project/stories/027-bwb-import-graphdb-writer.md §Buiten scope).
+Onderdeel, Illustratie, Ondertekenaar, Bijlage, Divisie, Verwijzing) plus de WTI-verrijking
+(Organisatie, grondslag-/wetsfamilie-relaties, story 030), artikel/lid/onderdeel-verrijking
+(provenance, voetnoten, definities, illustraties, story 031), wet-brondata/aanhef/considerans/
+ondertekenaars (story 032), bijlagen (story 033) en circulaires (story 034) — dat is de volledige
+kernscope uit story 027 §Buiten scope, op de Lucene-FTS-connector en tekstuele
+verwijzingsdetectie na.
 """
 
 from __future__ import annotations
@@ -82,6 +83,12 @@ _KLASSEN: dict[str, tuple[str, str, tuple[str | URIRef, ...]]] = {
         "citeerbaar op JuriConnect-sleutel.",
         ("Citeerbaar", ELI.LegalResourceSubdivision),
     ),
+    "Divisie": (
+        "Divisie",
+        "Divisie van een circulaire/beleidsregel; container (geneste subdivisies) én "
+        "tekstdrager, citeerbaar op JuriConnect-sleutel.",
+        ("Citeerbaar", ELI.LegalResourceSubdivision),
+    ),
 }
 
 # Objectproperty -> (label, toelichting, superproperties, rdfs:range of None).
@@ -94,6 +101,7 @@ _OBJECT_PROPS: dict[str, tuple[str, str, tuple[URIRef, ...], str | None]] = {
     "heeftLid": ("heeft lid", "Artikel bevat lid.", (ELI.has_part,), "Lid"),
     "heeftOnderdeel": ("heeft onderdeel", "Bevat lijstonderdeel.", (ELI.has_part,), "Onderdeel"),
     "heeftBijlage": ("heeft bijlage", "Regeling bevat bijlage.", (ELI.has_part,), "Bijlage"),
+    "heeftDivisie": ("heeft divisie", "Bevat circulaire-divisie.", (ELI.has_part,), "Divisie"),
     "volgtOp": ("volgt op", "Documentvolgorde binnen dezelfde ouder.", (), None),
     "bevatIllustratie": (
         "bevat illustratie",

@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from app.models import (
     Artikel,
     Bijlage,
+    Divisie,
     Illustratie,
     ImportSummary,
     Onderdeel,
@@ -99,6 +100,7 @@ class _Collector:
             self._structuur(deel, wet.bwb_id, "Regeling")
         self._artikelen(wet.losse_artikelen, wet.bwb_id, "Regeling")
         self._bijlagen(wet.bijlagen, wet.bwb_id, "Regeling")
+        self._divisies(wet.divisies, wet.bwb_id, "Regeling")
 
     def _structuur(self, deel: Structuurdeel, ouder_id: str, ouder_ent: str) -> None:
         entiteit = STRUCT_LABEL[deel.soort]
@@ -184,6 +186,39 @@ class _Collector:
             self._onderdelen(bijlage.onderdelen, bijlage.id, "Bijlage", ref_key)
             # Een bijlage kan eigen artikelen bevatten (aparte Artikel-nodes, hergebruikt).
             self._artikelen(bijlage.artikelen, bijlage.id, "Bijlage")
+
+    def _divisies(self, divisies: list[Divisie], ouder_id: str, ouder_ent: str) -> None:
+        vorige_divisie: str | None = None
+        for divisie in divisies:
+            ref_key = jci_to_ref_key(divisie.jci) or f"{self._bwb}#id={divisie.id}"
+            self.batch.node(
+                "Divisie",
+                {
+                    "id": divisie.id,
+                    "ref_key": ref_key,
+                    "nummer": divisie.nummer,
+                    "label": divisie.label,
+                    "titel": divisie.titel,
+                    "tekst": divisie.tekst,
+                    "inwerking": divisie.inwerking,
+                    "bron": divisie.bron,
+                    "effect": divisie.effect,
+                    "status": divisie.status,
+                    "terugwerkend_tot": divisie.terugwerkend_tot,
+                    "wijzigingsbronnen": divisie.wijzigingsbronnen,
+                    "voetnoot": divisie.voetnoten,
+                },
+            )
+            self.batch.rel(ouder_ent, "HEEFT_DIVISIE", "Divisie", ouder_id, divisie.id)
+            self.summary.divisies += 1
+            if vorige_divisie is not None:
+                self.batch.rel("Divisie", "VOLGT_OP", "Divisie", divisie.id, vorige_divisie)
+            vorige_divisie = divisie.id
+
+            self._illustraties("Divisie", divisie.id, divisie.illustraties)
+            self._verwijzingen(ref_key, divisie.verwijzingen)
+            self._onderdelen(divisie.onderdelen, divisie.id, "Divisie", ref_key)
+            self._divisies(divisie.subdivisies, divisie.id, "Divisie")
 
     def _leden(self, artikel: Artikel, artikel_ref_key: str) -> None:
         for lid in artikel.leden:

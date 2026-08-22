@@ -6,8 +6,8 @@ wet-besluit-document (`Wet`/`Structuurdeel`/`Artikel`/`Lid`, story 025), onderde
 `jci`-identiteit per node + import-tellingen (`ImportSummary`/`ImportResult`, story 027), de
 `label_id`/`locatie_wti`-join-sleutels voor WTI-verrijking (story 030), provenance/voetnoten/
 definities/illustraties op artikel/lid/onderdeel (`Illustratie`, story 031), wet-niveau
-brondata/aanhef/considerans/ondertekenaars (`Ondertekenaar`, story 032), en bijlagen
-(`Bijlage`, story 033). Circulaires komen in een latere story.
+brondata/aanhef/considerans/ondertekenaars (`Ondertekenaar`, story 032), bijlagen (`Bijlage`,
+story 033), en circulaires (`Divisie`, story 034).
 """
 
 from __future__ import annotations
@@ -145,6 +145,34 @@ class Bijlage:
 
 
 @dataclass(slots=True)
+class Divisie:
+    """Een `<circulaire.divisie>` uit een circulaire/beleidsregel.
+
+    Anders dan een wettekst-structuurdeel is een divisie tegelijk *container* (geneste
+    subdivisies) én *tekstdrager* (eigen alinea's). Ze draagt eigen provenance-attributen en
+    verwijzingen en doet daarmee — net als een artikel of bijlage — mee in het citatienetwerk
+    (citeerbaar op `ref_key`)."""
+
+    id: str
+    nummer: str
+    label: str
+    titel: str
+    tekst: str
+    jci: str | None = None
+    inwerking: str | None = None
+    bron: str | None = None
+    effect: str | None = None
+    status: str | None = None
+    terugwerkend_tot: str | None = None  # retroactieve ingangsdatum (ISO), indien aanwezig
+    wijzigingsbronnen: list[str] = field(default_factory=list)
+    verwijzingen: list[Verwijzing] = field(default_factory=list)
+    onderdelen: list[Onderdeel] = field(default_factory=list)
+    subdivisies: list[Divisie] = field(default_factory=list)
+    voetnoten: list[str] = field(default_factory=list)
+    illustraties: list[Illustratie] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class Structuurdeel:
     """Een structuurdeel (hoofdstuk/titeldeel/afdeling/paragraaf), generiek genest."""
 
@@ -197,6 +225,7 @@ class Wet:
     structuurdelen: list[Structuurdeel] = field(default_factory=list)
     losse_artikelen: list[Artikel] = field(default_factory=list)
     bijlagen: list[Bijlage] = field(default_factory=list)
+    divisies: list[Divisie] = field(default_factory=list)
     ondertekenaars: list[Ondertekenaar] = field(default_factory=list)
 
 
@@ -215,6 +244,7 @@ class ImportSummary:
     onderdelen: int = 0
     illustraties: int = 0
     bijlagen: int = 0
+    divisies: int = 0
     relaties: int = 0
 
     def as_dict(self) -> dict[str, int | str]:
@@ -230,6 +260,7 @@ class ImportSummary:
             "onderdelen": self.onderdelen,
             "illustraties": self.illustraties,
             "bijlagen": self.bijlagen,
+            "divisies": self.divisies,
             "relaties": self.relaties,
         }
 

@@ -7,7 +7,7 @@ import pytest
 from rdflib import OWL, RDF, RDFS, URIRef
 
 from app.graphdb_writer import GraphDbWriter
-from app.models import Artikel, Bijlage, Illustratie, Lid, Ondertekenaar, Wet
+from app.models import Artikel, Bijlage, Divisie, Illustratie, Lid, Ondertekenaar, Wet
 from app.parser import ToestandParser
 from app.rdf_vocab import Vocab
 
@@ -269,6 +269,24 @@ def test_build_graph_twee_bijlagen_volgt_op_camelcase() -> None:
     b1_iri = URIRef("urn:bwb:BWBR9999:id:B1")
     b2_iri = URIRef("urn:bwb:BWBR9999:id:B2")
     assert (b2_iri, volgt_op, b1_iri) in g
+
+
+def test_build_graph_divisie_citeerbaar_en_heeft_divisie() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="circulaire",
+        divisies=[Divisie(id="BWBR9999/Div1", nummer="1", label="1", titel="Inleiding", tekst="")],
+    )
+    g, _ = _writer().build_graph(wet)
+
+    divisie_iri = URIRef("urn:bwb:BWBR9999:id:BWBR9999%2FDiv1")
+    wet_iri = URIRef("urn:bwb:BWBR9999")
+    heeft_divisie = URIRef("urn:bwb-ns:heeftDivisie")
+    assert (divisie_iri, RDF.type, URIRef("urn:bwb-ns:Divisie")) in g
+    assert (divisie_iri, RDF.type, URIRef("urn:bwb-ns:Citeerbaar")) in g
+    assert (wet_iri, heeft_divisie, divisie_iri) in g
 
 
 def test_build_graph_onbekende_soort_geen_subklasse() -> None:

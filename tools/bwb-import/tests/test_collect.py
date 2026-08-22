@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.collect import collect
-from app.models import Artikel, Bijlage, Illustratie, Verwijzing, VerwijzingSoort, Wet
+from app.models import Artikel, Bijlage, Divisie, Illustratie, Verwijzing, VerwijzingSoort, Wet
 from app.parser import ToestandParser
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_toestand.xml"
@@ -173,6 +173,74 @@ def test_collect_bijlage_met_eigen_artikel_als_aparte_node() -> None:
     rel = batch.rels[("Bijlage", "HEEFT_ARTIKEL", "Artikel")]
     assert rel == [{"from": "BWBR9999/Bijlage1", "to": "BWBR9999/Bijlage1/ArtA"}]
     assert summary.artikelen == 1
+
+
+def test_collect_divisie_node_en_relatie() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="circulaire",
+        divisies=[Divisie(id="BWBR9999/Div1", nummer="1", label="1", titel="Inleiding", tekst="")],
+    )
+    batch, summary = collect(wet)
+
+    divisie = batch.nodes["Divisie"][0]
+    assert divisie["ref_key"] == "BWBR9999#id=BWBR9999/Div1"
+    assert divisie["titel"] == "Inleiding"
+    rel = batch.rels[("Regeling", "HEEFT_DIVISIE", "Divisie")]
+    assert rel == [{"from": "BWBR9999", "to": "BWBR9999/Div1"}]
+    assert summary.divisies == 1
+    assert ("Divisie", "VOLGT_OP", "Divisie") not in batch.rels
+
+
+def test_collect_twee_divisies_krijgen_volgt_op_relatie() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="circulaire",
+        divisies=[
+            Divisie(id="BWBR9999/Div1", nummer="1", label="1", titel="Eerste", tekst=""),
+            Divisie(id="BWBR9999/Div2", nummer="2", label="2", titel="Tweede", tekst=""),
+        ],
+    )
+    batch, _ = collect(wet)
+
+    rel = batch.rels[("Divisie", "VOLGT_OP", "Divisie")]
+    assert rel == [{"from": "BWBR9999/Div2", "to": "BWBR9999/Div1"}]
+
+
+def test_collect_subdivisie_relateert_aan_eigen_ouder() -> None:
+    wet = Wet(
+        bwb_id="BWBR9999",
+        citeertitel="Test",
+        opschrift="Test",
+        soort="circulaire",
+        divisies=[
+            Divisie(
+                id="BWBR9999/Div1",
+                nummer="1",
+                label="1",
+                titel="Ouder",
+                tekst="",
+                subdivisies=[
+                    Divisie(
+                        id="BWBR9999/Div1/Sub1", nummer="1.1", label="1.1", titel="Sub", tekst=""
+                    )
+                ],
+            )
+        ],
+    )
+    batch, summary = collect(wet)
+
+    sub = next(d for d in batch.nodes["Divisie"] if d["titel"] == "Sub")
+    assert sub["id"] == "BWBR9999/Div1/Sub1"
+    rel = batch.rels[("Divisie", "HEEFT_DIVISIE", "Divisie")]
+    assert rel == [{"from": "BWBR9999/Div1", "to": "BWBR9999/Div1/Sub1"}]
+    assert summary.divisies == 2
+    # De subdivisie is de enige op haar niveau -> geen VOLGT_OP naar de ouder.
+    assert ("Divisie", "VOLGT_OP", "Divisie") not in batch.rels
 
 
 def test_collect_verwijzing_zonder_doc_wordt_overgeslagen() -> None:
