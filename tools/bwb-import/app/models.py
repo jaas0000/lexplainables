@@ -1,10 +1,11 @@
 """Dataclasses voor het BWB-domeinmodel.
 
 Dekt tot nu toe: SRU-discovery (`ToestandRef`, story 024), de kernstructuur van een
-wet-besluit-document (`Wet`/`Structuurdeel`/`Artikel`/`Lid`, story 025), en onderdelen (genestelde
-`<lijst>/<li>`) + gestructureerde verwijzingen (`Onderdeel`/`Verwijzing`, story 026). Illustraties,
-voetnoten, definities, tabellen, ondertekenaars, bijlagen en circulaires komen in latere stories —
-zie docs/project/stories/026-bwb-import-onderdelen-en-verwijzingen.md §Buiten scope.
+wet-besluit-document (`Wet`/`Structuurdeel`/`Artikel`/`Lid`, story 025), onderdelen (genestelde
+`<lijst>/<li>`) + gestructureerde verwijzingen (`Onderdeel`/`Verwijzing`, story 026), en de
+`jci`-identiteit per node + import-tellingen (`ImportSummary`/`ImportResult`, story 027).
+Illustraties, voetnoten, definities, tabellen, ondertekenaars, bijlagen, circulaires en
+WTI-verrijking komen in latere stories.
 """
 
 from __future__ import annotations
@@ -36,11 +37,7 @@ class VerwijzingSoort(StrEnum):
 
 @dataclass(slots=True)
 class Verwijzing:
-    """Een gestructureerde verwijzing (`<intref>`/`<extref>`) vanuit een tekstdeel.
-
-    Alleen de rauwe velden uit de XML — jci-ontleding (naar een graafrelatie) is een taak voor de
-    GraphDB-writer-story, niet voor de parser (zie story 026 §Buiten scope).
-    """
+    """Een gestructureerde verwijzing (`<intref>`/`<extref>`) vanuit een tekstdeel."""
 
     soort: VerwijzingSoort
     tekst: str
@@ -58,6 +55,7 @@ class Onderdeel:
     id: str
     nummer: str  # uit <li.nr>, bv. "a." of "1°."
     tekst: str
+    jci: str | None = None
     verwijzingen: list[Verwijzing] = field(default_factory=list)
     subonderdelen: list[Onderdeel] = field(default_factory=list)
 
@@ -69,6 +67,7 @@ class Lid:
     id: str
     nummer: str
     tekst: str
+    jci: str | None = None
     verwijzingen: list[Verwijzing] = field(default_factory=list)
     onderdelen: list[Onderdeel] = field(default_factory=list)
 
@@ -81,6 +80,7 @@ class Artikel:
     nummer: str
     label: str
     tekst: str
+    jci: str | None = None
     leden: list[Lid] = field(default_factory=list)
     verwijzingen: list[Verwijzing] = field(default_factory=list)
     onderdelen: list[Onderdeel] = field(default_factory=list)
@@ -95,6 +95,7 @@ class Structuurdeel:
     nummer: str
     label: str
     titel: str
+    jci: str | None = None
     subdelen: list[Structuurdeel] = field(default_factory=list)
     artikelen: list[Artikel] = field(default_factory=list)
 
@@ -110,3 +111,51 @@ class Wet:
     geldig_vanaf: str | None = None
     structuurdelen: list[Structuurdeel] = field(default_factory=list)
     losse_artikelen: list[Artikel] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ImportSummary:
+    """Telling van geïmporteerde elementen, getoond na een import."""
+
+    bwb_id: str
+    wetten: int = 0
+    hoofdstukken: int = 0
+    titeldelen: int = 0
+    afdelingen: int = 0
+    paragrafen: int = 0
+    artikelen: int = 0
+    leden: int = 0
+    onderdelen: int = 0
+    relaties: int = 0
+
+    def as_dict(self) -> dict[str, int | str]:
+        return {
+            "bwb_id": self.bwb_id,
+            "wetten": self.wetten,
+            "hoofdstukken": self.hoofdstukken,
+            "titeldelen": self.titeldelen,
+            "afdelingen": self.afdelingen,
+            "paragrafen": self.paragrafen,
+            "artikelen": self.artikelen,
+            "leden": self.leden,
+            "onderdelen": self.onderdelen,
+            "relaties": self.relaties,
+        }
+
+
+@dataclass(slots=True)
+class ImportResult:
+    """Uitkomst van één wet binnen een (batch-)import."""
+
+    bwb_id: str
+    ok: bool
+    overzicht: ImportSummary | None = None
+    fout: str | None = None
+
+    def as_dict(self) -> dict:
+        return {
+            "bwb_id": self.bwb_id,
+            "status": "ok" if self.ok else "fout",
+            "overzicht": self.overzicht.as_dict() if self.overzicht else None,
+            "fout": self.fout,
+        }

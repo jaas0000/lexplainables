@@ -22,9 +22,11 @@ jobs:
       - uses: astral-sh/setup-uv@v3
       - name: Tests
         working-directory: tools/bwb-import
+        # -m "not integration": de integration-marker vereist een echte GraphDB-instance
+        # (deploy/graphdb/), die hier niet draait. Zie tests/test_graphdb_writer.py.
         run: |
           uv sync
-          uv run pytest -q
+          uv run pytest -q -m "not integration"
 
   check-python-style:
     runs-on: ubuntu-latest

@@ -21,3 +21,6 @@ api/alembic/versions/*.pyc
 # Editor
 .DS_Store
 *.swp
+
+# Lokale compose-overrides (secrets/licenties, bv. deploy/graphdb/docker-compose.override.yml)
+docker-compose.override.yml

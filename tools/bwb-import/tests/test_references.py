@@ -3,7 +3,7 @@ from __future__ import annotations
 from lxml import etree
 
 from app.models import VerwijzingSoort
-from app.references import extract_references
+from app.references import extract_references, jci_doel, jci_doel_ref_key, jci_to_ref_key
 
 
 def test_intref_geeft_soort_intern() -> None:
@@ -71,3 +71,48 @@ def test_extra_excl_sluit_geneste_lid_uit() -> None:
 
     assert len(op_artikel_niveau) == 1
     assert op_artikel_niveau[0].doel_pad == "/A"
+
+
+# --------------------------------------------------------------------- jci-ontleding
+
+
+def test_jci_doel_artikel_en_lid() -> None:
+    doc = "jci1.3:c:BWBR0004770&hoofdstuk=I&artikel=1&lid=1&z=2026-01-01&g=2026-01-01"
+    assert jci_doel(doc) == ("BWBR0004770", "1", "1")
+
+
+def test_jci_doel_alleen_wet() -> None:
+    assert jci_doel("jci1.3:c:BWBR0004770") == ("BWBR0004770", None, None)
+
+
+def test_jci_doel_leeg() -> None:
+    assert jci_doel(None) == (None, None, None)
+
+
+def test_jci_to_ref_key_met_artikel() -> None:
+    doc = "jci1.3:c:BWBR0005537&artikel=3:40"
+    assert jci_to_ref_key(doc) == "BWBR0005537#artikel=3:40"
+
+
+def test_jci_to_ref_key_zonder_artikel_geeft_none() -> None:
+    """Een verwijzing naar een heel hoofdstuk heeft geen concreet artikel-doel."""
+    doc = "jci1.3:c:BWBR0005537&hoofdstuk=6"
+    assert jci_to_ref_key(doc) is None
+
+
+def test_jci_doel_ref_key_artikel() -> None:
+    doc = "jci1.3:c:BWBR0004770&hoofdstuk=I&artikel=1&z=2026-01-01"
+    assert jci_doel_ref_key(doc) == ("BWBR0004770#artikel=1", "artikel")
+
+
+def test_jci_doel_ref_key_lid() -> None:
+    doc = "jci1.3:c:BWBR0004770&hoofdstuk=I&artikel=1&lid=1&z=2026-01-01"
+    assert jci_doel_ref_key(doc) == ("BWBR0004770#artikel=1#lid=1", "lid")
+
+
+def test_jci_doel_ref_key_alleen_wet() -> None:
+    assert jci_doel_ref_key("jci1.3:c:BWBR0004770") == ("BWBR0004770", "wet")
+
+
+def test_jci_doel_ref_key_geen_bwb_id_geeft_none() -> None:
+    assert jci_doel_ref_key("niet-een-jci-string") == (None, None)
