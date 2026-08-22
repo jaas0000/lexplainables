@@ -23,6 +23,11 @@
   --waarschuwing: 225 112 0; /* #E17000 */
   --fout: 213 43 30; /* #D52B1E */
   --info: 0 123 199; /* #007BC7 */
+  /* Zachte schaduwen voor de sidebar/kaart-vormtaal (naast de vlakke RH-randen elders). */
+  --schaduw-zacht:
+    0 1px 2px rgb(21 66 115 / 0.06), 0 1px 3px rgb(21 66 115 / 0.05);
+  --schaduw-kaart:
+    0 4px 14px rgb(21 66 115 / 0.08), 0 1px 3px rgb(21 66 115 / 0.06);
 }
 
 * {
@@ -80,6 +85,15 @@ a {
   color: rgb(var(--link));
 }
 
+/* Eén focusweergave voor de sidebar/kaart-componenten: een witte binnenrand tegen donkere vlakken,
+   lintblauw eromheen tegen lichte. Gebruik: `className="focus-ring"` i.p.v. een eigen
+   focus-visible:outline per component. */
+.focus-ring:focus-visible {
+  outline: 2px solid rgb(var(--lint));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px rgb(var(--paper));
+}
+
 ::selection {
   background: rgb(var(--lint) / 0.16);
 }
@@ -102,15 +116,11 @@ a {
   }
 }
 
-/* Printen / "Opslaan als PDF": het hele dossier op papier. Verberg de app-chrome (logobalk,
-   navigatie, footer; tablijst en knoppen dragen `print:hidden`), toon béide tabpanelen i.p.v.
-   alleen de actieve, en klap inklapbare blokken (reviewlog, audit) open. Behoud de
-   JAS-/badge-kleuren. */
+/* Printen / "Opslaan als PDF": het hele dossier op papier. Verberg de app-chrome (sidebar,
+   mobiele topbar, PoC-strip; die dragen zelf `print:hidden` in `AppSidebar.tsx`/`AppShell.tsx`;
+   tablijst en knoppen dragen `print:hidden`), toon béide tabpanelen i.p.v. alleen de actieve, en
+   klap inklapbare blokken (reviewlog, audit) open. Behoud de JAS-/badge-kleuren. */
 @media print {
-  header,
-  footer {
-    display: none !important;
-  }
   /* Beide fasen tonen, ook de tab die op scherm verborgen is. */
   [data-tabpanel][hidden] {
     display: block !important;
@@ -181,16 +191,8 @@ a {
 }
 
 /* ---- Navigatie ----
-   Logo- en navigatiebalk zelf staan als Tailwind-utilities in `layout.tsx`
-   (Rijkshuisstijl-lint centreren doet zich niet netjes vertalen naar losse
-   componentklassen). De onderstaande `.nav*`-klassen stijlen de nav-items
-   binnen de navigatiebalk (zie `NavigatieHeader.tsx`). */
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
+   Logo + navigatie zitten nu in de sidebar (`AppSidebar.tsx`, Tailwind-utilities). De
+   `.nav-link*`-klassen blijven bestaan voor de losse tab-trigger in `BerichtenPopover.tsx`. */
 
 .nav-link {
   display: inline-flex;
@@ -216,30 +218,6 @@ a {
 .nav-link--active {
   color: rgb(var(--lint));
   border-bottom-color: rgb(var(--lint));
-}
-
-.nav-link--placeholder {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.nav-link--placeholder:hover {
-  color: rgb(var(--muted));
-  border-bottom-color: transparent;
-}
-
-.nav-gebruiker {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: 1rem;
-  padding-left: 1rem;
-  border-left: 1px solid rgb(var(--line));
-}
-
-.nav-gebruiker-naam {
-  font-size: 0.875rem;
-  color: rgb(var(--muted));
 }
 
 /* ---- Main ---- */
