@@ -239,7 +239,9 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 - **openapi.json**: 401-response is niet gedocumenteerd voor de vijf admin-endpoints (GET, POST, PATCH, DELETE, reset-wachtwoord); toevoegen voor volledigheid van het contract.
 - **store.py**: `lijst_gebruikers` heeft geen LIMIT — bewust niet gefixt met een simpele `.limit(N)`: dit is een admin-beheerscherm waar volledigheid ("zie ik echt alle gebruikers") het punt is, dus een LIMIT zou stilzwijgend gebruikers verbergen in plaats van het probleem op te lossen. Een echte fix is paginering, niet een sweep-regel.
 - **scope**: GET + POST `/v1/admin/gebruikers` vallen buiten story 014-spec (afhankelijkheid story 006); functioneel noodzakelijk voor de UI maar niet formeel vastgelegd in de story.
-- **ADR-0011**: `identiteit_toegang` staat nog op SQLModel ORM (niet SQLAlchemy Core + Pydantic zoals ADR-0011 voorschrijft en de implementatienoot aanbeval). Aparte story aanmaken voor de migratie — te groot en te risicovol voor een sweep-fix.
+- ✅ opgelost (PR #74) — `identiteit_toegang` is gemigreerd van SQLModel ORM naar SQLAlchemy
+  Core + Pydantic (ADR-0011), zelfde patroon als `api_tokens`. Geen gedragswijziging; `sqlmodel`
+  is nu nergens meer een dependency van `api/`.
 
 ---
 
