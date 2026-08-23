@@ -1,5 +1,14 @@
 # Technische changelog
 
+- graph-qa toollaag (PR #78, story 041): getypeerde domein-toollaag over de kennisgraaf —
+  `agent/namespace.py` (IRI-ruimte + drift-guard tegen `tools/bwb-import`), `agent/graph/
+  queries.py` (11 geparametriseerde SPARQL-bouwers), `agent/graph/schema.py` (gecachete
+  schema-introspectie), `agent/tools/__init__.py` (13-tool-registry + `dispatch()`). Poort van de
+  `wetsanalyse-ai`-referentie, met drie schemacorrecties gevonden via live-verificatie tegen de
+  lokale GraphDB (die referentie se importer-schema wijkt af van dit project se
+  `tools/bwb-import`): `owl:sameAs` i.p.v. `bwb:jci`, `bwb:heeftOnderdeel+`/`eli:has_part` i.p.v.
+  het niet-bestaande `bwb:bevat`, en een `STR()`-fix voor een stille SPARQL-`CONCAT()`-typefout.
+  Nog geen aangesloten API/UI.
 - graph-qa GraphDB-adapter (PR #77, story 040): tweede poort-implementatie — `MCPClient`
   (`GraphPort`) tegen de GraphDB MCP-server, allowlist-gebaseerd read-only-vangnet (SPARQL moet
   met SELECT/ASK/CONSTRUCT/DESCRIBE beginnen, ook na een `PREFIX` op dezelfde regel — niet een
