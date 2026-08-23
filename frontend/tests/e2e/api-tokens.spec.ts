@@ -62,11 +62,3 @@ test("token intrekken verwijdert het uit de lijst", async ({ page }) => {
   // Token verdwenen uit de lijst.
   await expect(page.getByText(label)).not.toBeVisible();
 });
-
-test("beheer-pagina heeft navigatielink naar api-tokens", async ({ page }) => {
-  await page.goto("/beheer");
-  const link = page.getByRole("link", { name: /API-tokens/ });
-  await expect(link).toBeVisible();
-  await link.click();
-  await expect(page).toHaveURL("/beheer/api-tokens");
-});

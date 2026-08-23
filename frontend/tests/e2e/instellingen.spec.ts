@@ -55,14 +55,3 @@ test("beheerder kan capture aanzetten en daarna uitzetten", async ({
   await expect(page.getByRole("button", { name: "Aanzetten" })).toBeVisible();
   await expect(tag).toHaveText("uit");
 });
-
-test("beheer-pagina heeft navigatieknop naar instellingen", async ({
-  page,
-}) => {
-  await page.goto("/beheer");
-  // Case-insensitive: de link heet "Beheer instellingen →" (kleine letter i).
-  const link = page.getByRole("link", { name: /instellingen/i });
-  await expect(link).toBeVisible();
-  await link.click();
-  await expect(page).toHaveURL("/beheer/instellingen");
-});

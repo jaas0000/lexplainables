@@ -36,11 +36,3 @@ test("onbekend analyse-id toont lege-lijst-melding", async ({ page }) => {
     page.getByText("Geen LLM-calls gevonden voor dit analyse-id"),
   ).toBeVisible();
 });
-
-test("beheer-pagina heeft navigatielink naar llm-calls", async ({ page }) => {
-  await page.goto("/beheer");
-  const link = page.getByRole("link", { name: /LLM-calls/ });
-  await expect(link).toBeVisible();
-  await link.click();
-  await expect(page).toHaveURL("/beheer/llm-calls");
-});

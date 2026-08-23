@@ -6,7 +6,8 @@ import { login, resetBerichten } from "./_helpers";
 // Elke test ruimt eerst alle berichten op via de admin-API, zodat de UI in een bekende
 // beginstaat begint (geen residu van vorige runs of tests).
 //
-// UI-topologie: berichten-beheer zit in de sectie "Berichten" op /beheer (niet op /). De
+// UI-topologie: berichten-beheer zit op de "Berichten"-tab van het instellingenvenster
+// (/instellingen/beheer/berichten, werkwijze-story 042 — voorheen inline op /beheer). De
 // interactie is: klik "Nieuw bericht" → vul formulier (Titel, Inhoud) → "Opslaan" → open
 // de lijst via "Toon berichten". Berichten renderen als expandable cards (geen tabelrijen);
 // per bericht is er een toggle-knop bovenaan die de acties (Bewerken, Publiceren, Verwijderen)
@@ -22,7 +23,7 @@ test("beheerder maakt een bericht aan en publiceert het, zonder page-reload", as
 }) => {
   const titel = `E2E bericht ${Date.now()}`;
 
-  await page.goto("/beheer");
+  await page.goto("/instellingen/beheer/berichten");
 
   await page.getByRole("button", { name: "Nieuw bericht" }).click();
   await page.getByLabel("Titel").fill(titel);
@@ -48,7 +49,7 @@ test("verwijderen van een al verwijderd bericht toont een zichtbare foutmelding"
 }) => {
   const titel = `E2E fout-bericht ${Date.now()}`;
 
-  await page.goto("/beheer");
+  await page.goto("/instellingen/beheer/berichten");
   await page.getByRole("button", { name: "Nieuw bericht" }).click();
   await page.getByLabel("Titel").fill(titel);
   await page
@@ -61,7 +62,7 @@ test("verwijderen van een al verwijderd bericht toont een zichtbare foutmelding"
 
   // Tweede tabblad, zelfde browsercontext — sessiecookie wordt gedeeld.
   const page2 = await context.newPage();
-  await page2.goto("/beheer");
+  await page2.goto("/instellingen/beheer/berichten");
   await page2.getByRole("button", { name: "Toon berichten" }).click();
   const card2 = page2.locator(".card", { hasText: titel });
   await expect(card2).toBeVisible();

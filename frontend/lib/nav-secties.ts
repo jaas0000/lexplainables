@@ -11,8 +11,12 @@ export interface NavSectie {
 export const NAV_SECTIES: NavSectie[] = [
   { pad: "/projecten", titel: "Projecten" },
   { pad: "/werkplek", titel: "Werkplek" },
-  { pad: "/account", titel: "Account" },
-  { pad: "/beheer", titel: "Beheer", aliassen: ["/mockup/beheer"] },
+  { pad: "/instellingen/account", titel: "Account", aliassen: ["/account"] },
+  {
+    pad: "/instellingen/beheer",
+    titel: "Beheer",
+    aliassen: ["/beheer", "/mockup/beheer"],
+  },
   { pad: "/berichten", titel: "Berichten" },
   { pad: "/wetcatalogus", titel: "Wetcatalogus" },
 ];

@@ -93,7 +93,7 @@ test("foutpad: verkeerd huidig wachtwoord toont foutmelding bij het veld", async
   await expect(foutmelding).toContainText("klopt niet");
 });
 
-test("Account-link in het gebruikersmenu is bereikbaar en navigeert naar /account", async ({
+test("Account-link in het gebruikersmenu is bereikbaar en navigeert naar het instellingenvenster", async ({
   page,
 }) => {
   await page.goto("/");
@@ -103,6 +103,6 @@ test("Account-link in het gebruikersmenu is bereikbaar en navigeert naar /accoun
   const link = page.getByRole("link", { name: "Account" });
   await expect(link).toBeVisible();
   await link.click();
-  await expect(page).toHaveURL("/account");
+  await expect(page).toHaveURL("/instellingen/account");
   await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
 });

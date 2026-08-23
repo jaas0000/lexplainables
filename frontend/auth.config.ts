@@ -42,8 +42,13 @@ export const authConfig = {
       if (isPublic(pathname)) return true;
       if (!auth?.user) return false;
 
-      // Rol-gate: /beheer is alleen voor de beheerder-rol (werkwijze-story 038).
-      if (pathname.startsWith("/beheer") && auth.user.rol !== "beheerder") {
+      // Rol-gate: de beheer-tabs van het instellingenvenster zijn alleen voor de beheerder-rol
+      // (werkwijze-story 038, verschoven naar het nieuwe pad in story 042 — /beheer/* redirect
+      // meteen door naar /instellingen/beheer/…, dus de gate hoort op het doelpad).
+      if (
+        pathname.startsWith("/instellingen/beheer") &&
+        auth.user.rol !== "beheerder"
+      ) {
         return Response.redirect(new URL("/", request.url));
       }
 
