@@ -4,6 +4,18 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #79 — instellingenvenster (story 042)
+
+- **`ApiTokensPanel.tsx`'s `NieuwTokenModal` is een ad-hoc `role="dialog"`-constructie**, 1:1
+  verplaatst uit de oude `/beheer/api-tokens`-pagina (geen regressie van deze PR). Zou nu kunnen
+  hergebruiken van de nieuwe gedeelde `components/ui/Dialog.tsx` die deze PR toevoegt.
+- **Overige `Dialog`-varianten (`side`/`kolom`/`drawer`/`compact`) en `AppSidebar`'s mobiele
+  drawer migreren naar `Dialog`** — bewust buiten scope gehouden (zie de story
+  §lexplainables-specifieke afwijkingen punt 1), wacht op een echte tweede consument
+  (werkplek-chat/graph-qa-orkestrator).
+
+---
+
 ## PR #68 — werkplek: echte wetsartikeltekst via GraphDB (story 037) ✅ opgelost in PR #69
 
 `httpx.AsyncClient` per aanroep in `annotatie/graphdb.py` — opgelost via een proces-brede,
