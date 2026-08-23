@@ -6,22 +6,45 @@ import { useEffect, useRef, type ReactNode } from "react";
 const FOCUSBAAR =
   'a[href],button:not([disabled]),textarea,input:not([disabled]),select,[tabindex]:not([tabindex="-1"])';
 
+export type DialogVariant =
+  /** Gecentreerd venster met vaste hoogte (instellingen) — anders zou het bij elke tabwissel van
+   *  formaat springen. */
+  | "center"
+  /** Gecentreerd venster dat met de inhoud meegroeit tot een plafond (feedback) — een formulier
+   *  van een paar velden hoort niet in een venster van 42rem met een halve pagina wit eronder. */
+  | "compact";
+
+const PANEEL_CLASS: Record<DialogVariant, string> = {
+  center:
+    "absolute inset-x-0 bottom-0 top-[6%] flex flex-col rounded-t-vorm bg-paper shadow-kaart outline-none animate-rise sm:inset-0 sm:m-auto sm:h-[min(42rem,85vh)] sm:w-[min(56rem,92vw)] sm:rounded-vorm",
+  compact:
+    "absolute inset-x-0 bottom-0 max-h-[85dvh] flex flex-col rounded-t-vorm bg-paper shadow-kaart outline-none animate-rise sm:inset-0 sm:bottom-auto sm:m-auto sm:h-auto sm:max-h-[85vh] sm:w-[min(34rem,92vw)] sm:rounded-vorm",
+};
+
 interface Props {
   /** Voorleesnaam van het venster (aria-label). */
   label: string;
+  variant?: DialogVariant;
   onSluit: () => void;
   /** Wat Escape doet, als dat niet simpelweg sluiten is. */
   onEscape?: () => void;
   children: ReactNode;
 }
 
-/** Gecentreerd modaal venster met vaste hoogte — bedoeld voor het instellingenvenster, dat anders
- *  bij elke tabwissel van formaat zou springen. Op mobiel een bijna-volledig-scherm sheet.
+/** Modaal venster in twee vormen: `center` (vaste hoogte, instellingenvenster) en `compact`
+ *  (inhoud-hoogte met een plafond, feedback). Op mobiel een sheet.
  *
- *  Poort van `wetsanalyse-ai/frontend/components/ui/Dialog.tsx`, beperkt tot de `center`-variant:
- *  de andere vormen (`compact`/`side`/`kolom`/`drawer`) horen bij de chat-werkplek, die hier nog
- *  niet bestaat — zie werkwijze-story 042 §lexplainables-specifieke afwijkingen. */
-export function Dialog({ label, onSluit, onEscape, children }: Props) {
+ *  Poort van `wetsanalyse-ai/frontend/components/ui/Dialog.tsx`, beperkt tot deze twee varianten:
+ *  de overige vormen (`side`/`kolom`/`drawer`) horen bij de chat-werkplek, die hier nog niet
+ *  bestaat — zie werkwijze-story 042 §lexplainables-specifieke afwijkingen. `compact` kwam erbij in
+ *  story 043 (`FeedbackDialoog`), de eerste echte tweede consument. */
+export function Dialog({
+  label,
+  variant = "center",
+  onSluit,
+  onEscape,
+  children,
+}: Props) {
   const paneelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,11 +86,7 @@ export function Dialog({ label, onSluit, onEscape, children }: Props) {
       aria-label={label}
     >
       <div className="absolute inset-0 bg-ink/30" onClick={onSluit} />
-      <div
-        ref={paneelRef}
-        tabIndex={-1}
-        className="absolute inset-x-0 bottom-0 top-[6%] flex flex-col rounded-t-vorm bg-paper shadow-kaart outline-none animate-rise sm:inset-0 sm:m-auto sm:h-[min(42rem,85vh)] sm:w-[min(56rem,92vw)] sm:rounded-vorm"
-      >
+      <div ref={paneelRef} tabIndex={-1} className={PANEEL_CLASS[variant]}>
         {children}
       </div>
     </div>

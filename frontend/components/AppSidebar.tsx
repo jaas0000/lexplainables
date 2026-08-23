@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import { BerichtenPopover } from "@/components/berichten/BerichtenPopover";
+import { FeedbackDialoog } from "@/components/feedback/FeedbackDialoog";
 import { NAV_SECTIES, actieveSectie } from "@/lib/nav-secties";
 import { useClickOutside } from "@/lib/useClickOutside";
 
 interface Props {
   pathname: string | null;
   naam: string;
-  /** Bepaalt of de "Beheer"-link getoond wordt (werkwijze-story 038: BFF-rolautorisatie). */
+  /** Bepaalt of "Beheer" in het uitklapmenu getoond wordt (werkwijze-story 038:
+   *  BFF-rolautorisatie; naar het menu verplaatst in story 043, net als de referentie-app). */
   rol: string;
   /** Mobiel: staat de off-canvas drawer open, en hoe sluit hij. */
   drawerOpen?: boolean;
@@ -25,6 +27,10 @@ interface Props {
  *  Nog geen gesprekkenlijst zoals in de bron-app — die hoort bij de analyse-werkplek die pas in
  *  fase 4 gebouwd wordt. Deze skelet-versie draagt alvast de vorm (logo, navigatie, gebruikersblok,
  *  mobiele drawer) zodat fase 4 'm kan vullen in plaats van opnieuw op te zetten.
+ *
+ *  Het uitklapmenu onderin is wél al 1:1 met de referentie (story 043): Account & instellingen,
+ *  Beheer (alleen beheerder), Feedback geven, Uitloggen — dat deel hangt niet aan de
+ *  gesprekkenlijst en kon dus nu al gelijkgetrokken worden.
  */
 export function AppSidebar({
   pathname,
@@ -78,8 +84,10 @@ function SidebarInhoud({
   onSluit?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const actief = actieveSectie(pathname);
+  const isBeheerder = rol === "beheerder";
 
   useClickOutside(menuRef, menuOpen, () => setMenuOpen(false));
 
@@ -129,7 +137,7 @@ function SidebarInhoud({
         <Link
           href="/projecten/nieuw"
           onClick={onSluit}
-          className="flex min-h-[44px] w-full items-center gap-2 rounded-kaart border border-line bg-paper px-3 py-2.5 text-sm font-medium text-lint shadow-zacht transition-colors hover:bg-white hover:shadow-kaart"
+          className="flex min-h-[44px] w-full items-center gap-2 rounded-kaart border border-line bg-paper px-3 py-2.5 text-sm font-medium text-lint shadow-zacht transition-colors hover:bg-white hover:shadow-kaart focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lint"
         >
           <svg
             width="16"
@@ -151,19 +159,13 @@ function SidebarInhoud({
         {NAV_SECTIES.filter(
           (s) =>
             s.pad !== "/instellingen/account" &&
+            s.pad !== "/instellingen/beheer" &&
             s.pad !== "/berichten" &&
-            s.pad !== "/wetcatalogus" &&
-            (s.pad !== "/instellingen/beheer" || rol === "beheerder"),
+            s.pad !== "/wetcatalogus",
         ).map((sectie) => (
           <NavLink
             key={sectie.pad}
-            // "/instellingen/beheer" is een prefix (voor actieveSectie/de mobiele topbar-titel),
-            // geen bestaand pad op zichzelf — de link moet naar een concrete tab wijzen.
-            href={
-              sectie.pad === "/instellingen/beheer"
-                ? "/instellingen/beheer/modelprofielen"
-                : sectie.pad
-            }
+            href={sectie.pad}
             actief={actief?.pad === sectie.pad}
             onSluit={onSluit}
           >
@@ -189,8 +191,30 @@ function SidebarInhoud({
                 onSluit?.();
               }}
             >
-              Account
+              Account &amp; instellingen
             </Link>
+            {isBeheerder && (
+              <Link
+                href="/instellingen/beheer/modelprofielen"
+                className="block px-3 py-2.5 text-sm text-ink transition-colors hover:bg-surface"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onSluit?.();
+                }}
+              >
+                Beheer
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setFeedbackOpen(true);
+              }}
+              className="block w-full px-3 py-2.5 text-left text-sm text-ink transition-colors hover:bg-surface"
+            >
+              Feedback geven
+            </button>
             <button
               type="button"
               onClick={() => signOut({ callbackUrl: "/login" })}
@@ -214,6 +238,9 @@ function SidebarInhoud({
             <span className="block truncate text-sm font-medium text-ink">
               {naam || "Gebruiker"}
             </span>
+            <span className="block truncate text-[0.65rem] text-faint">
+              {isBeheerder ? "Beheerder" : "Analist"} · instellingen
+            </span>
           </span>
           <svg
             width="16"
@@ -230,6 +257,10 @@ function SidebarInhoud({
           </svg>
         </button>
       </div>
+
+      {feedbackOpen && (
+        <FeedbackDialoog onSluit={() => setFeedbackOpen(false)} />
+      )}
     </div>
   );
 }
