@@ -1,5 +1,13 @@
 # Technische changelog
 
+- graph-qa GraphDB-adapter (PR #77, story 040): tweede poort-implementatie — `MCPClient`
+  (`GraphPort`) tegen de GraphDB MCP-server, allowlist-gebaseerd read-only-vangnet (SPARQL moet
+  met SELECT/ASK/CONSTRUCT/DESCRIBE beginnen, ook na een `PREFIX` op dezelfde regel — niet een
+  blocklist die dat miste). Poort van de `wetsanalyse-ai`-referentie (code + tests), grotendeels
+  1:1. Tijdens live-verificatie tegen de lokale GraphDB 11.4.0 een echte afwijking gevonden: die
+  versie weigert `tools/call` zonder eerst een MCP-sessie te openen via `initialize` — de
+  referentie deed dat nergens expliciet; `_rpc()` doet dat nu lazy. Met story 039 zijn beide
+  poorten uit story 029 nu ingevuld. Nog geen aangesloten API/UI.
 - graph-qa LLM-adapter (PR #76, story 039): eerste echte `LLMPort`-implementatie voor
   `tools/graph-qa` — `AnthropicLLM` via `anthropic.AnthropicFoundry` (Anthropic-modellen op Azure
   AI Foundry), met prompt-caching (cache-punt op het stabiele systeemblok-deel) en terugval als
