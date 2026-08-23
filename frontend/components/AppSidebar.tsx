@@ -11,6 +11,8 @@ import { useClickOutside } from "@/lib/useClickOutside";
 interface Props {
   pathname: string | null;
   naam: string;
+  /** Bepaalt of de "Beheer"-link getoond wordt (werkwijze-story 038: BFF-rolautorisatie). */
+  rol: string;
   /** Mobiel: staat de off-canvas drawer open, en hoe sluit hij. */
   drawerOpen?: boolean;
   onDrawerSluit?: () => void;
@@ -27,13 +29,14 @@ interface Props {
 export function AppSidebar({
   pathname,
   naam,
+  rol,
   drawerOpen = false,
   onDrawerSluit,
 }: Props) {
   return (
     <>
       <aside className="hidden w-[17rem] shrink-0 border-r border-line bg-surface print:hidden lg:block">
-        <SidebarInhoud pathname={pathname} naam={naam} />
+        <SidebarInhoud pathname={pathname} naam={naam} rol={rol} />
       </aside>
 
       {drawerOpen && onDrawerSluit && (
@@ -53,6 +56,7 @@ export function AppSidebar({
             <SidebarInhoud
               pathname={pathname}
               naam={naam}
+              rol={rol}
               onSluit={onDrawerSluit}
             />
           </div>
@@ -65,10 +69,12 @@ export function AppSidebar({
 function SidebarInhoud({
   pathname,
   naam,
+  rol,
   onSluit,
 }: {
   pathname: string | null;
   naam: string;
+  rol: string;
   onSluit?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -146,7 +152,8 @@ function SidebarInhoud({
           (s) =>
             s.pad !== "/account" &&
             s.pad !== "/berichten" &&
-            s.pad !== "/wetcatalogus",
+            s.pad !== "/wetcatalogus" &&
+            (s.pad !== "/beheer" || rol === "beheerder"),
         ).map((sectie) => (
           <NavLink
             key={sectie.pad}

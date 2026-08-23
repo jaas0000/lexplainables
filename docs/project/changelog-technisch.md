@@ -1,5 +1,14 @@
 # Technische changelog
 
+- BFF-rolautorisatie voor admin-routes (PR #75, story 038): geen enkele `/api/admin/*`-BFF-route
+  (en `/api/projecten/[id]/llm-calls`) controleerde `session.user.rol` vóór het doorproxyen —
+  project-breed gat sinds story 006, bewust opengelaten tijdens de vervolgpunten-sweep in PR #73.
+  Nieuwe `requireBeheerder()`/`adminProxy()` in de BFF-laag (401 bij geen sessie, 403 bij een
+  sessie zonder beheerder-rol — bewust onderscheiden, zie de story-doc voor een regressie die
+  een blanket-403 opleverde), edge-redirect voor `/beheer`, sidebar verbergt de Beheer-link voor
+  niet-beheerders. Lost tegelijk het al genoteerde DRY-vervolgpunt op (`requireSession`+
+  `apiProxy`-boilerplate was gedupliceerd over 19 route-bestanden). Nieuwe
+  `tests/e2e/rolautorisatie.spec.ts`.
 - ADR-0011 SQLModel-migratie voor identiteit_toegang (PR #74): laatste feature die nog op
   SQLModel ORM draaide, nu SQLAlchemy Core + Pydantic (zelfde patroon als `api_tokens`) — Core
   `Table gebruikers`, niet-publiek `_GebruikerRij` + expliciete mappingfuncties
