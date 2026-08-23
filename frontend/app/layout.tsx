@@ -31,8 +31,13 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  /** Parallel-route-slot voor `app/@modal/…` — het instellingenvenster als dialoog wanneer je
+   *  er vanuit de app naartoe navigeert (werkwijze-story 042). `Dialog` is `fixed inset-0`, dus
+   *  onafhankelijk van waar in de boom hij als sibling van `AppShell` staat. */
+  modal: React.ReactNode;
 }) {
   const session = await auth();
 
@@ -42,6 +47,7 @@ export default async function RootLayout({
         <SessionProvider session={session}>
           <AppShell>{children}</AppShell>
           {session && <FeedbackKnop />}
+          {session && modal}
         </SessionProvider>
       </body>
     </html>

@@ -2,6 +2,9 @@
 
 ## Niet uitgebracht
 
+- Account en Beheer zijn nu te bereiken via één instellingenvenster met tabs in plaats van acht
+  losse pagina's — vanuit de zijbalk opent het als dialoogvenster over de huidige pagina heen.
+  (PR #79)
 - **Bugfixes:** Een `analist`-account kan niet meer bij beheerfunctionaliteit (Beheer-menu, gebruikersbeheer, wetcatalogus-beheer, etc.) — voorheen kon elke ingelogde gebruiker daar via de URL alsnog bij. (PR #75) Een crash in het wetten-beheerscherm is verholpen — het bewerkformulier sloot niet meer netjes af als de bewerkte wet ondertussen verwijderd werd. (PR #73)
 - De werkplek toont nu ook de a/b/c-onderdelen van een wetsartikel (bv. de losse definities in een definitieartikel), niet alleen de inleidende zin. (PR #70)
 - De werkplek toont nu de echte wetsartikeltekst bij een annotatie-document, in plaats van een tijdelijke plaatshoudertekst. (PR #68)

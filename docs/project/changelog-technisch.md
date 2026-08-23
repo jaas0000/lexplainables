@@ -1,5 +1,17 @@
 # Technische changelog
 
+- instellingenvenster (PR #79, story 042): Account + de 8 beheer-secties (incl. een negende,
+  `berichten`-CRUD, ontdekt tijdens de bouw op het oude `app/beheer/page.tsx`-dashboard) verplaatst
+  naar één gedeeld instellingenvenster — `lib/instellingen.ts` (tabtabel + padhelpers),
+  `app/instellingen/[[...tab]]/page.tsx` (volle pagina) + `app/@modal/(.)instellingen/[[...tab]]/
+  page.tsx` (intercepting-route-dialoog via een nieuw `modal`-parallel-route-slot in
+  `app/layout.tsx`), `components/instellingen/{InstellingenInhoud,InstellingenDialog}.tsx`. Poort
+  van `wetsanalyse-ai`'s `Dialog`/`Tabs`-componenten, bewust beperkt tot de varianten die hier al
+  een consument hebben. Oude `/beheer`- en `/account`-routes blijven als kale redirects; de
+  rol-gate in `auth.config.ts` verschuift van `/beheer` naar `/instellingen/beheer`. Twee
+  regressies tijdens de bouw gevonden en gefixt via de volledige e2e-suite (zie de story): een
+  gemiste negende tab, en een sessie-invalidatie-bug in de nieuwe rol-gate (dezelfde 401/403-les
+  als story 038, herhaald op de pagina-laag).
 - graph-qa toollaag (PR #78, story 041): getypeerde domein-toollaag over de kennisgraaf —
   `agent/namespace.py` (IRI-ruimte + drift-guard tegen `tools/bwb-import`), `agent/graph/
   queries.py` (11 geparametriseerde SPARQL-bouwers), `agent/graph/schema.py` (gecachete

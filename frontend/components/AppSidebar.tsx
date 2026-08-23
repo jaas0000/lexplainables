@@ -150,14 +150,20 @@ function SidebarInhoud({
       <nav className="flex-1 px-3 pb-2">
         {NAV_SECTIES.filter(
           (s) =>
-            s.pad !== "/account" &&
+            s.pad !== "/instellingen/account" &&
             s.pad !== "/berichten" &&
             s.pad !== "/wetcatalogus" &&
-            (s.pad !== "/beheer" || rol === "beheerder"),
+            (s.pad !== "/instellingen/beheer" || rol === "beheerder"),
         ).map((sectie) => (
           <NavLink
             key={sectie.pad}
-            href={sectie.pad}
+            // "/instellingen/beheer" is een prefix (voor actieveSectie/de mobiele topbar-titel),
+            // geen bestaand pad op zichzelf — de link moet naar een concrete tab wijzen.
+            href={
+              sectie.pad === "/instellingen/beheer"
+                ? "/instellingen/beheer/modelprofielen"
+                : sectie.pad
+            }
             actief={actief?.pad === sectie.pad}
             onSluit={onSluit}
           >
@@ -176,7 +182,7 @@ function SidebarInhoud({
         {menuOpen && (
           <div className="absolute inset-x-3 bottom-full mb-1 overflow-hidden rounded-kaart border border-line bg-paper shadow-kaart">
             <Link
-              href="/account"
+              href="/instellingen/account"
               className="block px-3 py-2.5 text-sm text-ink transition-colors hover:bg-surface"
               onClick={() => {
                 setMenuOpen(false);
