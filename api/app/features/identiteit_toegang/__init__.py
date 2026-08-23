@@ -12,8 +12,8 @@ integratie hoort bij `api_tokens`, niet hier.
 
 Tabellen:
   - gebruikers: id + gebruikersnaam (uniek) + wachtwoord_hash (bcrypt) + email + rol
-    (beheerder/analist) + actief + aangemaakt_op. SQLModel-gedefinieerd (ORM-tak; niet als
-    SQLAlchemy Core Table zoals de rest).
+    (beheerder/analist) + actief + aangemaakt_op + totp_secret_enc + totp_ingeschakeld.
+    SQLAlchemy Core Table + Pydantic-contracten, zelfde patroon als de rest (werkwijze-ADR-0011).
 
 Beslissingen:
   - ADR-0003 (auth-model): rollen `beheerder` en `analist`; bcrypt voor wachtwoorden; eerste

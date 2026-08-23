@@ -6,6 +6,23 @@ gebruikersbeheer (aanmaken/bewerken/verwijderen door beheerder), inloggen (verif
 
 **Grens:** sessie-cookies zelf leven in Auth.js (frontend); die roept `GET /v1/auth/me` periodiek aan (fase 2b.3 live-rol-check) voor rol-updates en deactivering. Het API-token voor externe integratie hoort bij `api_tokens`, niet hier.
 
+## Datamodel
+
+### `gebruikers`
+id + gebruikersnaam (uniek) + wachtwoord_hash (bcrypt) + email + rol (beheerder/analist) + actief + aangemaakt_op + totp_secret_enc + totp_ingeschakeld. SQLAlchemy Core Table + Pydantic-contracten, zelfde patroon als de rest (werkwijze-ADR-0011).
+
+| kolom | type | eigenschappen |
+|---|---|---|
+| `id` | `Integer` | primary key |
+| `gebruikersnaam` | `String(64)` | NOT NULL, unique |
+| `wachtwoord_hash` | `Text` | NOT NULL |
+| `rol` | `String(16)` | NOT NULL |
+| `actief` | `Boolean` | NOT NULL |
+| `aangemaakt_op` | `DateTime(timezone=True)` | NOT NULL |
+| `email` | `Text` | NOT NULL |
+| `totp_secret_enc` | `Text` | nullable |
+| `totp_ingeschakeld` | `Boolean` | NOT NULL |
+
 ## API
 
 | Methode | Pad | Auth | Response |

@@ -18,9 +18,9 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine
-from sqlmodel import SQLModel
 
 from app.db import get_engine
+from app.features.identiteit_toegang.models import metadata
 from app.features.identiteit_toegang.store import maak_gebruiker, tabel_leeg
 from app.main import app
 from conftest import maak_test_engine
@@ -36,8 +36,8 @@ def stel_api_token_in(monkeypatch):
 
 @pytest_asyncio.fixture
 async def async_engine(tmp_path) -> AsyncIterator[AsyncEngine]:
-    """Kortlevende engine met het volledige SQLModel-schema aangemaakt."""
-    engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
+    """Kortlevende engine met het volledige schema aangemaakt."""
+    engine = maak_test_engine(metadata, tmp_path=tmp_path)
     yield engine
     await engine.dispose()
 
@@ -45,7 +45,7 @@ async def async_engine(tmp_path) -> AsyncIterator[AsyncEngine]:
 @pytest.fixture
 def client(tmp_path) -> Iterator[TestClient]:
     """Elke test krijgt een eigen, lege database."""
-    async_eng = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
+    async_eng = maak_test_engine(metadata, tmp_path=tmp_path)
     app.dependency_overrides[get_engine] = lambda: async_eng
 
     with TestClient(app) as test_client:

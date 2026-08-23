@@ -13,12 +13,10 @@ import pyotp
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy.future import select
-from sqlmodel import SQLModel
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy import select
 
 from app.db import get_engine
-from app.features.identiteit_toegang.models import Gebruiker
+from app.features.identiteit_toegang.models import gebruikers, metadata
 from app.features.identiteit_toegang.store import (
     TotpFout,
     activeer_totp,
@@ -58,14 +56,14 @@ def wis_rate_limit():
 
 @pytest_asyncio.fixture
 async def db_engine(tmp_path):
-    engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
+    engine = maak_test_engine(metadata, tmp_path=tmp_path)
     yield engine
     await engine.dispose()
 
 
 @pytest.fixture
 def client(tmp_path) -> TestClient:
-    async_engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
+    async_engine = maak_test_engine(metadata, tmp_path=tmp_path)
     app.dependency_overrides[get_engine] = lambda: async_engine
 
     with TestClient(app) as c:
@@ -90,15 +88,16 @@ async def test_begin_totp_koppeling_maakt_secret_en_uri(db_engine):
     assert "issuer=lexplainables" in uri
 
     # Secret staat versleuteld in de DB (niet plaintext, ook niet in de URI-vorm).
-    async with AsyncSession(db_engine) as sess:
-        g = (
-            await sess.execute(select(Gebruiker).where(Gebruiker.gebruikersnaam == "ana"))
-        ).scalar_one()
-        assert g.totp_secret_enc is not None
-        assert g.totp_ingeschakeld is False
+    async with db_engine.connect() as conn:
+        rij = (
+            await conn.execute(select(gebruikers).where(gebruikers.c.gebruikersnaam == "ana"))
+        ).first()
+        g = dict(rij._mapping)
+        assert g["totp_secret_enc"] is not None
+        assert g["totp_ingeschakeld"] is False
         # Fernet-tokens beginnen met "gAAAA…"; niet gelijk aan de plaintext secret.
-        plaintext = crypto.decrypt(g.totp_secret_enc)
-        assert plaintext not in g.totp_secret_enc
+        plaintext = crypto.decrypt(g["totp_secret_enc"])
+        assert plaintext not in g["totp_secret_enc"]
 
 
 async def test_begin_zonder_fernet_key_gooit_cryptofout(db_engine, monkeypatch):
@@ -116,11 +115,11 @@ async def test_activeer_totp_met_goede_code_zet_vlag(db_engine):
 
     await activeer_totp(db_engine, "ana", totp.now())
 
-    async with AsyncSession(db_engine) as sess:
-        g = (
-            await sess.execute(select(Gebruiker).where(Gebruiker.gebruikersnaam == "ana"))
-        ).scalar_one()
-        assert g.totp_ingeschakeld is True
+    async with db_engine.connect() as conn:
+        rij = (
+            await conn.execute(select(gebruikers).where(gebruikers.c.gebruikersnaam == "ana"))
+        ).first()
+        assert rij._mapping["totp_ingeschakeld"] is True
 
 
 async def test_activeer_totp_met_foute_code_raist(db_engine):
@@ -145,12 +144,12 @@ async def test_uitschakel_totp_wist_secret_en_vlag(db_engine):
 
     await uitschakel_totp(db_engine, "ana", totp.now())
 
-    async with AsyncSession(db_engine) as sess:
-        g = (
-            await sess.execute(select(Gebruiker).where(Gebruiker.gebruikersnaam == "ana"))
-        ).scalar_one()
-        assert g.totp_ingeschakeld is False
-        assert g.totp_secret_enc is None
+    async with db_engine.connect() as conn:
+        rij = (
+            await conn.execute(select(gebruikers).where(gebruikers.c.gebruikersnaam == "ana"))
+        ).first()
+        assert rij._mapping["totp_ingeschakeld"] is False
+        assert rij._mapping["totp_secret_enc"] is None
 
 
 async def test_uitschakel_totp_met_foute_code_raist(db_engine):
