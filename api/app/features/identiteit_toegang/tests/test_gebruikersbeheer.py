@@ -10,9 +10,9 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel
 
 from app.db import get_engine
+from app.features.identiteit_toegang.models import metadata
 from app.features.identiteit_toegang.store import (
     GebruikerNietGevonden,
     GebruikersnaamAlInGebruik,
@@ -40,7 +40,7 @@ def stel_api_token_in(monkeypatch):
 @pytest.fixture
 async def db_engine(tmp_path):
     """Kortlevende engine voor store-laag tests."""
-    engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
+    engine = maak_test_engine(metadata, tmp_path=tmp_path)
     yield engine
     await engine.dispose()
 
@@ -48,7 +48,7 @@ async def db_engine(tmp_path):
 @pytest.fixture
 def client(tmp_path) -> Iterator[TestClient]:
     """HTTP-client met een dialect-agnostische engine en auth-override."""
-    async_engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
+    async_engine = maak_test_engine(metadata, tmp_path=tmp_path)
     app.dependency_overrides[get_engine] = lambda: async_engine
     app.dependency_overrides[huidige_beheerder] = lambda: TEST_BEHEERDER
 

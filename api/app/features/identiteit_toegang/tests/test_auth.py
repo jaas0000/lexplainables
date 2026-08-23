@@ -14,12 +14,10 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.future import select
-from sqlmodel import SQLModel
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy import update
 
 from app.db import get_engine
-from app.features.identiteit_toegang.models import Gebruiker
+from app.features.identiteit_toegang.models import gebruikers, metadata
 from app.features.identiteit_toegang.store import (
     GebruikerNietActief,
     WachtwoordOnjuist,
@@ -52,7 +50,7 @@ def wis_rate_limit():
 
 @pytest.fixture
 def client(tmp_path) -> TestClient:
-    async_engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
+    async_engine = maak_test_engine(metadata, tmp_path=tmp_path)
     app.dependency_overrides[get_engine] = lambda: async_engine
 
     with TestClient(app) as c:
@@ -63,7 +61,7 @@ def client(tmp_path) -> TestClient:
 
 @pytest.fixture
 async def db_engine(tmp_path):
-    engine = maak_test_engine(SQLModel.metadata, tmp_path=tmp_path)
+    engine = maak_test_engine(metadata, tmp_path=tmp_path)
     yield engine
     await engine.dispose()
 
@@ -162,12 +160,10 @@ def test_verify_te_veel_pogingen_geeft_429(client, monkeypatch):
 @pytest.mark.asyncio
 async def test_verify_inactieve_gebruiker(db_engine):
     await maak_gebruiker(db_engine, "inactief", "wachtwoord123", "beheerder")
-    async with AsyncSession(db_engine) as sess:
-        result = await sess.execute(select(Gebruiker).where(Gebruiker.gebruikersnaam == "inactief"))
-        g = result.scalar_one()
-        g.actief = False
-        sess.add(g)
-        await sess.commit()
+    async with db_engine.begin() as conn:
+        await conn.execute(
+            update(gebruikers).where(gebruikers.c.gebruikersnaam == "inactief").values(actief=False)
+        )
 
     result = await verifieer_credentials(db_engine, "inactief", "wachtwoord123")
     assert result.ok is False

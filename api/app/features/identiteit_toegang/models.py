@@ -1,48 +1,82 @@
-"""Gebruikersmodel en auth-contracten (ADR-0003)."""
+"""De ene bron voor het identiteit_toegang-domein (werkwijze-ADR-0011).
+
+Tabel `gebruikers` (migraties 0003, 0006, 0014). Zelfde patroon als `api_tokens/models.py`:
+een SQLAlchemy Core `Table`, de publieke Pydantic-contracten, en expliciete mapping-functies
+tussen een databaserij en die contracten.
+
+`_GebruikerRij` is bewust geen publiek contract: het draagt `id`/`wachtwoord_hash`/
+`totp_secret_enc`, velden die nooit in een API-response horen. `GebruikerRead`/`MijnProfiel`
+zijn de publieke afgeleiden daarvan (zie `naar_read`/`naar_mijn_profiel`).
+"""
 
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Literal
 
-from pydantic import field_validator, model_validator
-from sqlalchemy import Column, DateTime
-from sqlmodel import Field, SQLModel
+import sqlalchemy as sa
+from pydantic import BaseModel, Field, field_validator, model_validator
+from sqlalchemy import Boolean, Column, DateTime, Integer, MetaData, String, Table, Text
 
 _GEBRUIKERSNAAM_RE = re.compile(r"^[a-z0-9._-]{3,64}$")
 
+metadata = MetaData()
 
-class GebruikerBase(SQLModel):
-    gebruikersnaam: str = Field(max_length=64)
-    rol: str = Field(default="beheerder")
-    actief: bool = Field(default=True)
+gebruikers = Table(
+    "gebruikers",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("gebruikersnaam", String(64), nullable=False, unique=True),
+    Column("wachtwoord_hash", Text, nullable=False),
+    Column("rol", String(16), nullable=False, server_default="beheerder"),
+    Column("actief", Boolean, nullable=False, server_default=sa.true()),
+    Column("aangemaakt_op", DateTime(timezone=True), nullable=False),
+    Column("email", Text, nullable=False, server_default=""),
+    Column("totp_secret_enc", Text, nullable=True),
+    Column("totp_ingeschakeld", Boolean, nullable=False, server_default=sa.false()),
+)
 
 
-class Gebruiker(GebruikerBase, table=True):
-    __tablename__ = "gebruikers"
-    id: int | None = Field(default=None, primary_key=True)
+# --- Intern: volledige rij (nooit direct naar buiten) --------------------------------
+
+
+class _GebruikerRij(BaseModel):
+    id: int
+    gebruikersnaam: str
     wachtwoord_hash: str
-    email: str = Field(default="", max_length=320)
-    # DateTime(timezone=True) i.p.v. SQLModel's default `DateTime`: het model schrijft een
-    # tz-aware waarde (`datetime.now(UTC)`), en asyncpg weigert die op een naive-column
-    # ("can't subtract offset-naive and offset-aware datetimes"). SQLite is lax hierop, dus
-    # kwam dat pas aan het licht toen de test-matrix Postgres in het spel bracht.
-    aangemaakt_op: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+    rol: str
+    actief: bool
+    aangemaakt_op: datetime
+    email: str
+    totp_secret_enc: str | None
+    totp_ingeschakeld: bool
+
+
+def gebruiker_uit_rij(rij) -> _GebruikerRij:
+    """Mapping van een databaserij naar `_GebruikerRij` (werkwijze-ADR-0011 §expliciete mapping)."""
+    m = dict(rij._mapping)
+    return _GebruikerRij(
+        id=m["id"],
+        gebruikersnaam=m["gebruikersnaam"],
+        wachtwoord_hash=m["wachtwoord_hash"],
+        rol=m["rol"],
+        actief=m["actief"],
+        aangemaakt_op=m["aangemaakt_op"],
+        email=m["email"],
+        totp_secret_enc=m["totp_secret_enc"],
+        totp_ingeschakeld=m["totp_ingeschakeld"],
     )
-    # Story 017 (migratie 0014). Secret staat versleuteld (Fernet, ADR-0003 via
-    # `shared/crypto.encrypt`); ingeschakeld pas True ná een succesvolle activate-check.
-    totp_secret_enc: str | None = Field(default=None)
-    totp_ingeschakeld: bool = Field(default=False)
 
 
-class SetupStatus(SQLModel):
+# --- Publieke contracten ---------------------------------------------------------------
+
+
+class SetupStatus(BaseModel):
     needs_setup: bool
 
 
-class SetupVerzoek(SQLModel):
+class SetupVerzoek(BaseModel):
     gebruikersnaam: str = Field(max_length=64)
     email: str = Field(max_length=320)
     wachtwoord: str = Field(min_length=8, max_length=512)
@@ -58,26 +92,35 @@ class SetupVerzoek(SQLModel):
         return v
 
 
-class GebruikerInfo(SQLModel):
+class GebruikerInfo(BaseModel):
     gebruikersnaam: str
     email: str
     rol: str
 
 
-class GebruikerRead(SQLModel):
+class GebruikerRead(BaseModel):
     gebruikersnaam: str
     rol: str
     actief: bool
     aangemaakt_op: datetime
 
 
-class GebruikerCreate(SQLModel):
+def naar_read(g: _GebruikerRij) -> GebruikerRead:
+    return GebruikerRead(
+        gebruikersnaam=g.gebruikersnaam,
+        rol=g.rol,
+        actief=g.actief,
+        aangemaakt_op=g.aangemaakt_op,
+    )
+
+
+class GebruikerCreate(BaseModel):
     gebruikersnaam: str = Field(max_length=64)
     wachtwoord: str = Field(min_length=8)
     rol: Literal["beheerder", "analist"] = Field(default="analist")
 
 
-class GebruikerPatch(SQLModel):
+class GebruikerPatch(BaseModel):
     rol: Literal["beheerder", "analist"] | None = None
     actief: bool | None = None
 
@@ -88,18 +131,18 @@ class GebruikerPatch(SQLModel):
         return self
 
 
-class TijdelijkWachtwoord(SQLModel):
+class TijdelijkWachtwoord(BaseModel):
     gebruikersnaam: str
     tijdelijk_wachtwoord: str
 
 
-class VerifyRequest(SQLModel):
+class VerifyRequest(BaseModel):
     gebruikersnaam: str
     wachtwoord: str
     totp: str | None = Field(default=None, max_length=16)
 
 
-class VerifyResult(SQLModel):
+class VerifyResult(BaseModel):
     ok: bool
     gebruikersnaam: str = ""
     rol: str = ""
@@ -108,19 +151,19 @@ class VerifyResult(SQLModel):
     code: str = ""
 
 
-class TotpBeginResultaat(SQLModel):
+class TotpBeginResultaat(BaseModel):
     """Retour van POST /v1/auth/2fa/begin — de `otpauth://`-URI voor de QR-code."""
 
     otpauth_uri: str
 
 
-class TotpCodeVerzoek(SQLModel):
+class TotpCodeVerzoek(BaseModel):
     """Body van POST /v1/auth/2fa/activeer en /uitschakel."""
 
     totp: str = Field(min_length=6, max_length=16)
 
 
-class MijnProfiel(SQLModel):
+class MijnProfiel(BaseModel):
     """Eigen accountgegevens — teruggegeven door GET /v1/auth/me.
 
     `actief` is er expliciet zodat een consument (bijv. de frontend Auth.js live-rol-check,
@@ -136,7 +179,17 @@ class MijnProfiel(SQLModel):
     totp_ingeschakeld: bool
 
 
-class WachtwoordWijzigenVerzoek(SQLModel):
+def naar_mijn_profiel(g: _GebruikerRij) -> MijnProfiel:
+    return MijnProfiel(
+        naam=g.gebruikersnaam,
+        gebruikersnaam=g.gebruikersnaam,
+        rol=g.rol,
+        actief=g.actief,
+        totp_ingeschakeld=g.totp_ingeschakeld,
+    )
+
+
+class WachtwoordWijzigenVerzoek(BaseModel):
     """Verzoek om het eigen wachtwoord te wijzigen — body van POST /v1/auth/wijzig-wachtwoord."""
 
     huidig_wachtwoord: str = Field(max_length=512)
