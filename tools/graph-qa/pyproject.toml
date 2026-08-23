@@ -5,6 +5,7 @@ description = "Juridische vraagbeantwoording via GraphDB-graaf (MCP)."
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.0",
+    "anthropic>=1.0.0",
 ]
 
 [project.optional-dependencies]

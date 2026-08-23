@@ -39,8 +39,15 @@ class Settings(BaseModel):
 
     # LLM (Azure AI Foundry / Anthropic)
     azure_foundry_api_key: str | None = None
-    azure_foundry_base_url: str | None = None
+    # Korte resource-naam (bv. "jjpl-m8ei8xzz-eastus2"), niet een volledige URL — dat is wat
+    # `anthropic.AnthropicFoundry(resource=...)` verwacht (de dedicated Foundry-client-class,
+    # zie story 039).
+    azure_foundry_resource: str | None = None
     llm_model: str = "claude-sonnet-4-6"
+    # Prompt-caching is op Azure AI Foundry een beta-functie; de adapter zet 'm zelf uit als de
+    # provider een cache-punt weigert (zie adapters/anthropic_llm.py). Deze knop is voor bewust
+    # vooraf uitzetten (bv. lokale dev tegen een resource zonder de beta).
+    prompt_caching: bool = True
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -50,8 +57,9 @@ class Settings(BaseModel):
             "graphdb_token": _read_secret(e, "GRAPHDB_TOKEN"),
             "repository_id": e.get("GRAPHDB_REPOSITORY_ID"),
             "azure_foundry_api_key": _read_secret(e, "AZURE_FOUNDRY_API_KEY"),
-            "azure_foundry_base_url": e.get("AZURE_FOUNDRY_BASE_URL"),
+            "azure_foundry_resource": e.get("AZURE_FOUNDRY_RESOURCE"),
             "llm_model": e.get("LLM_MODEL"),
+            "prompt_caching": e.get("PROMPT_CACHING"),
         }
         # None én lege string weglaten zodat de veld-defaults van kracht blijven.
         return cls(**{k: v for k, v in raw.items() if v is not None and v != ""})
@@ -63,7 +71,7 @@ class Settings(BaseModel):
             raise ValueError("Graaf niet geconfigureerd: zet GRAPHDB_TOKEN.")
 
     def require_llm(self) -> None:
-        if not self.azure_foundry_api_key or not self.azure_foundry_base_url:
+        if not self.azure_foundry_api_key or not self.azure_foundry_resource:
             raise ValueError(
-                "LLM niet geconfigureerd: zet AZURE_FOUNDRY_API_KEY en AZURE_FOUNDRY_BASE_URL."
+                "LLM niet geconfigureerd: zet AZURE_FOUNDRY_API_KEY en AZURE_FOUNDRY_RESOURCE."
             )
