@@ -24,8 +24,6 @@ from .models import (
     naar_read,
 )
 
-GELDIGE_ROLLEN = {"beheerder", "analist"}
-
 
 class GebruikerFout(Exception):
     """Domeinuitzondering voor ongeldig gebruikersbeheer (409 / ongeldige invoer)."""
