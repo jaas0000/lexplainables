@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import Boolean, Column, DateTime, MetaData, Table, Text
 
 metadata = MetaData()
@@ -47,7 +47,7 @@ class ApiTokenAangemaakt(ApiTokenRead):
 
 
 class ApiTokenAanmakenVerzoek(BaseModel):
-    label: str = ""
+    label: str = Field(default="", max_length=128)
 
 
 def token_uit_rij(rij) -> ApiTokenRead:

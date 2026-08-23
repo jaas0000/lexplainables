@@ -176,7 +176,12 @@ async def _select(query: str, client: httpx.AsyncClient, *, foutcontext: str) ->
             headers={"Accept": "application/sparql-results+json"},
             auth=auth,
         )
-    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as exc:
+    except (
+        httpx.ConnectError,
+        httpx.TimeoutException,
+        httpx.NetworkError,
+        httpx.ProtocolError,
+    ) as exc:
         raise GraphDbNietBereikbaar(f"GraphDB niet bereikbaar voor {foutcontext}: {exc}") from exc
 
     if not resp.is_success:

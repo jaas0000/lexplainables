@@ -430,6 +430,7 @@
         "properties": {
           "label": {
             "default": "",
+            "maxLength": 128,
             "title": "Label",
             "type": "string"
           }
@@ -1367,6 +1368,10 @@
           },
           "rol": {
             "default": "analist",
+            "enum": [
+              "beheerder",
+              "analist"
+            ],
             "title": "Rol",
             "type": "string"
           },
@@ -1422,6 +1427,10 @@
           "rol": {
             "anyOf": [
               {
+                "enum": [
+                  "beheerder",
+                  "analist"
+                ],
                 "type": "string"
               },
               {
@@ -2051,13 +2060,8 @@
         "type": "object"
       },
       "WetCreate": {
-        "description": "Wat een beheerder meestuurt bij het aanmaken of bijwerken van een wet.",
+        "description": "Wat een beheerder meestuurt bij het aanmaken of bijwerken van een wet.\n\nGeen `bwb_id`-veld: dat komt uit het URL-pad (`PUT /admin/wetten/{bwb_id}`), nooit uit de\nbody \u2014 voorkomt een stilzwijgend genegeerd mismatch tussen beide.",
         "properties": {
-          "bwb_id": {
-            "minLength": 1,
-            "title": "Bwb Id",
-            "type": "string"
-          },
           "naam": {
             "maxLength": 256,
             "minLength": 1,
@@ -2066,7 +2070,6 @@
           }
         },
         "required": [
-          "bwb_id",
           "naam"
         ],
         "title": "WetCreate",

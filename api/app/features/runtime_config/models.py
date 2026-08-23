@@ -7,10 +7,14 @@ in de database; geen migratie nodig voor elke nieuwe instelling.
 
 from __future__ import annotations
 
+import json
+import logging
+
 from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, MetaData, Table, Text
 
 metadata = MetaData()
+logger = logging.getLogger(__name__)
 
 app_instellingen = Table(
     "app_instellingen",
@@ -39,16 +43,12 @@ class AppInstellingenPatch(BaseModel):
 def _str_naar_bool(waarde: str, standaard: bool) -> bool:
     """Parseer een JSON-geëncodeerde boolean-string; valt terug op `standaard` bij een fout."""
     try:
-        import json
-
         parsed = json.loads(waarde)
         if isinstance(parsed, bool):
             return parsed
         return standaard
     except Exception:
-        import logging
-
-        logging.getLogger(__name__).warning(
+        logger.warning(
             "Ongeldige JSON in app_instellingen voor waarde %r; gebruik standaard %r.",
             waarde,
             standaard,

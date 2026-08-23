@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { components } from "@/generated/types";
 import { ElementenKolom } from "@/components/annotatie/ElementenKolom";
@@ -59,8 +59,8 @@ export default function WerkplekDetailPagina({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { slug } = use(params);
   const router = useRouter();
-  const [slug, setSlug] = useState<string | null>(null);
   const [document_, setDocument] = useState<AnnotatieDocument | null>(null);
   const [audit, setAudit] = useState<AuditRegel[] | null>(null);
   const [fout, setFout] = useState<string | null>(null);
@@ -70,13 +70,7 @@ export default function WerkplekDetailPagina({
   const [wetsartikelLaden, setWetsartikelLaden] = useState(true);
   const laden = document_ === null && fout === null;
 
-  // Resolve params (Next.js 16)
   useEffect(() => {
-    params.then(({ slug: s }) => setSlug(s));
-  }, [params]);
-
-  useEffect(() => {
-    if (!slug) return;
     let cancelled = false;
 
     async function laad() {
@@ -111,7 +105,6 @@ export default function WerkplekDetailPagina({
   }, [slug, router]);
 
   useEffect(() => {
-    if (!slug) return;
     let cancelled = false;
 
     async function laadWetsartikel() {
@@ -150,7 +143,7 @@ export default function WerkplekDetailPagina({
   }, [slug, router]);
 
   useEffect(() => {
-    if (!slug || tabblad !== "auditlog") return;
+    if (tabblad !== "auditlog") return;
     let cancelled = false;
 
     async function laadAudit() {
@@ -174,7 +167,6 @@ export default function WerkplekDetailPagina({
   }, [slug, tabblad, router]);
 
   async function verwijder() {
-    if (!slug) return;
     if (!confirm("Dit document en alle elementen verwijderen?")) return;
     const res = await fetch(`/api/annotatie/documenten/${slug}`, {
       method: "DELETE",

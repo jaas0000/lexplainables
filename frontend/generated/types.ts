@@ -1372,8 +1372,9 @@ export interface components {
             /**
              * Rol
              * @default analist
+             * @enum {string}
              */
-            rol: string;
+            rol: "beheerder" | "analist";
             /** Wachtwoord */
             wachtwoord: string;
         };
@@ -1391,7 +1392,7 @@ export interface components {
             /** Actief */
             actief?: boolean | null;
             /** Rol */
-            rol?: string | null;
+            rol?: ("beheerder" | "analist") | null;
         };
         /** GebruikerRead */
         GebruikerRead: {
@@ -1668,10 +1669,11 @@ export interface components {
         /**
          * WetCreate
          * @description Wat een beheerder meestuurt bij het aanmaken of bijwerken van een wet.
+         *
+         *     Geen `bwb_id`-veld: dat komt uit het URL-pad (`PUT /admin/wetten/{bwb_id}`), nooit uit de
+         *     body — voorkomt een stilzwijgend genegeerd mismatch tussen beide.
          */
         WetCreate: {
-            /** Bwb Id */
-            bwb_id: string;
             /** Naam */
             naam: string;
         };

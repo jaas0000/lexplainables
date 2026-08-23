@@ -8,8 +8,8 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 `httpx.AsyncClient` per aanroep in `annotatie/graphdb.py` — opgelost via een proces-brede,
 lazily aangemaakte client (`_get_client()`, zelfde patroon als `db.py::get_engine`), tijdens de
-retroactieve simplify-sweep over stories 030-037. De vergelijkbare gevallen bij PR #15
-(`wetcatalogus/router.py`) en PR #17 (`shared/wettenbank.py`) staan nog open.
+retroactieve simplify-sweep over stories 030-037. De vergelijkbare gevallen bij PR #15/#17
+(`shared/wettenbank.py`) zijn inmiddels ook opgelost, in PR #71.
 
 ---
 
@@ -42,16 +42,9 @@ JWT-callback ververst rol/actief-status via `GET /v1/auth/me` elke `SESSION_CHEC
   + footer zijn weg"). Dit wijkt af van de klassieke RH-lintregel; bewust gekozen om gelijk te
   lopen met de bron-app. Als dit ooit een RH-toetsing moet doorstaan, is dit het punt om op terug
   te komen.
-- **Geen rol-gating op de "Beheer"-link**: zowel de oude `NavigatieHeader` als de nieuwe
-  `AppSidebar` tonen "Beheer" aan elke ingelogde gebruiker, ongeacht `session.user.rol`. Bestaand
-  gedrag, niet gewijzigd in fase 3 (zuiver visuele scope) — wel inconsistent met
-  `GesprekSidebar.tsx` in de bron-app, die "Beheer" alleen aan `beheerder`-rol toont. Zie ook het
-  bestaande vervolgpunt onder "PR #5 — auth-eigen-gebruikers": BFF-routes controleren
-  `session.user.rol` sowieso nog niet.
-- **`tailwind.config.ts` was géén volledige match met `wetsanalyse-ai`**: het fase-3-plan
-  claimde "identiek", maar `borderRadius.kaart`, `boxShadow.zacht`/`.kaart`, de `.focus-ring`-CSS-
-  klasse en de `coarse:`-Tailwind-variant ontbraken. Toegevoegd in deze PR (nodig voor de sidebar-
-  vormtaal); geverifieerd dat verder niets anders was.
+- **Geen rol-gating op de "Beheer"-link**: `AppSidebar` toont "Beheer" aan elke ingelogde
+  gebruiker, ongeacht rol — onderdeel van het bredere BFF-rolautorisatie-gat, zie
+  "BFF-rolautorisatie ontbreekt project-breed" verderop in dit bestand.
 - **Geen generieke `Dialog`-abstractie**: de mobiele drawer in `AppSidebar.tsx` is een eigen,
   eenvoudige implementatie (backdrop + paneel, geen focus-trap), niet de 5-varianten-`Dialog` uit
   `wetsanalyse-ai/components/ui/Dialog.tsx`. Voldoende voor nu (één variant nodig); overwegen zodra
@@ -72,7 +65,8 @@ JWT-callback ververst rol/actief-status via `GET /v1/auth/me` elke `SESSION_CHEC
 
 ## Simplify-sweep story 005 — auth-login
 
-- **Onbenutte BFF-route `app/api/auth/setup-status/route.ts`**: mogelijk dead code — de frontend gebruikt alleen `haalSetupStatus` (server-side). Onderzoeken en verwijderen indien nergens meer bereikt. Gevonden tijdens simplify-sweep (story 005, PR #32); buiten simplify-scope want gedragsverandering.
+- ✅ opgelost — `app/api/auth/setup-status/route.ts` was inderdaad nergens meer bereikt
+  (`haalSetupStatus` praat rechtstreeks met de API, niet via deze BFF-route) en is verwijderd.
 - **Header-bundel duplicatie in `lib/api-client.ts`**: `publiekApiProxy` bouwt zijn eigen header-object dat 90% overlapt met `buildBackendHeaders` — alleen `X-User-Id` verschilt. Uniticeren via `buildBackendHeaders(gebruikersnaam?: string)` met optionele user. Gevonden tijdens de architecturale review van PR #32; buiten scope van die PR (auth-login-005).
 
 ---
@@ -80,22 +74,22 @@ JWT-callback ververst rol/actief-status via `GET /v1/auth/me` elke `SESSION_CHEC
 ## PR #22 — Werkplek annotatie-UI (story 023)
 
 - **`projecten/page.tsx` — dubbele `formatDatum`**: `lib/datum.ts` is aangemaakt en `werkplek/page.tsx` importeert correct uit die lib, maar `frontend/app/projecten/page.tsx` heeft nog zijn eigen lokale kopie (regel 21). Vervang de lokale definitie door `import { formatDatum } from "@/lib/datum"`.
-- **Story 023 staat nog op "Gebouwd: nee"**: `docs/stories/023-werkplek-annotatie-ui.md` bijwerken naar `Gebouwd: ja`.
-- **Wetsartikeltekst is een placeholder**: de linkerkolom toont "De volledige wetsartikeltekst is beschikbaar via de Wettenbank-koppeling (nog niet ingebouwd)". Koppeling met Wettenbank-MCP (`GET /v1/wetten/{bwb_id}/structuur`) vereist een apart BFF-endpoint en een client-component; aparte story of vervolgspurt.
-- **`use(params)` voor slug-resolutie**: `app/werkplek/[slug]/page.tsx` lost `params` op via een `useEffect` + `useState`-combinatie (Next.js 16). React 19 biedt `use(params)` als éénregelige vervanging — consistent toepassen samen met `projecten/[id]/page.tsx` zodra de codebase naar React 19 gaat.
+- **`use(params)` voor slug-/id-resolutie**: `app/werkplek/[slug]/page.tsx` en `app/projecten/[id]/page.tsx` lossen `params` nog op via een `useEffect` + `useState`-combinatie. React is inmiddels 19 (was het blokkerende punt) — `use(params)` als éénregelige vervanging kan nu.
 - **Design-tokens voor aandacht-kleuren ontbreken in `globals.css`**: `ElementenKolom.tsx` gebruikt hardcoded hex-waarden (`#fef2f2`, `#fca5a5`, `#dc2626` etc.). Verplaatsen naar CSS-variabelen in `globals.css` zodra dark-mode wordt toegevoegd.
 
 ---
 
 ## PR #20 — LLM-calls log (story 021)
 
-- **Frontend CI structureel kapot op push-events**: `frontend-ci.yml` faalt bij elke push met "workflow file issue" (0s, geen job output). Hierdoor draaien `check-generated-types`, `check-ts-style` en `test-frontend-e2e` niet op PRs. Los op als apart vervolgpunt (raakt alle frontend-PRs, niet specifiek deze).
 - **Ontbrekende kolommen t.o.v. originele spec**: De originele story 021-spec had `ronde`, `poging`, `fase`, `provider`, `ok`, `fout` als kolommen — story 024 vereenvoudigde het schema. Als die velden later toch nodig zijn, vereist dat een nieuwe Alembic-migratie.
 - **`SqlAlchemyLlmCallsStore` zonder Protocol-abstractie**: De router bindt direct aan de concrete klasse (`SqlAlchemyLlmCallsStore`), terwijl `SqlAlchemyAnalyseStore` het `AnalyseStore`-Protocol implementeert. Voeg een `LlmCallsStore`-Protocol toe zodra er een tweede implementatie of gebruiker bijkomt.
 
 ---
 
 ## Architectuur-audit — 2026-08-19 (ronde 2)
+
+_Historische snapshot — `api/app/engine/` bestaat sinds PR #36 niet meer (zie "PR #17 —
+analyse-engine" hierboven); de tekst hieronder blijft ongewijzigd als tijdsopname._
 
 Audit gedraaid op stand na PRs #21 (annotatie-backend) en #22 (annotatie-UI). Focus: `api/app/features/`, `api/app/shared/`, `api/app/engine/`, `db.py`, `main.py`. Vier bevindingen — geen ervan is een projectbrede keuze die een ADR verdient (engine als derde mapniveau staat al in `stack-profiel.md` §Feature-eenheid; geen wijziging in dat beeld). Alles staat hieronder als vervolgpunt; niets is deze ronde direct gerefactord omdat elke aanpassing meerdere features raakt.
 
@@ -105,6 +99,8 @@ Audit gedraaid op stand na PRs #21 (annotatie-backend) en #22 (annotatie-UI). Fo
 ---
 
 ## Architectuur-audit — 2026-08-19 (ronde 1)
+
+_Historische snapshot — `api/app/engine/` bestaat sinds PR #36 niet meer._
 
 Audit gedraaid op stand na PRs #17 (analyse-engine), #18 (api-tokens, open), #19 (rapport, open), #20 (llm-calls log, open). Drie bevindingen — twee direct opgelost, één als vervolgpunt:
 
@@ -121,12 +117,6 @@ Audit gedraaid op stand na PRs #17 (analyse-engine), #18 (api-tokens, open), #19
 
 - **"Ingelogd blijven"-checkbox functioneel maken**: de checkbox staat visueel op de loginpagina maar doet nog niets. Zodra de sessieduur-logica gebouwd wordt (story nog aan te maken), hier de `remember`-vlag doorgeven aan de Auth.js Credentials-provider (zoals wetsanalyse dat doet met `rememberMe` in de JWT-callback).
 - **Mockup-stap in `frontend-bouwen` verbeterd en vastgelegd** ✓: dev-server als canvas, `/mockup/<feature>/`-pad, interactieve nepdata-component, badge, promotie naar definitief pad. Vastgelegd in `werkwijze-v2-multi-service/werkwijze/.claude/skills/frontend-bouwen/SKILL.md` (regels 2-4 + §Mockup-structuur).
-
----
-
-## PR #5 — auth-eigen-gebruikers (story 006)
-
-- BFF-routes controleren `session.user.rol` niet — momenteel geen `analist`-gebruikers, maar de architectuur (story 006) zegt dat de BFF de rolautorisatie draagt. Toevoegen zodra meerdere rollen in gebruik komen.
 
 ---
 
@@ -162,21 +152,17 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ---
 
-## PR #10 — llm-profielen (story 011)
-
-- **Story 011 "Gebouwd: nee"**: `docs/stories/011-llm-profielen.md` heeft onderaan nog `**Gebouwd:** nee` staan. Bijwerken naar `ja` bij de eerste volgende commit op die story.
-
----
-
-## PR #11 — analyse aanmaken & volgen (story 012)
-
-- **Story 012 "Gebouwd: nee"**: `docs/stories/012-analyse-aanmaken.md` heeft onderaan nog `**Gebouwd:** nee` staan. Bijwerken naar `ja`.
-
----
-
 ## PR #13 — setup-flow (story 015)
 
-- **Race condition in `maak_eerste_beheerder`** (prioritair): SELECT + INSERT zijn niet atomair (`api/app/features/identiteit_toegang/store.py`). Twee gelijktijdige POST /setup-requests met verschillende gebruikersnamen kunnen allebei slagen en zo twee beheerders aanmaken. Kans in de praktijk nihil (intern endpoint, eenmalige first-run), maar de invariant "precies één admin na setup" is niet gegarandeerd. Fix: serializable transactie of `SELECT FOR UPDATE` (let op: SQLite negeert FOR UPDATE — database-specifiek aanpakken). Aandacht vereist vóór productie-inzet met PostgreSQL.
+- **Race condition in `maak_eerste_beheerder`** (prioritair, nu actueel — Postgres is sinds
+  ADR-0003 de enige DB, dit is niet meer "vóór productie-inzet" maar de huidige stand): SELECT +
+  INSERT zijn niet atomair (`api/app/features/identiteit_toegang/store.py`). Twee gelijktijdige
+  POST /setup-requests met verschillende gebruikersnamen kunnen allebei slagen en zo twee
+  beheerders aanmaken. Kans in de praktijk nihil (intern endpoint, eenmalige first-run), maar de
+  invariant "precies één admin na setup" is niet gegarandeerd. Fix: serializable transactie of
+  `SELECT FOR UPDATE`. Zelfde soort ontbrekende locking als de LaatsteBeheerder-check bij
+  "PR #14 — gebruikersbeheer uitbreiden" — allebei verdienen dezelfde, bewuste oplossing i.p.v.
+  twee losse patches.
 - **OpenAPI-spec mist 409-response** voor `POST /v1/auth/setup` (`api/generated/openapi.json`). De frontend handelt 409 correct af, maar het contract beschrijft het niet. Toevoegen bij de volgende contractronde.
 - **`SetupVerzoek.email` heeft geen format-validatie** op de backend (`api/app/features/identiteit_toegang/models.py`). Elke string ≤ 320 tekens passeert. Voeg `EmailStr` (pydantic) of een `field_validator` toe zodra email-validatie elders in gebruik komt.
 - **`async_eng` niet disposed** in de `client`-fixture van `test_setup.py` (regel ~88-100). Voeg `async_eng.dispose()` toe via een sync finalizer of maak de fixture async.
@@ -190,88 +176,149 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 
 ## PR #15 — wettenbank-beheer (story 020)
 
-- **MEDIUM** — Crash in BewerkenFormulier na verwijder-terwijl-bewerkt: `wetten.find(...)!` geeft `undefined` als een rij verwijderd wordt terwijl het bewerkformulier al open staat. `setBewerkt(null)` toevoegen in de `verwijder`-functie (`frontend/app/beheer/wetten/page.tsx:279`).
+- ✅ opgelost — Crash in BewerkenFormulier na verwijder-terwijl-bewerkt: `setBewerkt(null)`
+  toegevoegd in de `verwijder`-functie. Regressietest toegevoegd
+  (`tests/e2e/wetten-beheer.spec.ts` — deze pagina had nog helemaal geen e2e-dekking).
 - **MEDIUM** — Geen index op `naam`-kolom: alle lijstqueries sorteren op naam, maar de migratie maakt geen index aan. Voeg `ix_wet_catalogus_naam` toe in een volgende migratie (`api/alembic/versions/0007_wet_catalogus_tabel.py`).
-- **MEDIUM** — ✅ opgelost: het bestand op deze regel bestond niet meer (de resolve-aanroep zit
-  sinds een latere refactor in `shared/wettenbank.py::_jsonrpc_call`, niet meer rechtstreeks in
-  de router) — daar alsnog gefixt (zie het vervolgpunt bij PR #17 hieronder en PR #71).
-- **MEDIUM** — `structuur()` geeft lege artikelenlijst zonder fout als `bwb_id` wel in de DB staat maar niet in `_STRUCTUUR`. Expliciete `WetNietGevonden` gooien of het gedrag documenteren (`api/app/features/wetcatalogus/store.py:117-128`).
-- **LAAG** — `WetCreate.bwb_id` stilzwijgend genegeerd bij mismatch met URL-pad: verwijder het veld uit `WetCreate` of voeg een 422-validatie toe (`api/app/features/wetcatalogus/router.py:80`).
-- **LAAG** — `httpx.ProtocolError` niet afgevangen: bij misvormde MCP-respons propageert als 500 in plaats van 502. Toevoegen aan de except-tuple (`api/app/features/wetcatalogus/router.py:132`).
-- **LAAG** — Dode else-tak in `wet_uit_rij`: `else: str(bijgewerkt)` is onbereikbaar bij `DateTime(timezone=True)` (`api/app/features/wetcatalogus/models.py:74-86`).
-- **LAAG** — `_wet_bestaat` heeft geen hergebruik en kan ingelind worden in `structuur()` (`api/app/features/wetcatalogus/store.py:130-135`).
-- **LAAG** — Duplicaat import `create_engine` in `lege_client` fixture (`api/app/features/wetcatalogus/tests/conftest.py:75`).
+- **MEDIUM** — ✅ opgelost (in het bestand dat de resolve-aanroep sindsdien echt bevat): zie het
+  vervolgpunt bij PR #17 en PR #71.
+- **MEDIUM** — `structuur()` geeft lege artikelenlijst zonder fout als `bwb_id` wel in de DB staat
+  maar niet in `_STRUCTUUR`, en `_STRUCTUUR` is nog steeds een hardgecodeerde placeholder (zie de
+  docstring in `store.py`: "wordt vervangen door een directe SPARQL-query op GraphDB"). Die
+  voorwaarde is nu wél vervuld — `deploy/graphdb` + `tools/bwb-import` bestaan en zijn gevuld
+  (zie CLAUDE.md) — dus dit is niet langer een kleine patch maar een echte story: `structuur()`
+  op GraphDB-SPARQL laten leunen, zelfde patroon als story 037's `annotatie/graphdb.py`. Niet in
+  deze sweep gedaan (te groot voor een sweep-fix), wel genoteerd als de eigenlijke, nu haalbare
+  oplossing i.p.v. de kleinere losse `WetNietGevonden`-patch.
+- ✅ opgelost — `WetCreate.bwb_id` (nooit gelezen, stond stil te negeren bij een mismatch) is
+  verwijderd uit het model; de URL-path-`bwb_id` is en blijft de enige bron. Frontend meegewerkt
+  (`beheer/wetten/page.tsx`): stuurt `bwb_id` niet langer mee in de PUT-body (toevoeg- én
+  bewerkformulier), het toevoegformulier gebruikt nu een eigen lokaal `NieuweWetFormulier`-type
+  i.p.v. het (nu smallere) gegenereerde `WetCreate`-contract te hergebruiken voor iets dat meer
+  velden nodig heeft dan de body.
+- ✅ opgelost — `httpx.ProtocolError` toegevoegd aan de except-tuples in `wettenbank.py` én
+  `annotatie/graphdb.py`.
+- ✅ opgelost — dode else-tak in `wet_uit_rij` verwijderd (`DateTime(timezone=True)` garandeert
+  al een `datetime`, geen `str`-fallback nodig).
+- **LAAG** — `_wet_bestaat` heeft geen hergebruik en kan ingelind worden in `structuur()` — bewust laten staan: een kleine, duidelijk genoemde private helper is prima leesbaar, en dit hangt sowieso samen met de grotere `structuur()`-herziening hierboven.
+- ✅ al opgelost vóór deze sweep — geen duplicaat-import meer in `lege_client` (bestand was al
+  ververst).
 - **LAAG** — `beheer/page.tsx` haalt de volledige wettenlijst op enkel voor de teller naast "Wetten →". Count-endpoint toevoegen of bewust accepteren als tech debt (`frontend/app/beheer/page.tsx:85-92`).
 
 ---
 
 ## PR #12 — account-pagina (story 016)
 
-- **Stale comment** in `test_me_met_geldig_token_geeft_profiel`: zegt "TestClient gebruikt de echte app-db" maar de fixture gebruikt na de fix een tmp SQLite. Bijwerken bij de volgende aanraking van dit testbestand.
-- **Dubbele DB-fetch** in `wijzig_eigen_wachtwoord` (`api/app/features/identiteit_toegang/store.py`): twee `AsyncSession`-blokken — één om te lezen + bcrypt te checken, één om te schrijven. Samenvoegen in één sessie (lees → hash → schrijf) voor minder DB-roundtrips en een kleiner TOCTOU-window.
-- **Zwakke HTTP-routetest** voor `GET /v1/auth/me`: `test_me_met_geldig_token_geeft_profiel` assert `in (200, 401)` maar raakt de 200-tak nooit (geen seed-gebruiker). De store-laag is wél goed gedekt via `test_haal_gebruiker_profiel`. Overweeg een seed in de test voor de 200-tak.
+- ✅ opgelost — de stale comment in `test_me_met_geldig_token_geeft_profiel` is gecorrigeerd
+  (zie de "Zwakke HTTP-routetest"-regel hieronder, dat was dezelfde plek).
+- **Dubbele DB-fetch** in `wijzig_eigen_wachtwoord` — bekeken en bewust laten staan: de twee
+  aparte `AsyncSession`-blokken zijn een deliberate keuze (zie de comment erboven in de code —
+  "bcrypt buiten de sessie: CPU-gebonden operatie, DB-verbinding hoeft niet open te blijven"),
+  niet losse duplicatie. Samenvoegen tot één sessie zou de DB-connectie openhouden tijdens de
+  bcrypt-hash (tientallen tot honderden ms CPU-werk), wat onder load eerder de connection-pool
+  belast dan de huidige twee korte round-trips. Geen duidelijke winst, dus niet aangepast.
+- **Zwakke HTTP-routetest** voor `GET /v1/auth/me` — comment gecorrigeerd (verwees ten onrechte
+  naar SQLite, is Postgres-only sinds ADR-0003). De onderliggende suggestie (een seed toevoegen
+  voor de 200-tak) staat nog open: vereist dat `client`- en `db_engine`-fixtures dezelfde
+  test-engine delen (nu allebei een eigen `drop_all`/`create_all`-ronde), niet triviaal zonder
+  fixture-herstructurering.
 
 ---
 
 ## PR #14 — gebruikersbeheer uitbreiden (story 014)
 
-- **store.py**: LaatsteBeheerder-invariantquery staat verbatim gedupliceerd in `wijzig_gebruiker` en `verwijder_gebruiker`; extraheer naar een private `_tel_actieve_beheerders(sess)` helper.
-- **store.py**: LaatsteBeheerder-check en write zijn in één transactie maar zonder `SELECT … FOR UPDATE`; bij een toekomstige PostgreSQL-migratie opnieuw evalueren (met SQLite zijn writes geserialiseerd, dus nu geen acuut risico).
-- **BFF**: `requireSession` + `apiProxy`-patroon is nu gedupliceerd in berichten-, profielen- én gebruikers-routes; een gedeelde `adminProxy(req, url, opts)`-utility elimineert de boilerplate.
-- **models.py**: `GebruikerCreate.rol` en `GebruikerPatch.rol` zijn getypeerd als `str` i.p.v. `Literal["beheerder", "analist"]`; met een Literal-type valideert FastAPI/Pydantic dit automatisch en verdwijnt de handmatige check in de router.
+- ✅ opgelost — LaatsteBeheerder-invariantquery gedupliceerd in `wijzig_gebruiker` en
+  `verwijder_gebruiker`: geëxtraheerd naar een private `_is_laatste_actieve_beheerder(sess, g)`.
+- **store.py**: LaatsteBeheerder-check en write zijn in één transactie maar zonder `SELECT … FOR UPDATE`; nu relevant sinds ADR-0003 (Postgres-only, was eerder "met SQLite geen acuut risico" — die aanname geldt niet meer). Zelfde soort race als `maak_eerste_beheerder` hieronder bij "PR #13 — setup-flow"; allebei verdienen dezelfde oplossing (serializable transactie of `SELECT FOR UPDATE`), niet losstaand bekijken.
+- **BFF**: `requireSession` + `apiProxy`-patroon is nu gedupliceerd in berichten-, profielen- én gebruikers-routes; een gedeelde `adminProxy(req, url, opts)`-utility elimineert de boilerplate. Zie ook "BFF-rolautorisatie ontbreekt project-breed" — een `requireBeheerder()`-helper zou hier natuurlijk bij aansluiten (twee vervolgpunten, één logische plek om samen op te lossen).
 - **page.tsx**: `onReset` cast de API-response naar een inline type i.p.v. `components["schemas"]["TijdelijkWachtwoord"]` (beschikbaar in `generated/types.ts`); consisent maken met de andere casts.
-- **models.py**: `GebruikerPatch` accepteert een volledig lege body (`{"rol": null, "actief": null}`) als silent no-op; een model-validator die ten minste één non-null veld eist zou dit explicieter maken.
+- ✅ opgelost — `GebruikerCreate.rol`/`GebruikerPatch.rol` zijn nu
+  `Literal["beheerder", "analist"]` (Pydantic valideert automatisch, de handmatige 422-check in
+  de router is weg); `GebruikerPatch` heeft nu een `model_validator` die een volledig lege body
+  weigert (422, test toegevoegd).
 - **openapi.json**: 401-response is niet gedocumenteerd voor de vijf admin-endpoints (GET, POST, PATCH, DELETE, reset-wachtwoord); toevoegen voor volledigheid van het contract.
-- **store.py**: `lijst_gebruikers` heeft geen LIMIT; inconsistent met berichten-store. Op de huidige schaal geen probleem, maar bewaken bij groei.
+- **store.py**: `lijst_gebruikers` heeft geen LIMIT — bewust niet gefixt met een simpele `.limit(N)`: dit is een admin-beheerscherm waar volledigheid ("zie ik echt alle gebruikers") het punt is, dus een LIMIT zou stilzwijgend gebruikers verbergen in plaats van het probleem op te lossen. Een echte fix is paginering, niet een sweep-regel.
 - **scope**: GET + POST `/v1/admin/gebruikers` vallen buiten story 014-spec (afhankelijkheid story 006); functioneel noodzakelijk voor de UI maar niet formeel vastgelegd in de story.
-- **ADR-0011**: `identiteit_toegang` staat nog op SQLModel ORM (niet SQLAlchemy Core + Pydantic zoals ADR-0011 voorschrijft en de implementatienoot aanbeval). Aparte story aanmaken voor de migratie.
+- **ADR-0011**: `identiteit_toegang` staat nog op SQLModel ORM (niet SQLAlchemy Core + Pydantic zoals ADR-0011 voorschrijft en de implementatienoot aanbeval). Aparte story aanmaken voor de migratie — te groot en te risicovol voor een sweep-fix.
 
 ---
 
 ## PR #16 — app-instellingen / runtime-config (story 019)
 
 - **MEDIUM** — `frontend/app/api/admin/instellingen/route.ts` r13-14: `req.text()` + vaste `Content-Type: application/json` in `buildBackendHeaders` — nu correct (browser stuurt JSON), maar impliciete aanname die breekt als een caller een andere Content-Type gebruikt.
-- **MEDIUM** — `api/app/features/runtime_config/store.py` r34, r50-52: `_cache: dict[str, object]` dwingt een `isinstance`-check en twee `# type: ignore` af. Een `@dataclass`-entry of `_CacheEntry | None`-variabele maakt dit weg.
-- **MEDIUM** — `api/app/features/runtime_config/models.py` r89, r95: `json` en `logging` als inline imports in `_str_naar_bool` — horen op module-niveau; `logger = logging.getLogger(__name__)` als module-constante.
-- **LAAG** — `api/app/features/runtime_config/store.py` r88-90: na elke schrijfactie cache wissen + nieuwe `SELECT *` — de geschreven waarden zijn al bekend, round-trip overbodig.
+- ✅ opgelost — `_cache: dict[str, object]` vervangen door een getypeerde `_CacheEntry`-dataclass
+  (geen `isinstance`-check/`# type: ignore` meer nodig).
+- ✅ opgelost — `json`/`logging` zijn nu module-niveau imports in `models.py`, met
+  `logger = logging.getLogger(__name__)` als module-constante.
+- **LAAG** — `api/app/features/runtime_config/store.py` r88-90: na elke schrijfactie cache wissen + nieuwe `SELECT *` — bewust niet gefixt: er is precies één instelling vandaag, dus de round-trip kost niets meetbaars; pas oppakken zodra er meerdere instellingen zijn en dit patroon zich herhaalt.
 - **LAAG** — `api/app/features/runtime_config/store.py` r78-87: per-sleutel upsert in loop — nu 1 query, bij méér instellingen N sequentiële queries binnen één transactie.
 - **LAAG** — `frontend/app/beheer/instellingen/page.tsx` r18-29: `useEffect` zonder `AbortController` — geen lek in React 18, maar netwerk-request loopt onnodig door na unmount.
 - **LAAG** — `frontend/app/beheer/instellingen/page.tsx`: 197 regels inline styles voor één kaart — kaart-layout en status-badge herhalen patronen die extraction verdienen (zie `SectieHeader` als precedent). ✅ opgelost in fase 3 (Rijkshuisstijl): kaart-wrapper → `.card`, status-tag → `.badge`/`.badge-gepubliceerd`/`.badge-concept`, knop → `.btn`, foutmelding → `.melding melding-fout`.
 ---
 
-## PR #17 — analyse-engine (story 024)
+## PR #17 — analyse-engine (story 024) ✅ vervallen — module verwijderd in PR #36
 
-- **Act3b schema-validatie is een no-op**: `schema_check_act3b` in `api/app/engine/steps.py` retourneert altijd een lege lijst (`lambda d: []`). Invullen zodra een formeel JAS-schema voor afleidingsregels beschikbaar is.
-- **`httpx.AsyncClient` per aanroep** — ✅ opgelost in PR #71: `_jsonrpc_call` in
-  `api/app/shared/wettenbank.py` (de functie heette destijds nog `haal_artikel_op`, sindsdien
-  hernoemd) gebruikt nu een proces-brede, lazily aangemaakte client (`_get_client()`, zelfde
-  patroon als `db.py::get_engine` en `annotatie/graphdb.py`) i.p.v. een nieuwe per aanvraag.
-- **Human-in-the-loop poll zonder backoff**: `orchestrator.py` pollt elke 2 seconden met een vaste `asyncio.sleep(2)` voor maximaal 24 uur. Bij een toekomstige PostgreSQL-backend overwegen om een LISTEN/NOTIFY-notificatiemechanisme te gebruiken i.p.v. polling, voor lagere DB-load en kortere latentie.
-
----
-
-## PR #18 — API-tokens (story 018)
-
-- **`ApiTokenAanmakenVerzoek.label` mist Pydantic `max_length`-validator**: het story-schema specificeert max 128 tekens. De store trunceert op 128 (`[:128]`), maar de Pydantic-request-body heeft geen `max_length=128`. Een client die 1000 tekens instuurt krijgt nu een 201 met een stilzwijgend afgeknipte waarde; correctere API-opmaak zou een 422 geven. Functioneel niet-blocking, verfijning voor een volgende ronde (`api/app/features/api_tokens/models.py`).
+`api/app/engine/` (orchestrator, prompts, steps, retry, validation) en de rapport-/SSE-flow
+zijn volledig opgeruimd in PR #36 ("opruimen story 013 + 024", migratie 0012) — de JAS-
+orkestratie (act2/act3, review-flow, rapport) is legacy; annotatie is de enige overgebleven
+analyse-stap (zie `docs/project/migratie-wetsanalyse.md`). De twee resterende bevindingen hier
+(act3b-schema-validatie, human-in-the-loop-poll-backoff) vervielen daarmee. De
+`httpx.AsyncClient`-bevinding is apart opgelost in PR #71 (zat inmiddels in
+`shared/wettenbank.py::_jsonrpc_call`, niet meer in `engine/`).
 
 ---
 
-## PR #19 — rapport bekijken (story 013)
+## PR #18 — API-tokens (story 018) ✅ opgelost
 
-- **Story-doc URL drift**: `docs/stories/013-rapport-bekijken.md` vermeldt de teruglink als `/analyse/{id}`, maar de implementatie gebruikt correct `/projecten/{id}`. Story-doc bijwerken zodat de URL klopt.
+`ApiTokenAanmakenVerzoek.label` heeft nu `Field(default="", max_length=128)` — een te lange
+`label` geeft 422 i.p.v. een stilzwijgend afgeknipte 201.
 
 ---
 
-## Frontend — berichten fase 2
+## PR #19 — rapport bekijken (story 013) ✅ vervallen — feature verwijderd in PR #36
 
-- **BFF-rolautorisatie**: `app/api/admin/berichten/` controleert `session.user.rol` niet — momenteel alleen beheerders actief, maar de BFF hoort rolautorisatie te dragen zodra analisten bestaan.
+De hele rapport-bekijken-feature (endpoint, story-doc, frontend-pagina) is opgeruimd in PR #36
+— de story-doc-URL-drift die hier stond is daarmee niet meer van toepassing (het bestand
+bestaat niet meer).
+
+---
+
+## Frontend — berichten fase 2 (rolautorisatie — zie ook de bredere versie hieronder)
+
 - **E2E-tests voor `/beheer` en `/berichten`**: ontbreken nog (`frontend-bouwen` regel 6). Aanmaken vóór de feature in productie gaat.
+
+---
+
+## BFF-rolautorisatie ontbreekt project-breed (PR #5 t/m nu)
+
+Drie eerdere, losse vermeldingen van dit punt (PR #5 story 006, Frontend-berichten-fase-2,
+Fase-3-sidebar) samengevoegd — het is één en hetzelfde, project-brede gat, niet drie losse.
+
+`huidige_beheerder` in `api/app/shared/auth.py` verifieert alleen het machine-`API_TOKEN` +
+een `X-User-Id`-header; het retourneert altijd `rol="beheerder"`, ongeacht wie er werkelijk
+achter die gebruikersnaam zit (zie de docstring: "sterk vereenvoudigde stand-in"). De
+architectuur (story 006) legt rolautorisatie bewust bij de BFF — maar geen enkele
+`app/api/admin/*`-route (berichten, gebruikers, wetten, instellingen, api-tokens,
+llm-profielen, llm-calls) controleert `session.user.rol` vóór het doorproxyen. Ook
+`AppSidebar.tsx` toont de "Beheer"-link aan elke ingelogde gebruiker, ongeacht rol.
+
+Praktisch risico vandaag: nihil (er bestaan nog geen `analist`-gebruikers in het systeem). Zodra
+dat verandert is dit een echt gat: een analist met een geldige sessie kan via de BFF elk
+`/api/admin/*`-endpoint bereiken. Dit is geen kleine losse fix — het raakt alle admin-BFF-routes
+tegelijk (een gedeelde `requireBeheerder()`-helper naast het bestaande `requireSession()` ligt
+het meest voor de hand) en verdient een bewuste keuze wanneer dat gebouwd wordt, niet een
+stilzwijgende sweep-fix.
 
 ---
 
 ## Gevonden tijdens story 024 (bwb-import setup)
 
-- **`api/app/shared/crypto.py:29` schendt werkwijze-ADR-0006**: `FERNET_KEY` wordt rechtstreeks uit een env-var gelezen (`os.environ.get("FERNET_KEY", "")`), niet via het `*_FILE`-pad-patroon dat de ADR voorschrijft. `tools/bwb-import`'s nieuwe `Settings` volgt de ADR wél voor `GRAPHDB_PASSWORD`; `crypto.py` retrofitten is een aparte, kleine story.
+- ✅ opgelost — `crypto.py` leest nu `FERNET_KEY_FILE` (werkwijze-ADR-0006), niet meer een
+  platte `FERNET_KEY`-env-var. Geraakt: `crypto.py` zelf, foutmeldingen in
+  `identiteit_toegang/router.py`+`store.py` en `llm_profielen/store.py`, story 017's doc, de
+  test-fixtures in `test_2fa.py`/`test_llm_profielen.py` (schrijven nu een tmp-bestand i.p.v.
+  de key als platte env-var-waarde te zetten), en `frontend-ci.yml`'s `test-frontend-e2e`-job
+  (schrijft de CI-testkey naar `/tmp/fernet_key` vóórdat de API-server start).
 
 ---
 
@@ -295,11 +342,7 @@ een productie-deploy (fase 5) vereist een betaalde licentie.
 
 ---
 
-## Gevonden tijdens story 034 (bwb-import circulaires)
+## Gevonden tijdens story 034 (bwb-import circulaires) ✅ opgelost
 
-- **`tools/bwb-import/CLAUDE.md` is op twee punten stale**: noemt "de nog te bouwen
-  GraphDB-writer" (§Architectuurbeslissingen, DI-punt) en "Geen `integration`-marker/echte-
-  GraphDB-tests in deze story — komt zodra de GraphDB-writer gebouwd wordt" (§Tests) — beide
-  achterhaald sinds story 027 (de GraphDB-writer bestaat, en er is wel degelijk een
-  `integration`-marked test tegen de lokale stack). Pre-existing, niet door story 034 veroorzaakt;
-  bijwerken bij de eerstvolgende aanraking van dat bestand.
+`tools/bwb-import/CLAUDE.md`'s twee stale verwijzingen naar "de nog te bouwen GraphDB-writer"
+zijn bijgewerkt.

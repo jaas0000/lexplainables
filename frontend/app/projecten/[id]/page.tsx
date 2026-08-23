@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { components } from "@/generated/types";
@@ -13,18 +13,13 @@ export default function AnalyseDetailPagina({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
-  const [id, setId] = useState<string | null>(null);
   const [analyse, setAnalyse] = useState<AnalyseDetail | null>(null);
   const [foutBericht, setFoutBericht] = useState<string | null>(null);
   const laden = analyse === null && foutBericht === null;
 
   useEffect(() => {
-    params.then(({ id: resolvedId }) => setId(resolvedId));
-  }, [params]);
-
-  useEffect(() => {
-    if (!id) return;
     let cancelled = false;
 
     async function laden_() {
@@ -59,7 +54,6 @@ export default function AnalyseDetailPagina({
   }, [id, router]);
 
   async function verwijder() {
-    if (!id) return;
     const res = await fetch(`/api/projecten/${id}`, { method: "DELETE" });
     if (res.ok || res.status === 204) {
       router.push("/projecten");

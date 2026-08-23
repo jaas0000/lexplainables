@@ -12,7 +12,7 @@ achtergrond staan in dit repo zelf onder [`docs/project/werkwijze/`](docs/projec
 - `api/app/features/identiteit_toegang/` — gebruikers-tabel, bcrypt, auth/verify, setup (eerste beheerder), CRUD beheerder, account/wachtwoord-wijzigen (PR #12, #13, #14)
 - `api/app/features/wetcatalogus/` — database-backed (tabel `wet_catalogus`, migratie 0007), admin CRUD + resolve via Wettenbank-MCP (PR #9 story 010, PR #15 story 020)
 - `api/app/features/llm_profielen/` — CRUD + Fernet-encryptie van API-sleutels (PR #10, story 011)
-- `api/app/features/projecten/` — analyses aanmaken/volgen, SSE voortgang, echte LLM-orkestratie act2/act3 (PR #11, #17, stories 012/024); rapport-endpoint + Markdown-download (PR #19, story 013); LLM-calls log (PR #20, story 021)
+- `api/app/features/projecten/` — werkgebied-metadata (naam + bronnen + omschrijving), CRUD-endpoints (PR #11, story 012); LLM-calls log (PR #20, story 021). De ooit gebouwde JAS-orkestratie (act2/act3, review-flow, rapport, SSE — PR #17/#19, stories 013/024) is opgeruimd (PR #36, migratie 0012) — annotatie (`annotatie/`) is de enige overgebleven analyse-stap.
 - `api/app/features/llm_calls/` — capture-tabel + store, endpoint blijft in projecten
 - `api/app/features/annotatie/` — documenten, elementen, beslissingen, auditlog (PR #21, story 022)
 - `api/app/features/api_tokens/` — aanmaken, intrekken, DB-verificatielaag (PR #18, story 018)
@@ -31,8 +31,7 @@ achtergrond staan in dit repo zelf onder [`docs/project/werkwijze/`](docs/projec
 - `/beheer/instellingen` — LLM-invoer vastleggen toggle (PR #16)
 - `/berichten` — berichten voor analisten
 - `/wetcatalogus` — wetcatalogus lezen
-- `/projecten`, `/projecten/nieuw` — analyses aanmaken + SSE volgen (PR #11)
-- `/projecten/{id}/rapport` — rapport bekijken + Markdown-download (PR #19, story 013)
+- `/projecten`, `/projecten/nieuw`, `/projecten/{id}` — werkgebieden aanmaken/bekijken (PR #11, story 012; SSE/rapport-flow opgeruimd in PR #36)
 - `/beheer/llm-calls` — LLM-calls log per analyse (PR #20, story 021)
 - `/beheer/api-tokens` — API-tokens aanmaken + intrekken (PR #18, story 018)
 - `/werkplek/`, `/werkplek/{slug}` — annotatie-werkplek: documentenlijst + beslissingen per element, incl. echte wetsartikeltekst via GraphDB-SPARQL (PR #22 story 023, PR #68 story 037)

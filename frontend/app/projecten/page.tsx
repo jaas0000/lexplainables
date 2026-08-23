@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { components } from "@/generated/types";
 import { StatusDot } from "@/components/projecten/StatusPill";
 import { VerwijderKnop } from "@/components/projecten/VerwijderKnop";
+import { formatDatum } from "@/lib/datum";
 
 type AnalyseOverzicht = components["schemas"]["AnalyseOverzicht"];
 
@@ -16,15 +17,6 @@ function bronnenSamenvatting(bronnen: AnalyseOverzicht["bronnen"]): string {
   const lidSuffix = eerste.lid ? ` lid ${eerste.lid}` : "";
   const rest = bronnen.length > 1 ? ` +${bronnen.length - 1}` : "";
   return `${eerste.bwb_id} art. ${eerste.artikel}${lidSuffix}${rest}`;
-}
-
-function formatDatum(iso: string): string {
-  return new Date(iso).toLocaleString("nl-NL", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 // ─── Hoofd-component ──────────────────────────────────────────────────────────

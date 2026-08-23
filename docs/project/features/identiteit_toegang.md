@@ -86,6 +86,7 @@ gebruikersbeheer (aanmaken/bewerken/verwijderen door beheerder), inloggen (verif
 - Patch onbekende gebruiker geeft 404.
 - Patch laatste beheerder deactiveren geeft 409.
 - Patch ongeldige rol geeft 422.
+- Patch lege body geeft 422.
 - Reset wachtwoord endpoint.
 - Reset onbekende gebruiker geeft 404.
 - Delete verwijdert gebruiker.

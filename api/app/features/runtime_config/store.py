@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import time
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -30,8 +31,15 @@ from .models import (
 
 _TTL_S = 10.0
 
-# Module-niveau TTL-cache: sleutel → {"data": AppInstellingen, "ts": float}
-_cache: dict[str, object] = {}
+
+@dataclass
+class _CacheEntry:
+    data: AppInstellingen
+    verloopt_op: float
+
+
+# Module-niveau TTL-cache: sleutel → entry.
+_cache: dict[str, _CacheEntry] = {}
 
 
 def _cache_leeg() -> None:
@@ -45,11 +53,9 @@ class RuntimeConfigStore:
 
     async def lees_alle(self) -> AppInstellingen:
         """Geef alle instellingen terug; gebruikt TTL-cache."""
-        treffer = _cache.get("alle")
-        if treffer is not None:
-            entry = treffer  # type: ignore[assignment]
-            if isinstance(entry, dict) and entry["ts"] > time.monotonic():
-                return entry["data"]  # type: ignore[return-value]
+        entry = _cache.get("alle")
+        if entry is not None and entry.verloopt_op > time.monotonic():
+            return entry.data
 
         stmt = select(app_instellingen)
         async with self._engine.connect() as conn:
@@ -63,7 +69,7 @@ class RuntimeConfigStore:
                 standaard=False,
             ),
         )
-        _cache["alle"] = {"data": instelling, "ts": time.monotonic() + _TTL_S}
+        _cache["alle"] = _CacheEntry(data=instelling, verloopt_op=time.monotonic() + _TTL_S)
         return instelling
 
     async def schrijf(self, patch: AppInstellingenPatch) -> AppInstellingen:

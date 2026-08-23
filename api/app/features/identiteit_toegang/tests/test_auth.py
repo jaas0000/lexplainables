@@ -197,8 +197,9 @@ def test_me_met_geldig_token_geeft_profiel(client):
             "X-User-Id": "beheerder",
         },
     )
-    # Gebruiker bestaat niet in DB (TestClient gebruikt de echte app-db);
-    # store geeft 401. Test verifieert dat de auth-grens correct doorlaat.
+    # Gebruiker bestaat niet in de schone test-DB (ADR-0003, geen seed hier); store geeft 401.
+    # Test verifieert dat de auth-grens correct doorlaat. De 200-tak is gedekt op storeniveau
+    # via `test_haal_gebruiker_profiel`.
     assert response.status_code in (200, 401)
 
 
