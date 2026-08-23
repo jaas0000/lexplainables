@@ -15,11 +15,13 @@ test("gebruiker opent feedbackformulier, vult tekst in en ziet succesbericht", a
 }) => {
   await page.goto("/");
 
-  // Feedbackknop moet zichtbaar zijn rechtsonder.
+  // "Feedback geven" zit sinds story 043 in het uitklapmenu (net als de referentie-app), niet meer
+  // als losse zwevende knop.
+  await page.getByRole("button", { name: "Gebruikersmenu" }).click();
   const knop = page.getByRole("button", { name: "Feedback geven" });
   await expect(knop).toBeVisible();
 
-  // Paneel opent na klikken.
+  // Venster opent na klikken.
   await knop.click();
   await expect(page.getByText("Geef feedback")).toBeVisible();
 
@@ -42,6 +44,7 @@ test("beheerder verwijdert al verwijderd feedbackitem en ziet zichtbare foutmeld
   const tekst = `E2E dubbel-verwijder ${Date.now()}`;
 
   await page.goto("/");
+  await page.getByRole("button", { name: "Gebruikersmenu" }).click();
   await page.getByRole("button", { name: "Feedback geven" }).click();
   await page.getByLabel("Uw opmerking").fill(tekst);
   await page.getByRole("button", { name: "Verzenden" }).click();

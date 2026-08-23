@@ -2,6 +2,8 @@
 
 ## Niet uitgebracht
 
+- "Beheer" en "Feedback geven" zijn verhuisd naar het gebruikersmenu onderin de sidebar; feedback
+  geven opent nu als venster in plaats van als zwevende knop rechtsonder. (PR #80)
 - Account en Beheer zijn nu te bereiken via één instellingenvenster met tabs in plaats van acht
   losse pagina's — vanuit de zijbalk opent het als dialoogvenster over de huidige pagina heen.
   (PR #79)

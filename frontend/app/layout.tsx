@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { AppShell } from "@/components/AppShell";
-import { FeedbackKnop } from "@/components/feedback/FeedbackKnop";
 import { sans, mono } from "./fonts";
 import "./globals.css";
 
@@ -46,7 +45,6 @@ export default async function RootLayout({
       <body className="min-h-screen">
         <SessionProvider session={session}>
           <AppShell>{children}</AppShell>
-          {session && <FeedbackKnop />}
           {session && modal}
         </SessionProvider>
       </body>

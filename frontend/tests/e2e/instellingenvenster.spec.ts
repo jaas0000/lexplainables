@@ -1,10 +1,18 @@
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import {
+  test,
+  expect,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 import { apiPost, login } from "./_helpers";
 
 // Werkwijze-story 042 — Account/Beheer → instellingenvenster-patroon. Dekt wat de bestaande
 // per-paneel-e2e's (gebruikersbeheer.spec.ts, llm-profielen.spec.ts, ...) niet raken: de
 // dialoog-versus-volle-pagina-tweedeling zelf, tabwissel-historiegedrag en de rol-gate op het
 // nieuwe pad.
+//
+// Story 043 verplaatste "Beheer" van een losse navlink naar het uitklapmenu (net als de
+// referentie-app) — de sidebar-klik-tests openen dat menu daarom eerst.
 
 async function maakAnalist(request: APIRequestContext): Promise<string> {
   const naam = `e2e-analist-042-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -16,12 +24,17 @@ async function maakAnalist(request: APIRequestContext): Promise<string> {
   return naam;
 }
 
+async function klikBeheerInMenu(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Gebruikersmenu" }).click();
+  await page.getByRole("link", { name: "Beheer" }).click();
+}
+
 test("sidebar-klik op Beheer opent het instellingenvenster als dialoog", async ({
   page,
   context,
 }) => {
   await login(page, context);
-  await page.getByRole("link", { name: "Beheer" }).click();
+  await klikBeheerInMenu(page);
 
   const dialoog = page.getByRole("dialog", { name: "Instellingen" });
   await expect(dialoog).toBeVisible();
@@ -35,7 +48,7 @@ test("tabwissel in de dialoog toont het juiste paneel en gebruikt replace (geen 
   context,
 }) => {
   await login(page, context);
-  await page.getByRole("link", { name: "Beheer" }).click();
+  await klikBeheerInMenu(page);
   await expect(
     page.getByRole("dialog", { name: "Instellingen" }),
   ).toBeVisible();
@@ -54,7 +67,7 @@ test("tabwissel in de dialoog toont het juiste paneel en gebruikt replace (geen 
 
 test("Escape sluit de dialoog", async ({ page, context }) => {
   await login(page, context);
-  await page.getByRole("link", { name: "Beheer" }).click();
+  await klikBeheerInMenu(page);
   await expect(
     page.getByRole("dialog", { name: "Instellingen" }),
   ).toBeVisible();

@@ -4,15 +4,23 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #80 — sidebar-uitklapmenu-parity (story 043)
+
+- **`InstellingenDialog` en `FeedbackDialoog` dupliceren nu dezelfde kop-markup** (titel +
+  kruisje-knop, identieke classNames). Bij een derde `Dialog`-consument is dat het moment om een
+  gedeelde `DialogHeader`-subcomponent te trekken.
+
+---
+
 ## PR #79 — instellingenvenster (story 042)
 
 - **`ApiTokensPanel.tsx`'s `NieuwTokenModal` is een ad-hoc `role="dialog"`-constructie**, 1:1
   verplaatst uit de oude `/beheer/api-tokens`-pagina (geen regressie van deze PR). Zou nu kunnen
-  hergebruiken van de nieuwe gedeelde `components/ui/Dialog.tsx` die deze PR toevoegt.
-- **Overige `Dialog`-varianten (`side`/`kolom`/`drawer`/`compact`) en `AppSidebar`'s mobiele
-  drawer migreren naar `Dialog`** — bewust buiten scope gehouden (zie de story
-  §lexplainables-specifieke afwijkingen punt 1), wacht op een echte tweede consument
-  (werkplek-chat/graph-qa-orkestrator).
+  hergebruiken van de gedeelde `components/ui/Dialog.tsx`.
+- **Overige `Dialog`-varianten (`side`/`kolom`/`drawer`) en `AppSidebar`'s mobiele drawer
+  migreren naar `Dialog`** — bewust buiten scope gehouden (zie de story §lexplainables-specifieke
+  afwijkingen punt 1), wacht op een echte tweede consument (werkplek-chat/graph-qa-orkestrator).
+  `compact` is inmiddels toegevoegd in PR #80 (story 043, `FeedbackDialoog`).
 
 ---
 
