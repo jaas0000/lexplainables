@@ -213,7 +213,7 @@ class SqlAlchemyLlmProfielenStore:
 
 def _encrypt_optioneel(sleutel: str | None) -> str | None:
     """Versleutel de API-sleutel als die aanwezig is; geeft None terug als `sleutel` leeg is.
-    Gooit `CryptoFout` als FERNET_KEY ontbreekt maar wel een sleutel meegegeven wordt."""
+    Gooit `CryptoFout` als FERNET_KEY_FILE ontbreekt maar wel een sleutel meegegeven wordt."""
     if not sleutel:
         return None
     return encrypt(sleutel)

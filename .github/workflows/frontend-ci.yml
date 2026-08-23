@@ -110,9 +110,10 @@ jobs:
       # als seed-beheerder — met de default (10/60s) raakt dat het plafond binnen de eerste
       # workers. In productie blijft de rem aan (default in de code).
       LOGIN_RATE_LIMIT_MAX: "0"
-      # Fernet-key voor test-versleuteling (LLM-profielen, TOTP-secrets). Willekeurige
-      # base64-32-byte-key — geldig maar niet bruikbaar buiten deze CI-run.
-      FERNET_KEY: "sPQtLXlYFB2Zn9lVJv1wTIY_MYh_gBpvMh_p7hUpiL8="
+      # Fernet-key voor test-versleuteling (LLM-profielen, TOTP-secrets) — via *_FILE
+      # (werkwijze-ADR-0006), het bestand wordt weggeschreven in de opzet-stap hieronder.
+      # Willekeurige base64-32-byte-key — geldig maar niet bruikbaar buiten deze CI-run.
+      FERNET_KEY_FILE: "/tmp/fernet_key"
       # Korte TTL voor de Auth.js live-rol-check (fase 2b.3): de e2e-test verwacht dat de
       # sessie binnen ~200ms na deactivering ongeldig wordt. In productie: default 300000
       # (5 minuten).
@@ -128,6 +129,7 @@ jobs:
 
       - name: API en frontend parallel opzetten en starten
         run: |
+          echo -n "sPQtLXlYFB2Zn9lVJv1wTIY_MYh_gBpvMh_p7hUpiL8=" > /tmp/fernet_key
           (
             cd api
             uv sync
