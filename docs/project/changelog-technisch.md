@@ -1,5 +1,14 @@
 # Technische changelog
 
+- graph-qa LLM-adapter (PR #76, story 039): eerste echte `LLMPort`-implementatie voor
+  `tools/graph-qa` — `AnthropicLLM` via `anthropic.AnthropicFoundry` (Anthropic-modellen op Azure
+  AI Foundry), met prompt-caching (cache-punt op het stabiele systeemblok-deel) en terugval als
+  de provider `cache_control` weigert. Poort van de `wetsanalyse-ai`-referentie-adapter, met één
+  bewuste afwijking: de dedicated `AnthropicFoundry`-client i.p.v. de oudere
+  `Anthropic(base_url=...)`-vorm. Correctie op story 029: `Settings.azure_foundry_base_url` (een
+  volledige URL, klopte niet met de SDK) hernoemd naar `azure_foundry_resource`. Live
+  geverifieerd tegen de echte Foundry-resource. Nog geen aangesloten API/UI — interne
+  infrastructuur voor latere graph-qa-stories.
 - BFF-rolautorisatie voor admin-routes (PR #75, story 038): geen enkele `/api/admin/*`-BFF-route
   (en `/api/projecten/[id]/llm-calls`) controleerde `session.user.rol` vóór het doorproxyen —
   project-breed gat sinds story 006, bewust opengelaten tijdens de vervolgpunten-sweep in PR #73.
