@@ -1,5 +1,14 @@
 # Technische changelog
 
+- uitklapmenu-parity met wetsanalyse-ai (PR #80, story 043): sidebar-uitklapmenu 1:1 met de
+  referentie — "Account & instellingen", "Beheer" (verhuisd uit de hoofdnavigatie, alleen
+  beheerder), "Feedback geven" (nieuw menu-item), "Uitloggen"; trigger-knop toont nu ook een
+  rol-onderschrift. `components/feedback/FeedbackKnop.tsx` (losse zwevende knop) vervalt ten
+  gunste van `components/feedback/FeedbackDialoog.tsx` (zelfde formulierlogica, nieuwe schil via
+  `components/ui/Dialog.tsx`, dat een `compact`-variant kreeg — de eerste echte tweede consument
+  na story 042, die bewust alleen `center` bouwde). De hoofdnavigatie blijft projecten/
+  werkplek-gericht: de referentie se chatgeschiedenis-sidebar bestaat hier nog niet (geen
+  chat-backend/graph-qa-orkestrator), scope daarop afgestemd met de gebruiker.
 - instellingenvenster (PR #79, story 042): Account + de 8 beheer-secties (incl. een negende,
   `berichten`-CRUD, ontdekt tijdens de bouw op het oude `app/beheer/page.tsx`-dashboard) verplaatst
   naar één gedeeld instellingenvenster — `lib/instellingen.ts` (tabtabel + padhelpers),
