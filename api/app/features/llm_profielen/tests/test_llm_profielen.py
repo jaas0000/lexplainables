@@ -9,6 +9,19 @@ from __future__ import annotations
 # Een geldige Fernet-key voor tests die versleuteling raken.
 TEST_FERNET_KEY = "pHJH9BfOH6gWMJGBpD2bBRHpJE9hCVs0iiqHWH8Xm0k="
 
+
+def _stel_fernet_key_in(monkeypatch, tmp_path) -> None:
+    """Schrijft `TEST_FERNET_KEY` naar een tmp-bestand en wijst `FERNET_KEY_FILE` ernaar
+    (werkwijze-ADR-0006 — geen platte env-var-waarde). Reset ook de `lru_cache` in `crypto.py`
+    zodat de nieuwe waarde wordt opgepikt."""
+    from app.shared import crypto
+
+    pad = tmp_path / "fernet_key"
+    pad.write_text(TEST_FERNET_KEY)
+    monkeypatch.setenv("FERNET_KEY_FILE", str(pad))
+    crypto._fernet.cache_clear()
+
+
 BASIS = {
     "naam": "test-profiel",
     "provider": "openai",
@@ -62,16 +75,14 @@ def test_aanmaken_zonder_sleutel_geeft_sleutel_ingesteld_false(client):
     assert p["sleutel_ingesteld"] is False
 
 
-def test_aanmaken_met_sleutel_geeft_sleutel_ingesteld_true(monkeypatch, client):
-    monkeypatch.setenv("FERNET_KEY", TEST_FERNET_KEY)
-    # Reset de lru_cache zodat de nieuwe envvar wordt opgepikt.
-    from app.shared import crypto
-
-    crypto._fernet.cache_clear()
+def test_aanmaken_met_sleutel_geeft_sleutel_ingesteld_true(monkeypatch, client, tmp_path):
+    _stel_fernet_key_in(monkeypatch, tmp_path)
 
     p = _maak(client, api_sleutel="geheime-api-sleutel")
     assert p["sleutel_ingesteld"] is True
     assert "api_sleutel" not in p  # plaintext verlaat de API nooit
+
+    from app.shared import crypto
 
     crypto._fernet.cache_clear()
 
@@ -104,11 +115,8 @@ def test_bijwerken_succesvol(client):
     assert bijgewerkt["temperatuur"] == 0.5
 
 
-def test_bijwerken_lege_sleutel_laat_bestaande_ongewijzigd(monkeypatch, client):
-    monkeypatch.setenv("FERNET_KEY", TEST_FERNET_KEY)
-    from app.shared import crypto
-
-    crypto._fernet.cache_clear()
+def test_bijwerken_lege_sleutel_laat_bestaande_ongewijzigd(monkeypatch, client, tmp_path):
+    _stel_fernet_key_in(monkeypatch, tmp_path)
 
     _maak(client, api_sleutel="originele-sleutel")
     assert client.get("/v1/admin/profielen").json()[0]["sleutel_ingesteld"] is True
@@ -126,6 +134,8 @@ def test_bijwerken_lege_sleutel_laat_bestaande_ongewijzigd(monkeypatch, client):
     )
     assert resp.status_code == 200
     assert resp.json()["sleutel_ingesteld"] is True
+
+    from app.shared import crypto
 
     crypto._fernet.cache_clear()
 

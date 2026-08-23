@@ -37,9 +37,11 @@ TEST_FERNET_KEY = "pHJH9BfOH6gWMJGBpD2bBRHpJE9hCVs0iiqHWH8Xm0k="
 
 
 @pytest.fixture(autouse=True)
-def stel_omgeving_in(monkeypatch):
+def stel_omgeving_in(monkeypatch, tmp_path):
     monkeypatch.setattr("app.shared.auth.API_TOKEN", TEST_API_TOKEN)
-    monkeypatch.setenv("FERNET_KEY", TEST_FERNET_KEY)
+    pad = tmp_path / "fernet_key"
+    pad.write_text(TEST_FERNET_KEY)
+    monkeypatch.setenv("FERNET_KEY_FILE", str(pad))
     crypto._fernet.cache_clear()
     yield
     crypto._fernet.cache_clear()
@@ -101,7 +103,7 @@ async def test_begin_totp_koppeling_maakt_secret_en_uri(db_engine):
 
 async def test_begin_zonder_fernet_key_gooit_cryptofout(db_engine, monkeypatch):
     await maak_gebruiker(db_engine, "ana", "wachtwoord123", "analist")
-    monkeypatch.delenv("FERNET_KEY", raising=False)
+    monkeypatch.delenv("FERNET_KEY_FILE", raising=False)
     crypto._fernet.cache_clear()
     with pytest.raises(crypto.CryptoFout):
         await begin_totp_koppeling(db_engine, "ana")
@@ -206,7 +208,7 @@ def test_begin_via_http_zonder_sessie_geeft_401(client):
 
 
 def test_begin_zonder_fernet_key_geeft_400(client, monkeypatch):
-    monkeypatch.delenv("FERNET_KEY", raising=False)
+    monkeypatch.delenv("FERNET_KEY_FILE", raising=False)
     crypto._fernet.cache_clear()
     resp = client.post(
         "/v1/auth/2fa/begin",

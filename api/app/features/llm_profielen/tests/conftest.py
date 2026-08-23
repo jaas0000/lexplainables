@@ -1,7 +1,8 @@
 """Testfixtures voor het llm_profielen-domein.
 
 Elke test krijgt een schoon schema op de gedeelde Postgres-testserver (ADR-0003).
-`FERNET_KEY` wordt via `monkeypatch.setenv` gezet per test die encryptie nodig heeft.
+`FERNET_KEY_FILE` wordt via `monkeypatch.setenv` (wijzend naar een `tmp_path`-bestand) gezet
+per test die encryptie nodig heeft.
 """
 
 from __future__ import annotations

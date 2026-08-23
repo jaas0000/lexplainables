@@ -176,7 +176,7 @@ async def begin_totp_koppeling(engine: AsyncEngine, gebruikersnaam: str) -> str:
             raise GebruikerNietActief(gebruikersnaam)
 
         secret = pyotp.random_base32()
-        # `crypto.encrypt` gooit CryptoFout als FERNET_KEY ontbreekt — de router mapt dat
+        # `crypto.encrypt` gooit CryptoFout als FERNET_KEY_FILE ontbreekt — de router mapt dat
         # naar HTTP 400 zoals de story vereist.
         gebruiker.totp_secret_enc = crypto.encrypt(secret)
         sess.add(gebruiker)
@@ -346,6 +346,17 @@ async def lijst_gebruikers(engine: AsyncEngine) -> list[GebruikerRead]:
         return [_naar_read(g) for g in result.scalars().all()]
 
 
+async def _is_laatste_actieve_beheerder(sess: AsyncSession, g: Gebruiker) -> bool:
+    """Zou `g` (op dit moment een actieve beheerder) de laatste actieve beheerder zijn?"""
+    actieve_beheerders = await sess.execute(
+        select(Gebruiker).where(
+            Gebruiker.rol == "beheerder",
+            Gebruiker.actief == True,  # noqa: E712
+        )
+    )
+    return len(actieve_beheerders.scalars().all()) <= 1
+
+
 async def wijzig_gebruiker(
     engine: AsyncEngine,
     gebruikersnaam: str,
@@ -365,15 +376,13 @@ async def wijzig_gebruiker(
         # Controleer de invariant als de actie de gebruiker zou deactiveren of degraderen.
         zou_deactiveren = actief is False and g.actief
         zou_degraderen = rol == "analist" and g.rol == "beheerder"
-        if (zou_deactiveren or zou_degraderen) and g.actief and g.rol == "beheerder":
-            actieve_beheerders = await sess.execute(
-                select(Gebruiker).where(
-                    Gebruiker.rol == "beheerder",
-                    Gebruiker.actief == True,  # noqa: E712
-                )
-            )
-            if len(actieve_beheerders.scalars().all()) <= 1:
-                raise LaatsteBeheerder(gebruikersnaam)
+        if (
+            (zou_deactiveren or zou_degraderen)
+            and g.actief
+            and g.rol == "beheerder"
+            and await _is_laatste_actieve_beheerder(sess, g)
+        ):
+            raise LaatsteBeheerder(gebruikersnaam)
 
         if rol is not None:
             g.rol = rol
@@ -402,15 +411,8 @@ async def verwijder_gebruiker(
 
         # Eigen account verwijderen is toegestaan zolang de invariant-check hieronder doorkomt
         # (ingelogd_als wordt bewaard voor toekomstige uitbreiding, b.v. audit-log).
-        if g.actief and g.rol == "beheerder":
-            actieve_beheerders = await sess.execute(
-                select(Gebruiker).where(
-                    Gebruiker.rol == "beheerder",
-                    Gebruiker.actief == True,  # noqa: E712
-                )
-            )
-            if len(actieve_beheerders.scalars().all()) <= 1:
-                raise LaatsteBeheerder(gebruikersnaam)
+        if g.actief and g.rol == "beheerder" and await _is_laatste_actieve_beheerder(sess, g):
+            raise LaatsteBeheerder(gebruikersnaam)
 
         await sess.delete(g)
         await sess.commit()
