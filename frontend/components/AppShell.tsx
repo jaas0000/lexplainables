@@ -25,6 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AppSidebar
         pathname={pathname}
         naam={session.user.name ?? ""}
+        rol={session.user.rol ?? ""}
         drawerOpen={drawerOpen}
         onDrawerSluit={() => setDrawerOpen(false)}
       />

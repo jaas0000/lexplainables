@@ -42,6 +42,11 @@ export const authConfig = {
       if (isPublic(pathname)) return true;
       if (!auth?.user) return false;
 
+      // Rol-gate: /beheer is alleen voor de beheerder-rol (werkwijze-story 038).
+      if (pathname.startsWith("/beheer") && auth.user.rol !== "beheerder") {
+        return Response.redirect(new URL("/", request.url));
+      }
+
       // Disclaimer-gate: stuur ingelogde gebruikers zonder cookie naar /disclaimer
       if (!isDisclaimerExempt(pathname)) {
         const disclaimerCookie = request.cookies.get("disclaimer_geaccepteerd");

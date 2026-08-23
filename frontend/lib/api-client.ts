@@ -1,4 +1,5 @@
 import "server-only";
+import { requireBeheerder } from "@/lib/bff-auth";
 
 export const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8000";
 export const API_TOKEN = process.env.API_TOKEN ?? "";
@@ -51,6 +52,22 @@ export function apiProxy(
     init.headers as Record<string, string>,
   );
   return proxy(pad, headers, init, forwardHeaders);
+}
+
+/**
+ * Proxy voor `/v1/admin/*`-endpoints (en functioneel-admin routes zoals llm-calls): eist
+ * `rol === "beheerder"` vóór het doorproxyen (werkwijze-story 038: BFF-rolautorisatie —
+ * vóór deze story controleerde geen enkele admin-route de rol, alleen dat er een sessie was).
+ */
+export async function adminProxy(
+  pad: string,
+  init: RequestInit = {},
+  forwardHeaders: string[] = [],
+): Promise<Response> {
+  const gebruikersnaam = await requireBeheerder();
+  if (!gebruikersnaam)
+    return Response.json({ detail: "Onvoldoende rechten." }, { status: 403 });
+  return apiProxy(pad, gebruikersnaam, init, forwardHeaders);
 }
 
 /**
