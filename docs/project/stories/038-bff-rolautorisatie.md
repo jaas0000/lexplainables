@@ -50,13 +50,20 @@ al (`auth.config.ts`'s `session`-callback zet 'm al vanuit het JWT).
 
 ## Aanpak
 
-Nieuwe helper naast het bestaande `requireSession()` in `lib/bff-auth.ts`:
+Nieuwe helper naast het bestaande `requireSession()` in `lib/bff-auth.ts` — onderscheidt
+bewust "geen sessie" (401) van "sessie zonder beheerder-rol" (403), zie Edge cases hieronder
+voor waarom dat onderscheid nodig bleek:
 
 ```ts
-export async function requireBeheerder(): Promise<string | null> {
+export type BeheerderCheck =
+  | { gebruikersnaam: string; fout?: undefined }
+  | { gebruikersnaam?: undefined; fout: 401 | 403 };
+
+export async function requireBeheerder(): Promise<BeheerderCheck> {
   const session = await auth();
-  if (session?.user?.rol !== "beheerder") return null;
-  return session.user.name ?? null;
+  if (!session?.user?.name) return { fout: 401 };
+  if (session.user.rol !== "beheerder") return { fout: 403 };
+  return { gebruikersnaam: session.user.name };
 }
 ```
 
@@ -82,6 +89,15 @@ zelfde patroon als de bestaande disclaimer-/setup-redirects in diezelfde callbac
 - Sessie verloopt/rol wijzigt tussen het laden van de sidebar en een click (bestaande live-rol-
   check ververst dit periodiek, zie `auth.ts`'s `jwt`-callback) — buiten scope van deze story:
   de route-level 403 vangt dit sowieso af bij de eerstvolgende server-aanroep.
+- **Gevonden tijdens verificatie (regressie, gefixt):** `requireBeheerder()` sloeg aanvankelijk
+  "geen geldige sessie" en "wel een sessie, geen beheerder-rol" allebei plat tot 403. Dat brak
+  `auth-live-rol-check.spec.ts`: bij een gedeactiveerd account wordt de sessie server-side
+  (node, live-check) ongeldig, maar de *edge*-middleware (`proxy.ts`, licht `authConfig` zonder
+  live-check) blijft de oude, nog-geldig-ogende cookie zien en laat `/beheer` gewoon door. Vóór
+  deze story kreeg de client dan 401 van `requireSession()`, en `beheerFetch` redirect
+  specifiek op 401 naar `/login` — met een blanket 403 verdween die redirect. Fix:
+  `requireBeheerder()` retourneert nu `{fout: 401}` (geen sessie) vs. `{fout: 403}` (sessie,
+  verkeerde rol) i.p.v. één plat `string | null`.
 
 ## Auth / rollen
 
@@ -101,9 +117,17 @@ Dit ís de story — geen aparte sectie nodig buiten het bovenstaande.
   de sidebar plaatst geeft 'm door, zelfde patroon als `naam` nu al binnenkomt).
 
 **Gebouwd:** ja (PR #75). Geverifieerd: `tsc --noEmit`/`eslint`/`prettier` schoon, `npm run build`
-succeedt. Volledige lokale e2e-regressie gedraaid (55 tests, `--workers=1`) — 52 groen, 3
-faalden ook op ongewijzigde `master` (bevestigd door de wijzigingen te stashen en dezelfde tests
-te herdraaien: `auth-live-rol-check.spec.ts`'s TTL-test en twee `wetcatalogus.spec.ts`-tests,
-beide pre-existing/lokale-omgeving-gebonden, geen regressie van deze story). Nieuwe
-`tests/e2e/rolautorisatie.spec.ts` (3 tests: sidebar verbergt Beheer-link, `/beheer`-redirect,
-403 op een admin-BFF-route) groen.
+succeedt.
+
+CI ving een echte regressie op `auth-live-rol-check.spec.ts` die lokaal aanvankelijk niet als
+zodanig herkend werd: `SESSION_CHECK_TTL_MS` stond lokaal niet standaard op de CI-waarde (100ms),
+waardoor de test lokaal ook al zonder mijn wijzigingen faalde (verkeerd toegeschreven aan
+pre-existing gedrag) — pas met `SESSION_CHECK_TTL_MS=100` lokaal ingesteld bleek het een echte
+regressie: de blanket-403 in `requireBeheerder()` at de 401-gedreven login-redirect van
+`beheerFetch` op (zie Edge cases). Gefixt door 401 en 403 te onderscheiden. Na de fix: volledige
+lokale e2e-suite met `SESSION_CHECK_TTL_MS=100 --workers=1` (55 tests) — 53 groen, 2
+`wetcatalogus.spec.ts`-tests falen ook op ongewijzigde `master` (bevestigd door te stashen en
+dezelfde tests te herdraaien) én slagen wél in CI — lokale-fixture-staat, geen regressie van
+deze story. Nieuwe `tests/e2e/rolautorisatie.spec.ts` (3 tests: sidebar verbergt Beheer-link,
+`/beheer`-redirect, 403 op een admin-BFF-route bij een geldige analist-sessie) groen; de
+401-tak wordt gedekt door het herstelde `auth-live-rol-check.spec.ts`.

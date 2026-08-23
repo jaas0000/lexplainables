@@ -53,3 +53,8 @@ test("analist krijgt 403 op een admin-BFF-route", async ({
   const res = await page.request.get("/api/admin/gebruikers");
   expect(res.status()).toBe(403);
 });
+
+// De "geen geldige sessie meer → 401, niet 403" tak van adminProxy() (nodig zodat de
+// client (`beheerFetch`) naar /login redirect bij een gedeactiveerd account) wordt al
+// gedekt door auth-live-rol-check.spec.ts — geen losse test hier, dat zou de
+// TTL/deactivatie-opzet van die test dupliceren.

@@ -64,10 +64,13 @@ export async function adminProxy(
   init: RequestInit = {},
   forwardHeaders: string[] = [],
 ): Promise<Response> {
-  const gebruikersnaam = await requireBeheerder();
-  if (!gebruikersnaam)
-    return Response.json({ detail: "Onvoldoende rechten." }, { status: 403 });
-  return apiProxy(pad, gebruikersnaam, init, forwardHeaders);
+  const check = await requireBeheerder();
+  if (check.fout) {
+    const detail =
+      check.fout === 401 ? "Niet geautoriseerd." : "Onvoldoende rechten.";
+    return Response.json({ detail }, { status: check.fout });
+  }
+  return apiProxy(pad, check.gebruikersnaam, init, forwardHeaders);
 }
 
 /**
