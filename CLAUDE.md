@@ -23,17 +23,16 @@ achtergrond staan in dit repo zelf onder [`docs/project/werkwijze/`](docs/projec
 **`frontend/` — pagina's:**
 - `/` — startpagina (banner)
 - `/login`, `/setup` — auth-flow
-- `/account` — eigen profiel + wachtwoord wijzigen (PR #12)
-- `/beheer` — overzicht met navigatie naar alle beheer-secties
-- `/beheer/llm-profielen` — LLM-profielen CRUD (PR #10)
-- `/beheer/gebruikers` — gebruikersbeheer CRUD (PR #14)
-- `/beheer/wetten` — wetcatalogus admin CRUD + resolve (PR #15)
-- `/beheer/instellingen` — LLM-invoer vastleggen toggle (PR #16)
+- `/instellingen/[[...tab]]` — instellingenvenster: Account + 8 beheer-secties (modelprofielen,
+  gebruikers, wetten, instellingen, llm-calls, api-tokens, feedback, berichten) als tabs van één
+  gedeeld venster, bereikbaar als volle pagina of als dialoog over de huidige pagina heen via de
+  intercepting route `app/@modal/(.)instellingen/…` (PR #79, story 042; poort van
+  `wetsanalyse-ai`'s `Dialog`/`Tabs`-patroon). `/account` en `/beheer/*` blijven bestaan als
+  redirects naar het bijbehorende tabpad (PR #12/#10/#14/#15/#16/#20/#18, stories 011-021 —
+  content nu in `components/{account,beheer}/*Panel.tsx`).
 - `/berichten` — berichten voor analisten
 - `/wetcatalogus` — wetcatalogus lezen
 - `/projecten`, `/projecten/nieuw`, `/projecten/{id}` — werkgebieden aanmaken/bekijken (PR #11, story 012; SSE/rapport-flow opgeruimd in PR #36)
-- `/beheer/llm-calls` — LLM-calls log per analyse (PR #20, story 021)
-- `/beheer/api-tokens` — API-tokens aanmaken + intrekken (PR #18, story 018)
 - `/werkplek/`, `/werkplek/{slug}` — annotatie-werkplek: documentenlijst + beslissingen per element, incl. echte wetsartikeltekst via GraphDB-SPARQL (PR #22 story 023, PR #68 story 037)
 - `app/mockup/` — resterende interactieve mockups (nog niet gepromoveerd)
 
