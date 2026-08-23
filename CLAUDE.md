@@ -70,9 +70,10 @@ verwijzingsdetectie (036: kleine hardcoded afkortingentabel + regex, elke treffe
 volledige scope uit story 027 §Buiten scope afgerond — divisies/bijlagen/illustraties/tabellen
 én FTS én tekstuele detectie, alles handmatig geverifieerd tegen de live GraphDB.
 `tools/graph-qa` is gestart (story 029: projectskelet + poorten `GraphPort`/`LLMPort` + fakes;
-story 039: eerste echte `LLMPort`-implementatie, `AnthropicLLM` via Azure AI Foundry, live
-geverifieerd) — de agent-loop zelf (orkestrator, supervisor, toollaag, annotatieketen, GraphDB-
-adapter, ~25-35 stories geschat in totaal) moet nog gebouwd worden.
+story 039: `LLMPort`-implementatie `AnthropicLLM` via Azure AI Foundry; story 040: `GraphPort`-
+implementatie `MCPClient` tegen de GraphDB-MCP-server — beide poorten uit story 029 zijn nu
+ingevuld, allebei live geverifieerd) — de agent-loop zelf (orkestrator, supervisor, toollaag,
+annotatieketen, ~25-35 stories geschat in totaal) moet nog gebouwd worden.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
