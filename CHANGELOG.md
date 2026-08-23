@@ -2,7 +2,7 @@
 
 ## Niet uitgebracht
 
-- **Bugfixes:** Een crash in het wetten-beheerscherm is verholpen — het bewerkformulier sloot niet meer netjes af als de bewerkte wet ondertussen verwijderd werd. (PR #73)
+- **Bugfixes:** Een `analist`-account kan niet meer bij beheerfunctionaliteit (Beheer-menu, gebruikersbeheer, wetcatalogus-beheer, etc.) — voorheen kon elke ingelogde gebruiker daar via de URL alsnog bij. (PR #75) Een crash in het wetten-beheerscherm is verholpen — het bewerkformulier sloot niet meer netjes af als de bewerkte wet ondertussen verwijderd werd. (PR #73)
 - De werkplek toont nu ook de a/b/c-onderdelen van een wetsartikel (bv. de losse definities in een definitieartikel), niet alleen de inleidende zin. (PR #70)
 - De werkplek toont nu de echte wetsartikeltekst bij een annotatie-document, in plaats van een tijdelijke plaatshoudertekst. (PR #68)
 - Analisten kunnen annotatie-documenten aanmaken, de door de agent voorgestelde JAS-elementen bekijken en per element een beslissing nemen (goedkeuren, bewerken of afwijzen met verplichte reden). De werkplek is bereikbaar via de navigatiebalk. (PR #22)
