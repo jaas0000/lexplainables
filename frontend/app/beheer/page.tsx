@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { components } from "@/generated/types";
 import { TypeBadge } from "@/components/berichten/TypeBadge";
@@ -35,6 +35,13 @@ export default function BeheerPagina() {
   const [aantalProfielen, setAantalProfielen] = useState<number | null>(null);
   const [aantalWetten, setAantalWetten] = useState<number | null>(null);
   const [aantalApiTokens, setAantalApiTokens] = useState<number | null>(null);
+  const opgeslagenTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (opgeslagenTimeout.current) clearTimeout(opgeslagenTimeout.current);
+    };
+  }, []);
 
   const laadBerichten = useCallback(async () => {
     setLaden(true);
@@ -147,7 +154,8 @@ export default function BeheerPagina() {
       setFormulier(LEEG);
       setToonLijst(true);
       setOpgeslagen(true);
-      setTimeout(() => setOpgeslagen(false), 3000);
+      if (opgeslagenTimeout.current) clearTimeout(opgeslagenTimeout.current);
+      opgeslagenTimeout.current = setTimeout(() => setOpgeslagen(false), 3000);
     } catch (err) {
       setFout(err instanceof Error ? err.message : "Fout bij het opslaan.");
     }

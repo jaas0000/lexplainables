@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   CATEGORIE_META,
@@ -18,8 +18,15 @@ export function FeedbackKnop() {
   const [categorie, setCategorie] = useState<Categorie>("verbeteridee");
   const [tekst, setTekst] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
+  const verzondenTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useClickOutside(panelRef, panelOpen, () => setPanelOpen(false));
+
+  useEffect(() => {
+    return () => {
+      if (verzondenTimeout.current) clearTimeout(verzondenTimeout.current);
+    };
+  }, []);
 
   async function handleVerzenden() {
     if (!tekst.trim()) {
@@ -47,7 +54,7 @@ export function FeedbackKnop() {
         return;
       }
       setVerzonden(true);
-      setTimeout(() => {
+      verzondenTimeout.current = setTimeout(() => {
         setVerzonden(false);
         setPanelOpen(false);
         setTekst("");

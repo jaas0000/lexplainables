@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
+from typing import Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
@@ -73,12 +74,18 @@ class GebruikerRead(SQLModel):
 class GebruikerCreate(SQLModel):
     gebruikersnaam: str = Field(max_length=64)
     wachtwoord: str = Field(min_length=8)
-    rol: str = Field(default="analist")
+    rol: Literal["beheerder", "analist"] = Field(default="analist")
 
 
 class GebruikerPatch(SQLModel):
-    rol: str | None = None
+    rol: Literal["beheerder", "analist"] | None = None
     actief: bool | None = None
+
+    @model_validator(mode="after")
+    def _minstens_een_veld(self) -> GebruikerPatch:
+        if self.rol is None and self.actief is None:
+            raise ValueError("Geef ten minste 'rol' of 'actief' op.")
+        return self
 
 
 class TijdelijkWachtwoord(SQLModel):

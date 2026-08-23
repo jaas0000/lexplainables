@@ -80,7 +80,12 @@ async def _jsonrpc_call(method: str, arguments: dict, *, foutcontext: str) -> li
             json=payload,
             headers={"Content-Type": "application/json", "Accept": "application/json"},
         )
-    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as exc:
+    except (
+        httpx.ConnectError,
+        httpx.TimeoutException,
+        httpx.NetworkError,
+        httpx.ProtocolError,
+    ) as exc:
         raise WettenbankNietBereikbaar(
             f"Wettenbank niet bereikbaar voor {foutcontext}: {exc}"
         ) from exc

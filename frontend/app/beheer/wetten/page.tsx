@@ -9,7 +9,13 @@ import {
 import { beheerFetch, BeheerFetchFout } from "@/lib/beheer-fetch";
 
 type WetRead = components["schemas"]["WetRead"];
-type WetCreate = components["schemas"]["WetCreate"];
+
+/** Lokale formulierstate voor "wet toevoegen" — `bwb_id` stuurt de URL (`PUT
+ * /admin/wetten/{bwb_id}`), niet de body: `WetCreate` heeft daarom geen `bwb_id`-veld. */
+interface NieuweWetFormulier {
+  bwb_id: string;
+  naam: string;
+}
 
 function veldfout(fout: unknown): string {
   if (fout instanceof BeheerFetchFout) return fout.message;
@@ -39,7 +45,7 @@ function BewerkenFormulier({
     try {
       const bijgewerkt = (await beheerFetch(`/api/admin/wetten/${wet.bwb_id}`, {
         method: "PUT",
-        body: JSON.stringify({ bwb_id: wet.bwb_id, naam: naam.trim() }),
+        body: JSON.stringify({ naam: naam.trim() }),
       })) as WetRead;
       onOpgeslagen(bijgewerkt);
     } catch (err) {
@@ -142,7 +148,7 @@ function ToevoegenFormulier({
 }: {
   onToegevoegd: (nieuw: WetRead) => void;
 }) {
-  const [formulier, setFormulier] = useState<WetCreate>({
+  const [formulier, setFormulier] = useState<NieuweWetFormulier>({
     bwb_id: "",
     naam: "",
   });
@@ -159,10 +165,7 @@ function ToevoegenFormulier({
         `/api/admin/wetten/${formulier.bwb_id.trim()}`,
         {
           method: "PUT",
-          body: JSON.stringify({
-            bwb_id: formulier.bwb_id.trim(),
-            naam: formulier.naam.trim(),
-          }),
+          body: JSON.stringify({ naam: formulier.naam.trim() }),
         },
       )) as WetRead;
       onToegevoegd(nieuw);
@@ -272,6 +275,9 @@ function WettenTabel({
     try {
       await beheerFetch(`/api/admin/wetten/${bwbId}`, { method: "DELETE" });
       onVerwijderd(bwbId);
+      // Zonder dit crasht het bewerkformulier: `wetten.find(...)!` levert `undefined` als de
+      // rij die je aan het bewerken bent net verwijderd is.
+      setBewerkt((huidig) => (huidig === bwbId ? null : huidig));
     } catch (err) {
       setVerwijderFout({ bwbId, bericht: veldfout(err) });
     }

@@ -31,7 +31,6 @@ from .models import (
     WachtwoordWijzigenVerzoek,
 )
 from .store import (
-    GELDIGE_ROLLEN,
     GebruikerFout,
     GebruikerNietActief,
     GebruikerNietGevonden,
@@ -238,11 +237,6 @@ async def maak_gebruiker_aan(
     _ctx: GebruikerContext = Depends(huidige_beheerder),
     engine=Depends(get_engine),
 ) -> GebruikerRead:
-    if body.rol not in GELDIGE_ROLLEN:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Ongeldige rol '{body.rol}'. Kies uit: {sorted(GELDIGE_ROLLEN)}.",
-        )
     try:
         return await maak_gebruiker_admin(engine, body.gebruikersnaam, body.wachtwoord, body.rol)
     except GebruikersnaamAlInGebruik as exc:
@@ -259,11 +253,6 @@ async def wijzig_gebruiker_endpoint(
     _ctx: GebruikerContext = Depends(huidige_beheerder),
     engine=Depends(get_engine),
 ) -> GebruikerRead:
-    if body.rol is not None and body.rol not in GELDIGE_ROLLEN:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Ongeldige rol '{body.rol}'. Kies uit: {sorted(GELDIGE_ROLLEN)}.",
-        )
     try:
         return await wijzig_gebruiker(engine, gebruikersnaam, rol=body.rol, actief=body.actief)
     except GebruikerNietGevonden as exc:

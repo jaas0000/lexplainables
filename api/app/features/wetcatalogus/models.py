@@ -50,9 +50,12 @@ class WetStructuur(BaseModel):
 
 
 class WetCreate(BaseModel):
-    """Wat een beheerder meestuurt bij het aanmaken of bijwerken van een wet."""
+    """Wat een beheerder meestuurt bij het aanmaken of bijwerken van een wet.
 
-    bwb_id: str = Field(..., min_length=1)
+    Geen `bwb_id`-veld: dat komt uit het URL-pad (`PUT /admin/wetten/{bwb_id}`), nooit uit de
+    body — voorkomt een stilzwijgend genegeerd mismatch tussen beide.
+    """
+
     naam: str = Field(..., min_length=1, max_length=256)
 
 
@@ -73,14 +76,9 @@ class ResolveResultaat(BaseModel):
 
 def wet_uit_rij(rij) -> WetRead:
     """Expliciete mapping tussen databaserij en het Read-contract (werkwijze-ADR-0011)."""
-    bijgewerkt = rij.bijgewerkt
-    if hasattr(bijgewerkt, "isoformat"):
-        bijgewerkt_str = bijgewerkt.isoformat()
-    else:
-        bijgewerkt_str = str(bijgewerkt)
     return WetRead(
         bwb_id=rij.bwb_id,
         naam=rij.naam,
         bijgewerkt_door=rij.bijgewerkt_door,
-        bijgewerkt=bijgewerkt_str,
+        bijgewerkt=rij.bijgewerkt.isoformat(),
     )

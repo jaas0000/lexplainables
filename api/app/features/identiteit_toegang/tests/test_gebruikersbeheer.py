@@ -246,6 +246,11 @@ def test_patch_ongeldige_rol_geeft_422(client):
     assert r.status_code == 422
 
 
+def test_patch_lege_body_geeft_422(client):
+    r = client.patch("/v1/admin/gebruikers/alice", json={})
+    assert r.status_code == 422
+
+
 def test_reset_wachtwoord_endpoint(client):
     client.post(
         "/v1/admin/gebruikers",
