@@ -36,6 +36,8 @@ class Settings(BaseModel):
     graphdb_mcp_url: str = ""  # verplicht; zie require_graph()
     graphdb_token: str | None = None
     repository_id: str = "inning"
+    graphdb_sparql_tool: str = "sparql_query"  # naam van de SPARQL-tool op de MCP-server
+    similarity_index: str = ""  # GraphDB-similarity-index voor semantic_search; leeg = nog uit
 
     # LLM (Azure AI Foundry / Anthropic)
     azure_foundry_api_key: str | None = None
@@ -56,6 +58,8 @@ class Settings(BaseModel):
             "graphdb_mcp_url": e.get("GRAPHDB_MCP_URL"),
             "graphdb_token": _read_secret(e, "GRAPHDB_TOKEN"),
             "repository_id": e.get("GRAPHDB_REPOSITORY_ID"),
+            "graphdb_sparql_tool": e.get("GRAPHDB_SPARQL_TOOL"),
+            "similarity_index": e.get("SIMILARITY_INDEX"),
             "azure_foundry_api_key": _read_secret(e, "AZURE_FOUNDRY_API_KEY"),
             "azure_foundry_resource": e.get("AZURE_FOUNDRY_RESOURCE"),
             "llm_model": e.get("LLM_MODEL"),

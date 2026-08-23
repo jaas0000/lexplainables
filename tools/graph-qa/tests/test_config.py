@@ -14,6 +14,8 @@ def test_from_env_defaults_zonder_env_vars() -> None:
     assert settings.repository_id == "inning"
     assert settings.llm_model == "claude-sonnet-4-6"
     assert settings.graphdb_token is None
+    assert settings.graphdb_sparql_tool == "sparql_query"
+    assert settings.similarity_index == ""
 
 
 def test_from_env_leest_platte_waarden() -> None:
@@ -24,6 +26,8 @@ def test_from_env_leest_platte_waarden() -> None:
         "AZURE_FOUNDRY_API_KEY": "sleutel",
         "AZURE_FOUNDRY_RESOURCE": "jjpl-m8ei8xzz-eastus2",
         "LLM_MODEL": "claude-opus-5",
+        "GRAPHDB_SPARQL_TOOL": "andere_tool",
+        "SIMILARITY_INDEX": "bwb_similarity",
     }
     settings = Settings.from_env(env)
 
@@ -31,6 +35,8 @@ def test_from_env_leest_platte_waarden() -> None:
     assert settings.graphdb_token == "geheim-token"
     assert settings.azure_foundry_resource == "jjpl-m8ei8xzz-eastus2"
     assert settings.llm_model == "claude-opus-5"
+    assert settings.graphdb_sparql_tool == "andere_tool"
+    assert settings.similarity_index == "bwb_similarity"
 
 
 def test_secret_file_heeft_voorrang_boven_platte_waarde(tmp_path: Path) -> None:
