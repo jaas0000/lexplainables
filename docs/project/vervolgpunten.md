@@ -230,7 +230,8 @@ Wat stabiel is: `main.py` en `db.py` zijn correct dun; feature-structuur (models
 - ✅ opgelost — LaatsteBeheerder-invariantquery gedupliceerd in `wijzig_gebruiker` en
   `verwijder_gebruiker`: geëxtraheerd naar een private `_is_laatste_actieve_beheerder(sess, g)`.
 - **store.py**: LaatsteBeheerder-check en write zijn in één transactie maar zonder `SELECT … FOR UPDATE`; nu relevant sinds ADR-0003 (Postgres-only, was eerder "met SQLite geen acuut risico" — die aanname geldt niet meer). Zelfde soort race als `maak_eerste_beheerder` hieronder bij "PR #13 — setup-flow"; allebei verdienen dezelfde oplossing (serializable transactie of `SELECT FOR UPDATE`), niet losstaand bekijken.
-- **BFF**: `requireSession` + `apiProxy`-patroon is nu gedupliceerd in berichten-, profielen- én gebruikers-routes; een gedeelde `adminProxy(req, url, opts)`-utility elimineert de boilerplate. Zie ook "BFF-rolautorisatie ontbreekt project-breed" — een `requireBeheerder()`-helper zou hier natuurlijk bij aansluiten (twee vervolgpunten, één logische plek om samen op te lossen).
+- ✅ opgelost (PR #75) — `adminProxy()` in `lib/api-client.ts` combineert `requireBeheerder()` +
+  `apiProxy()`; alle 19 admin-route-bestanden gemigreerd, samen met de rol-check zelf.
 - **page.tsx**: `onReset` cast de API-response naar een inline type i.p.v. `components["schemas"]["TijdelijkWachtwoord"]` (beschikbaar in `generated/types.ts`); consisent maken met de andere casts.
 - ✅ opgelost — `GebruikerCreate.rol`/`GebruikerPatch.rol` zijn nu
   `Literal["beheerder", "analist"]` (Pydantic valideert automatisch, de handmatige 422-check in
@@ -293,23 +294,23 @@ bestaat niet meer).
 
 ## BFF-rolautorisatie ontbreekt project-breed (PR #5 t/m nu)
 
+- ✅ opgelost (PR #75, story 038) — nieuwe `requireBeheerder()`/`adminProxy()` in de BFF-laag
+  (`lib/bff-auth.ts`/`lib/api-client.ts`) controleren nu `session.user.rol` op alle 19
+  admin-route-bestanden (401 bij geen sessie, 403 bij een sessie zonder beheerder-rol —
+  bewust onderscheiden na een regressie die dat eerst plat sloeg tot 403, zie de story-doc);
+  `auth.config.ts` redirect een analist die `/beheer` bezoekt naar `/`; `AppSidebar.tsx` toont
+  de "Beheer"-link alleen aan een beheerder. Lost tegelijk het DRY-vervolgpunt op dat hieronder
+  (regel "requireSession + apiProxy-patroon is nu gedupliceerd...") stond.
+
 Drie eerdere, losse vermeldingen van dit punt (PR #5 story 006, Frontend-berichten-fase-2,
 Fase-3-sidebar) samengevoegd — het is één en hetzelfde, project-brede gat, niet drie losse.
 
 `huidige_beheerder` in `api/app/shared/auth.py` verifieert alleen het machine-`API_TOKEN` +
 een `X-User-Id`-header; het retourneert altijd `rol="beheerder"`, ongeacht wie er werkelijk
 achter die gebruikersnaam zit (zie de docstring: "sterk vereenvoudigde stand-in"). De
-architectuur (story 006) legt rolautorisatie bewust bij de BFF — maar geen enkele
-`app/api/admin/*`-route (berichten, gebruikers, wetten, instellingen, api-tokens,
-llm-profielen, llm-calls) controleert `session.user.rol` vóór het doorproxyen. Ook
-`AppSidebar.tsx` toont de "Beheer"-link aan elke ingelogde gebruiker, ongeacht rol.
-
-Praktisch risico vandaag: nihil (er bestaan nog geen `analist`-gebruikers in het systeem). Zodra
-dat verandert is dit een echt gat: een analist met een geldige sessie kan via de BFF elk
-`/api/admin/*`-endpoint bereiken. Dit is geen kleine losse fix — het raakt alle admin-BFF-routes
-tegelijk (een gedeelde `requireBeheerder()`-helper naast het bestaande `requireSession()` ligt
-het meest voor de hand) en verdient een bewuste keuze wanneer dat gebouwd wordt, niet een
-stilzwijgende sweep-fix.
+architectuur (story 006) legt rolautorisatie bewust bij de BFF — dat is precies waar PR #75
+'m nu daadwerkelijk afdwingt; `huidige_beheerder` zelf blijft ongewijzigd (bewuste architectuur,
+geen gat meer nu de BFF-laag het afdwingt).
 
 ---
 
