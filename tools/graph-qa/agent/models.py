@@ -1,8 +1,9 @@
 """Pydantic-modellen voor de agent-loop.
 
-Getrimd tot wat de antwoord-agent-loop (stories 044-046) en de annotatieketen (stories 047-048)
-gebruiken — geen `ChatRequest`/`AgentDoel`/`ChatContext`/`ArtikelResult`, en van de
-annotatie-modellen bewust geen `AgentRun`; die hoort bij de story die `emit_node` bouwt.
+Getrimd tot wat de antwoord-agent-loop (stories 044-046), de annotatieketen (stories 047-048) en
+de HTTP-laag (story 053, `ChatRequest`) gebruiken — geen `AgentDoel`/`ChatContext`/
+`ArtikelResult` (bestaan nog niet in `answer_stream()`, zie story 050 §Afwijkingen punt 3), en
+van de annotatie-modellen bewust geen `AgentRun`; die hoort bij de story die `emit_node` bouwt.
 
 Poort van `wetsanalyse-ai/tools/graph-qa/agent/models.py`, 1:1 voor de hier opgenomen klassen.
 """
@@ -60,6 +61,14 @@ class DoneEvent(BaseModel):
 class ErrorEvent(BaseModel):
     type: Literal["error"] = "error"
     message: str
+
+
+class ChatRequest(BaseModel):
+    """Body van `POST /v1/chat` (story 053). Geen `modus`/`context`/`doel` — die bestaan nog niet
+    in `answer_stream()`."""
+
+    question: str
+    conversation_id: str | None = None
 
 
 # --- Annotatie (stories 047-048: enkele ronde + critic) ------------------------------------

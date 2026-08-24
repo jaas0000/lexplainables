@@ -6,7 +6,9 @@ skelet). Poort van `wetsanalyse-ai/tools/graph-qa/agent/agent.py`, bewust smal: 
 observability/runs-model — zie `docs/project/stories/051-graph-qa-streaming.md` §Afwijkingen.
 Story 052 voegt `stop_check` door: een aanroeper kan een lopende beurt op een nodegrens laten
 stoppen (`BeurtGestopt`) — er is hier nog geen aanroeper die 'm daadwerkelijk zet, dat wacht op
-het latere runs-model, zie `docs/project/stories/052-graph-qa-stop-check.md`.
+het latere runs-model, zie `docs/project/stories/052-graph-qa-stop-check.md`. Story 053 (het
+eerste HTTP-endpoint, `api/main.py`) laat het grounding-event nu ook `cited`/`niet_letterlijk`
+meegeven — pariteit met de al bestaande `GroundingEvent` in `agent/models.py`.
 """
 
 from __future__ import annotations
@@ -110,7 +112,9 @@ async def answer_stream(
                 "type": "grounding",
                 "grounded": laatste_state.get("grounded", True),
                 "niveau": laatste_state.get("grounding_niveau", ""),
+                "cited": len(laatste_state.get("cited", []) or []),
                 "unsupported": laatste_state.get("unsupported", []),
+                "niet_letterlijk": laatste_state.get("niet_letterlijk", []),
             }
             if conversation_id:
                 yield {"type": "conversation_id", "conversation_id": conversation_id}
