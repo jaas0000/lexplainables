@@ -1,5 +1,15 @@
 # Technische changelog
 
+- graph-qa annotatie-critic — kwaliteitsoordeel over voorstellen (PR #86, story 048): tweede
+  story van de annotatieketen-werkstroom. `critic_node` (losstaand, nog niet in `build_graph`
+  gewired) beoordeelt `annoteer_node`'s voorstellen met een aandacht-niveau
+  (groen/geel/rood) + actie (behoud/vervang/verwijder) per element, plus waarschijnlijk gemiste
+  elementen. Interne element-ids in de motivatie worden vervangen door een kort citaat
+  (`vervang_ids_door_citaat`). Bij een tweede beoordelingsronde dempt de node een eindoordeel dat
+  de eigen, al uitgevoerde correctie terugdraait (`demp_zelfweerspreking`). Een mislukte
+  Critic-call breekt de keten nooit. Live geverifieerd tegen artikel 1 van de Invorderingswet
+  1990: de Critic ving een echte misclassificatie van de annotator met een correcte rode kaart
+  en concrete correctie-suggestie.
 - graph-qa dedup `komt_letterlijk_voor`/`normaliseer` (PR #85): zelf ontdekt na de merge van
   PR #84 dat story 047 deze functies opnieuw kopieerde in `agent/annotatie.py`, terwijl een
   vervolgpunt uit PR #81 al vastlegde dat ze naar een gedeelde plek moesten verhuizen zodra er
