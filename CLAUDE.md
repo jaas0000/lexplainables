@@ -83,9 +83,13 @@ een vraag buiten de wetgeving direct af zonder graafbevraging — live geverifie
 voegt een tweede graaf-topologie toe (`enable_decomposition`, standaard uit): een samengestelde
 vraag wordt gesplitst in deelvragen, elke deelvraag krijgt een eigen agent⇄tools-lus, en de
 bevindingen worden samengevoegd tot één antwoord — live geverifieerd (een vraag over twee begrippen
-routeerde correct naar twee verschillende onderdelen van hetzelfde artikel). De rest van de
-agent-loop (annotatieketen, checkpointer/streaming, API-laag, ~25-35 stories geschat in totaal)
-moet nog gebouwd worden.
+routeerde correct naar twee verschillende onderdelen van hetzelfde artikel). Story 047 begint de
+**annotatieketen**: `annoteer_node` classificeert één bepaling volgens het Juridisch
+Analyseschema (JAS) in één LLM-call, brongetrouw en ontdubbeld — bewust losstaand (nog niet in de
+graaf gewired), geen critic/patch/herzie/emit/advance nog. Live geverifieerd tegen artikel 1 van
+de Invorderingswet 1990. De rest van de agent-loop (critic/patch/herzie/emit/advance, de
+graaf-wiring naar een annotatie-worker, checkpointer/streaming, API-laag, ~25-35 stories geschat
+in totaal) moet nog gebouwd worden.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -168,6 +172,10 @@ graaf te raken — ook live geverifieerd. Story 046 voegde een tweede graaf-topo
 (`enable_decomposition`, standaard uit) die een samengestelde vraag splitst in deelvragen, elk
 apart beantwoordt met een gedeelde bronnenlijst, en samenvoegt tot één antwoord — ook live
 geverifieerd, en de eerste plek die de al bestaande prompt-cachingsplit (story 039) daadwerkelijk
-gebruikt. Nog geen annotatieketen/checkpointer/streaming, en geen enkel aangesloten API- of
-UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom (~25-35 stories geschat in
-totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
+gebruikt. Story 047 begint de annotatieketen: `annoteer_node` classificeert één bepaling volgens
+het JAS in één LLM-call, brongetrouw en ontdubbeld — losstaand, nog niet in de graaf gewired. Live
+geverifieerd tegen artikel 1 van de Invorderingswet 1990 (5 grounded voorstellen, 0 verworpen).
+Nog geen critic/patch/herzie/emit/advance, geen graaf-wiring naar een annotatie-worker, geen
+checkpointer/streaming, en geen enkel aangesloten API- of UI-endpoint — dat is de rest van de
+eerstvolgende grote werkstroom (~25-35 stories geschat in totaal), daarna `frontend-chat`
+(`tools/wetsanalyse-admin-mcp/` is klaar).
