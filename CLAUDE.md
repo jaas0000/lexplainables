@@ -105,8 +105,12 @@ toe: `agent_node`/`synthesize_node` sturen hun eind-antwoord nu token-voor-token
 SSE-event-contract (token/sources/grounding/done/error) als async generator — nog geen HTTP.
 Story 052 voegt `stop_check` toe: `build_graph(..., stop_check=...)` laat een lopende beurt op
 een nodegrens stoppen (`BeurtGestopt`, `agent/agent_common.py`) — infrastructuur zonder aanroeper,
-dat wacht op het latere runs-model (`POST /v1/runs/{id}/cancel`). API-laag (~25-35 stories
-geschat in totaal voor de hele werkstroom) moet nog gebouwd worden.
+dat wacht op het latere runs-model (`POST /v1/runs/{id}/cancel`). Story 053 opent `tools/graph-qa/
+api/` (was een leeg skelet): `GET /health` + `POST /v1/chat` (SSE, providers via FastAPI
+`Depends()`, optioneel bearer-token) — de eerste echte HTTP-aanroeper van de agent, live
+geverifieerd tegen de Invorderingswet-fixture. Nog geen CORS/rate-limiting/runs-model (geen
+vastgestelde aanroeper-architectuur) — dat is de rest van de API-laag (~25-35 stories geschat in
+totaal voor de hele werkstroom).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -211,6 +215,11 @@ error) als async generator — live geverifieerd (token-events komen aantoonbaar
 Story 052 voegt `stop_check` toe: alle 16 node-registraties in `build_graph` lopen nu via een
 `stopbaar()`-wrapper die op een nodegrens `BeurtGestopt` (nieuwe `agent/agent_common.py`) gooit
 i.p.v. de node te draaien, en `answer_stream()` vangt die als een normale afronding (`done`, geen
-`error`) — bewust zonder aanroeper, dat is het latere runs-model. Nog geen HTTP-laag en geen enkel
-aangesloten API- of UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom (~25-35
-stories geschat in totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
+`error`) — bewust zonder aanroeper, dat is het latere runs-model. Story 053 opent de HTTP-laag:
+`tools/graph-qa/api/main.py` (was een leeg skelet) krijgt `GET /health` + `POST /v1/chat`
+(SSE via `sse-starlette`, providers via FastAPI `Depends()` voor testbaarheid, optioneel
+`QA_API_TOKEN`-bearer-token, fail-fast lifespan) — live geverifieerd met een echte vraag over de
+HTTP-server. Nog geen CORS/rate-limiting/runs-model/`/v1/artikel` (geen vastgestelde
+aanroeper-architectuur, geen `frontend-chat` om tegen te bouwen) en geen enkel aangesloten
+UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom (~25-35 stories geschat in
+totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
