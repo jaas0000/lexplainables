@@ -76,8 +76,12 @@ met drie schemacorrecties t.o.v. de `wetsanalyse-ai`-referentie onderweg gevonde
 Story 044 knoopt die drie bouwstenen voor het eerst daadwerkelijk aan elkaar: een minimale
 LangGraph-antwoord-agent-loop (`agent_node ⇄ tools_node → verify_node → correct/finalize`), bewust
 zonder supervisor/annotatieketen/decompositie/checkpointer/streaming/API-laag — live geverifieerd
-tegen de Invorderingswet-fixture. De rest van de agent-loop (orkestrator-uitbreiding, supervisor,
-annotatieketen, ~25-35 stories geschat in totaal) moet nog gebouwd worden.
+tegen de Invorderingswet-fixture. Story 045 zet daar een supervisor vóór: kiest een specialist
+(`definitie`/`duiding`/`algemeen`, elk met een eigen prompt-addendum en beperkte toolset) en wijst
+een vraag buiten de wetgeving direct af zonder graafbevraging — live geverifieerd (begripsvraag →
+`definitie` met een letterlijk citaat, structuurvraag → `duiding`, weervraag → afgewezen). De rest
+van de agent-loop (annotatieketen, decompositie, checkpointer/streaming, API-laag, ~25-35 stories
+geschat in totaal) moet nog gebouwd worden.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -154,7 +158,9 @@ De Azure Foundry-key is beschikbaar en al live geverifieerd (stories 039-041). S
 dat de drie bouwstenen — `LLMPort` (`AnthropicLLM`), `GraphPort` (`MCPClient`) en de
 domein-toollaag (13 tools) — daadwerkelijk samenwerken: een minimale antwoord-agent-loop
 (LangGraph) beantwoordt een vraag met een gegrond, letterlijk citaat uit de Invorderingswet-
-fixture. Nog geen supervisor/annotatieketen/decompositie/checkpointer/streaming, en geen enkel
-aangesloten API- of UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom
-(~25-35 stories geschat in totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is
-klaar).
+fixture. Story 045 voegde daar een supervisor aan toe die per vraag een specialist kiest
+(`definitie`/`duiding`/`algemeen`) of een vraag buiten de wetgeving direct afwijst zonder de
+graaf te raken — ook live geverifieerd. Nog geen annotatieketen/decompositie/checkpointer/
+streaming, en geen enkel aangesloten API- of UI-endpoint — dat is de rest van de eerstvolgende
+grote werkstroom (~25-35 stories geschat in totaal), daarna `frontend-chat`
+(`tools/wetsanalyse-admin-mcp/` is klaar).
