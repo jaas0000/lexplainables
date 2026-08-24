@@ -8,41 +8,24 @@ Poort van `wetsanalyse-ai/tools/graph-qa/agent/annotatie.py`, 1:1 voor de hier o
 — de kern van de enkele-annotatieronde (werkwijze-story 047). Bewust **niet** meegenomen:
 `PatchTelling`, `pas_critic_toe`, `demp_zelfweerspreking`, `vervang_ids_door_citaat`,
 `openstaand_voorstel`, `_markeer_toegepast`, `_verwerk_critic` — die horen bij de critic/patch/
-herzie-keten, een latere story.
+herzie-keten, een latere story. `komt_letterlijk_voor`/de normalisatie komen uit
+`agent/brongetrouw.py` (gedeeld met `grounding.py`, dat dezelfde eis stelt aan het antwoord).
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import re
 import uuid
 from collections.abc import Iterator
 from typing import Any
 
+from .brongetrouw import komt_letterlijk_voor  # noqa: F401 — los bruikbaar, zie module-docstring
+from .brongetrouw import normaliseer as _normaliseer
 from .jas_klassen import GELDIGE_JAS_KLASSEN
 from .models import AnnotatieAlternatief, AnnotatieVoorstel, VerworpenFragment
 
 logger = logging.getLogger("graph_qa.annotatie")
-
-_WS = re.compile(r"\s+")
-
-
-def _normaliseer(s: str) -> str:
-    """Collapse witruimte, zodat een fragment ondanks layout-verschillen matcht."""
-    return _WS.sub(" ", s or "").strip()
-
-
-def komt_letterlijk_voor(corpus: str, fragment: str) -> bool:
-    """Staat dit fragment letterlijk in de opgehaalde tekst?
-
-    Dezelfde eis (en dezelfde normalisatie) waarmee `_verwerk` de voorstellen van het model afkeurt,
-    maar los bruikbaar — bijvoorbeeld voor markeringen die niet uit deze ronde komen. Ook die moeten
-    in de bepaling staan die is opgehaald: een oordeel over een fragment dat niet voor je ligt is
-    geen oordeel.
-    """
-    norm = _normaliseer(fragment)
-    return bool(norm) and _normaliseer(corpus).find(norm) >= 0
 
 
 def sleutel_van(tekst: str, lid: str) -> tuple[str, str]:

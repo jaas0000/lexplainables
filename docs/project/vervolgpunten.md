@@ -4,11 +4,13 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
-## PR #81 — graph-qa antwoord-agent-loop (story 044)
+## PR #81 — graph-qa antwoord-agent-loop (story 044) ✅ opgelost (story 047)
 
-- **`komt_letterlijk_voor`/`_normaliseer` staan tijdelijk in `agent/grounding.py`** (enige
-  consument nu). Zodra de annotatieketen-story ze ook nodig heeft (dezelfde
-  brongetrouwheidseis geldt daar voor elke markering), verhuizen naar een gedeelde plek.
+- **`komt_letterlijk_voor`/`_normaliseer` stonden tijdelijk in `agent/grounding.py`.** Story 047
+  (annotatie) werd de tweede consument — verhuisd naar `agent/brongetrouw.py`; `grounding.py` en
+  `annotatie.py` importeren er nu allebei uit (geen duplicaat meer, ontdekt en direct gefixt
+  ná de merge van PR #84, want de story had ze ook per ongeluk gekopieerd in plaats van
+  hergebruikt).
 
 ---
 
