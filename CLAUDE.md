@@ -72,9 +72,12 @@ volledige scope uit story 027 §Buiten scope afgerond — divisies/bijlagen/illu
 story 039: `LLMPort`-implementatie `AnthropicLLM` via Azure AI Foundry; story 040: `GraphPort`-
 implementatie `MCPClient` tegen de GraphDB-MCP-server; story 041: getypeerde domein-toollaag
 (13 tools, 11 SPARQL-bouwers) — alle drie live geverifieerd tegen de lokale, gevulde GraphDB,
-met drie schemacorrecties t.o.v. de `wetsanalyse-ai`-referentie onderweg gevonden en gefixt) — de
-agent-loop zelf (orkestrator, supervisor, annotatieketen, ~25-35 stories geschat in totaal) moet
-nog gebouwd worden.
+met drie schemacorrecties t.o.v. de `wetsanalyse-ai`-referentie onderweg gevonden en gefixt).
+Story 044 knoopt die drie bouwstenen voor het eerst daadwerkelijk aan elkaar: een minimale
+LangGraph-antwoord-agent-loop (`agent_node ⇄ tools_node → verify_node → correct/finalize`), bewust
+zonder supervisor/annotatieketen/decompositie/checkpointer/streaming/API-laag — live geverifieerd
+tegen de Invorderingswet-fixture. De rest van de agent-loop (orkestrator-uitbreiding, supervisor,
+annotatieketen, ~25-35 stories geschat in totaal) moet nog gebouwd worden.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -147,10 +150,11 @@ trokken de frontend-GUI gelijk met de `wetsanalyse-ai`-referentie: Account/Behee
 sidebar-uitklapmenu is 1:1 met de referentie (Account & instellingen/Beheer/Feedback geven/
 Uitloggen, PR #80).
 
-De Azure Foundry-key is beschikbaar en al live geverifieerd (stories 039-041): `tools/graph-qa`
-heeft de drie bouwstenen — `LLMPort` (`AnthropicLLM`), `GraphPort` (`MCPClient`) en de
-domein-toollaag (13 tools) — maar nog geen orkestrator/supervisor/annotatieketen die ze
-daadwerkelijk aan elkaar knoopt tot een werkende agent, en geen enkel aangesloten API- of
-UI-endpoint. Dat is de eerstvolgende grote werkstroom (~25-35 stories geschat, zie
-`ai-notes/fase-4-aparte-services-plan.md`), daarna `frontend-chat`
-(`tools/wetsanalyse-admin-mcp/` is klaar).
+De Azure Foundry-key is beschikbaar en al live geverifieerd (stories 039-041). Story 044 bewees
+dat de drie bouwstenen — `LLMPort` (`AnthropicLLM`), `GraphPort` (`MCPClient`) en de
+domein-toollaag (13 tools) — daadwerkelijk samenwerken: een minimale antwoord-agent-loop
+(LangGraph) beantwoordt een vraag met een gegrond, letterlijk citaat uit de Invorderingswet-
+fixture. Nog geen supervisor/annotatieketen/decompositie/checkpointer/streaming, en geen enkel
+aangesloten API- of UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom
+(~25-35 stories geschat in totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is
+klaar).
