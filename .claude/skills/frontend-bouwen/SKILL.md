@@ -72,7 +72,7 @@ echte data erin. Vraagt de feature geen UI: sla deze skill over en ga direct naa
      frontend wijzigt zonder een bijbehorende wijziging in diens `tests/e2e/`, en `code-review`
      regel 1 controleert het los daarvan nog een keer bij het lezen van de diff.
 
-7. **Simplify en aflevering gebeuren niet hier.** Ná deze skill loopt `feature-bouwen` regel 9
+7. **Simplify en aflevering gebeuren niet hier.** Ná deze skill loopt `feature-bouwen` regel 10
    verder — één `/simplify`-ronde en één Simplify-regel in het commit-/PR-bericht voor de hele
    wijziging (backend + frontend samen), niet apart per fase.
 

@@ -50,7 +50,7 @@ gehad.
      feature, de Container-sectie bij een nieuwe service of frontend). Geen wijziging aan dat
      bestand terwijl de structuur wél verandert: vervolgpunt, niet per se blocking (zie de
      triagetabel in regel 5).
-   - Staat er een geldige `Simplify:`-regel (de vier vormen uit `feature-bouwen` regel 9) in het
+   - Staat er een geldige `Simplify:`-regel (de vier vormen uit `feature-bouwen` regel 10) in het
      commit-bericht of de PR-beschrijving? Zonder een van de vier is er geen controleerbaar
      bewijs dat die stap is afgehandeld — behandel dat als een onvolledige PR, ongeacht hoe
      klein de wijziging lijkt (klein-lijkende wijzigingen zijn precies waar dit soort stappen
@@ -67,7 +67,7 @@ gehad.
    regel onderaan de story volgt daaruit (`ja`/`grotendeels`/`nee`, nooit optimistisch afgerond).
    Blijkt een criterium niet volledig gebouwd: dat is zelf een blocking bevinding (regel 5) —
    niet alleen de doc-staleness die daaruit volgt. Werk de story-doc bij als onderdeel van deze
-   stap; net als `feature-bouwen` regel 9 is dit geen aanname die je stilzwijgend mag overslaan
+   stap; net als `feature-bouwen` regel 10 is dit geen aanname die je stilzwijgend mag overslaan
    omdat "de tests slagen toch al".
 
 3. Generieke correctheid en veiligheid: input-validatie voorbij het schema, auth op nieuwe

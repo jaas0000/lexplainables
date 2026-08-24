@@ -7,7 +7,7 @@ description: >-
   test-namen uit `tests/`, en schrijft dat samen naar `docs/project/features/<naam>.md`. Bedoeld als
   vervanging van "stories als levende documentatie" — stories blijven planningsartefact tot
   merge, deze skill produceert de doorlopende referentie. Gebruik bij "documenteer feature X",
-  "werk de feature-docs bij", of automatisch aan het eind van `feature-bouwen` (regel 10, na
+  "werk de feature-docs bij", of automatisch aan het eind van `feature-bouwen` (regel 11, na
   Simplify). Niet voor project-brede overzichten (zie `architectuur-audit`) en niet voor
   cross-service flows (die horen in `docs/flows/<flow>.md`, met de hand geschreven).
 ---
@@ -42,7 +42,7 @@ bij" / "documenteer feature X".
 
    `__init__.py` mag verder leeg zijn — de docstring is de inhoud. Ontbreekt de docstring, of
    ontbreekt een verplichte sectie, dan is de feature niet af (net zoals ontbrekende tests dat
-   maakt): `feature-bouwen` regel 10 en `code-review` regel 1 controleren dit.
+   maakt): `feature-bouwen` regel 11 en `code-review` regel 1 controleren dit.
 
 2. **De skill draait een deterministisch script op de repo-root.** Het script leeft onder
    `<repo>/scripts/docs/genereer-feature-docs.py` — projectinfrastructuur onder een
@@ -141,7 +141,7 @@ bij" / "documenteer feature X".
 
 ## Waar dit inhaakt op de rest van de werkwijze
 
-- `feature-bouwen` regel 10 (nieuw, toe te voegen): "Voeg de module-docstring in `__init__.py`
+- `feature-bouwen` regel 11 (nieuw, toe te voegen): "Voeg de module-docstring in `__init__.py`
   toe volgens `feature-docs` regel 1; draai `feature-docs` om `docs/project/features/<naam>.md` te
   genereren; commit beide bestanden mee." Zonder dit haal je de check in punt 4 niet.
 - `code-review` regel 1: controleert of de docstring en gegenereerde doc bij deze PR

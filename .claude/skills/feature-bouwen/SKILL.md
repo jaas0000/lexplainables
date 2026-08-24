@@ -17,9 +17,9 @@ description: >-
 **Trigger:** een nieuwe user story, een uitbreiding van bestaand gedrag, of `pr-triage` die een
 blocking review-bevinding laat verwerken. Is de story nog niet gecheckt op volledigheid, draai
 dan eerst `story-review`. Vraagt de story ook een UI: `frontend-bouwen` loopt ná regel 1-6
-hieronder (schema, keten, logica, tests zijn dan klaar), vóór regel 9 (zie daar).
+hieronder (schema, keten, logica, tests zijn dan klaar), vóór regel 10 (zie daar).
 
-Lever nooit af zonder de checklist in regel 9 te doorlopen — zonder het controleerbare spoor
+Lever nooit af zonder de checklist in regel 10 te doorlopen — zonder het controleerbare spoor
 dat daar verplicht is, behandelt `code-review` de PR als onvolledig.
 
 ## Stappen (1-6)
@@ -79,7 +79,7 @@ dat daar verplicht is, behandelt `code-review` de PR als onvolledig.
    acceptatiecriteria en de randgevallen: de businessregel zelf, wat er gebeurt als je hem
    probeert te omzeilen, 404's op onbekende id's.
 
-## Situationeel (7-8)
+## Situationeel (7-9)
 
 7. **Bestaande database? Migratie apart.** Volg `docs/project/architectuur/stack-profiel.md` §Migraties van de service
    waar je in werkt. Let op de klassieke val: een "maak ontbrekende tabellen aan bij het
@@ -114,9 +114,23 @@ dat daar verplicht is, behandelt `code-review` de PR als onvolledig.
    — die terugverwijzing verwacht `architectuur-audit` aan te treffen, en helpt andere features
    het te vinden zonder te hoeven zoeken.
 
-## Afleveren (9-10)
+9. **Vervang je bestaand gedrag (niet: bouw je iets nieuws)? Inventariseer eerst wat er al is,
+   vóór je het wijzigt.** Geldt alleen als de story een bestaand scherm, endpoint of component
+   vervangt of herstructureert — een gloednieuwe feature heeft niets om te inventariseren. Kijk
+   naar wat er nu al getest is én wat niet, en leg in de story vast welk gedrag je bewust
+   behoudt en welk gedrag je bewust wijzigt.
 
-9. **Checklist — doorloop dit expliciet, sla geen stap over:**
+   Dit is **geen behoudsplicht**. Een volledige herbouw die bestaand gedrag laat vallen is
+   prima — ook als dat het meeste van wat er stond is — zolang die keuze vooraf is gemaakt na
+   een blik op wat er al was, niet achteraf ontdekt doordat een test faalt of een gebruiker het
+   mist. Zonder die blik vooraf kun je een falende bestaande test niet onderscheiden van een
+   bewuste wijziging: je moet dan reconstrueren wat de bedoeling was, in plaats van dat al
+   vastgelegd te hebben. Het doel is dus niet "niets mag veranderen" maar "niets valt weg zonder
+   dat iemand dat besliste".
+
+## Afleveren (10-11)
+
+10. **Checklist — doorloop dit expliciet, sla geen stap over:**
 
    - [ ] Tests groen (regel 6).
    - [ ] Generatieketen gedraaid, geen diff op de gegenereerde bestanden (regel 4).
@@ -149,7 +163,7 @@ dat daar verplicht is, behandelt `code-review` de PR als onvolledig.
    Vink deze lijst niet stilzwijgend af door meteen naar git-commando's te gaan (zie §Bekende
    valkuilen).
 
-10. **Afleveren.** Twee verschillende acties, afhankelijk van de trigger:
+11. **Afleveren.** Twee verschillende acties, afhankelijk van de trigger:
 
     - **Eerste keer** (nieuwe story/uitbreiding, inclusief een eventuele `frontend-bouwen`-fase
       erin): **open de PR.** Vanaf dat moment is `pr-triage` aan zet.
@@ -174,7 +188,7 @@ dat daar verplicht is, behandelt `code-review` de PR als onvolledig.
   "plek" leek te zijn om naartoe te verwijzen.
 - **Een checklist-item dat alleen als tekst in een lijst staat, is makkelijk te missen zodra de
   rest van het werk klaar aanvoelt** — met name vlak vóór het committen, wanneer de aandacht al
-  naar de volgende taak is verschoven. Vandaar de expliciete checklist in regel 9 én de
+  naar de volgende taak is verschoven. Vandaar de expliciete checklist in regel 10 én de
   verplichte spoor-regel in het commit-/PR-bericht: een lijst zonder controleerbaar bewijs is
   geen vangrail (zie `CLAUDE.md` §Verificatie-principe).
 
