@@ -1,4 +1,4 @@
-"""Antwoord-agent-loop (LangGraph) — werkwijze-stories 044-046.
+"""Antwoord-agent-loop (LangGraph) — werkwijze-stories 044-047.
 
 Story 044 bouwde de kleinste snede die de drie losse bouwstenen (`ports.py`/story 029,
 `AnthropicLLM`/story 039, `MCPClient`/story 040, de toollaag/story 041) daadwerkelijk samenvoegt
@@ -11,13 +11,6 @@ standaard uit): een samengestelde vraag wordt eerst in deelvragen gesplitst, elk
 een eigen agent⇄tools-lus, en de bevindingen worden samengevoegd tot één antwoord. Staat de toggle
 uit, dan is de graaf-opbouw byte voor byte gelijk aan stories 044-045.
 
-Bewust nog **geen** annotatieketen, checkpointer/gespreksgeheugen of streaming — zie
-`docs/project/stories/044-graph-qa-antwoord-loop.md`, `docs/project/stories/
-045-graph-qa-supervisor.md` en `docs/project/stories/046-graph-qa-decompositie.md` §Afwijkingen
-voor de reden per punt (o.a.: de referentie se supervisor kiest ook tussen een antwoord- en een
-annotatie-worker en kan ze ketenen — met maar één worker hier is er niets om tussen te routeren of
-te ketenen).
-
     START → supervisor_node → (afwijs_node → END)
                              → agent_node ⇄ tools_node → verify_node
                                → (correct_node → agent_node | finalize_node) → END
@@ -28,6 +21,14 @@ te ketenen).
                                → (verify_node, 1 deelvraag)
                                → (synthesize_node → verify_node, >1 deelvraag)
                              → verify_node → (resynth_node → synthesize_node | finalize_node) → END
+
+Story 047 begint de **annotatieketen**: `annoteer_node` is de kleinste zelfstandig bewijsbare
+snede daarvan — één LLM-call die een aangeleverde bepaling classificeert volgens het Juridisch
+Analyseschema (JAS), brongetrouw en ontdubbeld. Bewust **losstaand**, niet in `build_graph`
+gewired (geen supervisor-routing naar een annotatie-worker) — critic/patch/herzie/emit/advance en
+de graaf-wiring zijn stuk voor stuk latere stories, zie `docs/project/stories/
+047-graph-qa-annotatie-enkele-ronde.md` §Afwijkingen. Bewust nog **geen** checkpointer/
+gespreksgeheugen of streaming — zie de story-docs' §Afwijkingen voor de reden per punt.
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ from typing import Annotated, Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from . import prompts, specialists, supervisor
+from . import annotatie, annotatie_prompt, artikel, prompts, specialists, supervisor
 from .config import Settings
 from .grounding import check_grounding, curate_sources
 from .models import Source
@@ -74,6 +75,10 @@ _AFWIJS_MELDING = (
 )
 
 _MAX_DECOMPOSE_TOKENS = 400
+
+# Een volledig artikel met veel JAS-elementen kan een lange JSON-respons opleveren — ruim boven de
+# 4096 van de antwoord-loop, matcht de referentie.
+_MAX_ANNOTATIE_TOKENS = 8192
 
 _DECOMPOSE_SYSTEM = (
     "Je splitst een juridische vraag over de kennisgraaf op in de deelvragen die je apart moet "
@@ -127,6 +132,10 @@ class State(TypedDict, total=False):
     sources: list[Source]
     sub_questions: list[str]
     sub_findings: list[dict[str, str]]
+    doel: dict[str, str]
+    corpus: str
+    voorstellen: list[dict[str, Any]]
+    verworpen_fragmenten: list[dict[str, Any]]
 
 
 def _parse_final(final: Any) -> tuple[list[dict[str, Any]], list[str]]:
@@ -461,6 +470,43 @@ def synthesize_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[s
 def resynth_node(state: State) -> dict[str, Any]:
     """Ongegronde synthese → markeer voor één her-synthese (synthesize_node leest `corrected`)."""
     return {"corrected": True, "answer": ""}
+
+
+# ---- Annotatie (story 047: enkele ronde, geen critic) — losstaand, niet in build_graph gewired ---
+
+
+def annoteer_node(
+    state: State, *, settings: Settings, llm: LLMPort, graph: GraphPort
+) -> dict[str, Any]:
+    """Classificeert één bepaling (`state["doel"]`) volgens het JAS in één LLM-call.
+
+    Geen ophaal-agent, geen graaf-routing: `doel` (bwbId/artikel/lid) is al bekend. Geen critic/
+    patch/herzie — dat zijn latere stories die op deze ruwe, gegronde voorstellen voortbouwen."""
+    doel = state["doel"]
+    corpus = artikel.artikel_corpus(doel["bwbId"], doel["artikel"], graph, doel.get("lid"))
+    resp = llm.create(
+        model=settings.llm_model,
+        max_tokens=_MAX_ANNOTATIE_TOKENS,
+        system=annotatie_prompt.annotatie_systeemprompt(),
+        tools=[],
+        messages=[
+            {
+                "role": "user",
+                "content": annotatie_prompt.annotatie_userprompt(
+                    doel["bwbId"], doel["artikel"], corpus, doel.get("lid")
+                ),
+            }
+        ],
+    )
+    text = "".join(b.text for b in resp.content if b.type == "text")
+    voorstellen, verworpen = annotatie._verwerk(
+        text, corpus, doel["bwbId"], doel["artikel"], doel.get("lid")
+    )
+    return {
+        "corpus": corpus,
+        "voorstellen": [v.model_dump() for v in voorstellen],
+        "verworpen_fragmenten": [v.model_dump() for v in verworpen],
+    }
 
 
 def route_after_supervisor(state: State) -> str:

@@ -1,14 +1,16 @@
 """De antwoord-agent-loop: supervisor-routing, gelukkig pad, ongegrond-correctie, onbepaald,
-max-turns-vangnet, afwijzen, decompositie (multi-hop).
+max-turns-vangnet, afwijzen, decompositie (multi-hop), annotatie (enkele ronde).
 
 Eigen tests (niet geport van de referentie se `tests/test_orchestrator.py`/`test_agent_loop.py` —
 niet gelezen, alleen hun bestandsgrootte gezien via een Explore-agent), tegen `agent/
-orchestrator.py`, dat zelf wél 1:1 op het legacy-QA-pad geport is (stories 044-046).
+orchestrator.py`, dat zelf wél 1:1 op het legacy-QA-pad geport is (stories 044-047).
 """
 
 from __future__ import annotations
 
-from agent.orchestrator import MAX_TURNS, build_graph, parse_subquestions
+import json
+
+from agent.orchestrator import MAX_TURNS, annoteer_node, build_graph, parse_subquestions
 from tests.fakes import FakeGraph, FakeLLM, make_settings, response, text_block, tool_block
 
 
@@ -335,3 +337,55 @@ def test_decompositie_afwijzen_kort_nog_steeds_voor_decompose() -> None:
     assert result["afwijzen"] is True
     assert graph.queries == []
     assert llm.index == 1  # geen decompose-call
+
+
+# ---- Annotatie (story 047, enkele ronde) — losstaande functie, geen build_graph -------------
+
+
+def test_annoteer_node_haalt_corpus_op_en_verwerkt_de_classificatie() -> None:
+    corpus_tsv = (
+        "?tekst\t?jci\t?lid\t?lidnummer\t?lidtekst\t?onderdeel\t?onderdeeltekst\n"
+        '\t\t\t"1"\t"Degene die aangifte doet, is verplicht de gegevens waarheidsgetrouw te '
+        'verstrekken."@nl\t\t'
+    )
+    llm = FakeLLM(
+        [
+            response(
+                [
+                    text_block(
+                        json.dumps(
+                            {
+                                "elementen": [
+                                    {
+                                        "klasse": "Rechtssubject",
+                                        "tekst": "Degene die aangifte doet",
+                                        "lid": "1",
+                                        "toelichting": "de drager van de aangifteplicht",
+                                    }
+                                ]
+                            }
+                        )
+                    )
+                ],
+                "end_turn",
+            )
+        ]
+    )
+    graph = FakeGraph(result=corpus_tsv)
+    settings = make_settings()
+
+    result = annoteer_node(
+        {"doel": {"bwbId": "BWBR0004770", "artikel": "10"}},
+        settings=settings,
+        llm=llm,
+        graph=graph,
+    )
+
+    assert result["corpus"].startswith("1. Degene die aangifte doet")
+    assert graph.queries  # de corpus is daadwerkelijk uit de graaf gehaald
+    assert len(result["voorstellen"]) == 1
+    assert result["voorstellen"][0]["klasse"] == "Rechtssubject"
+    assert result["voorstellen"][0]["grounded"] is True
+    assert result["verworpen_fragmenten"] == []
+    # De prompt kreeg geen tools mee — dit is een pure classificatiestap, geen tool-lus.
+    assert llm.calls[0]["tools"] == []

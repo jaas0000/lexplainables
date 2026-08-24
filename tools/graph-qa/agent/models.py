@@ -1,8 +1,9 @@
 """Pydantic-modellen voor de agent-loop.
 
-Getrimd tot wat story 044 (de minimale antwoord-agent-loop) gebruikt — geen `ChatRequest`/
-`AgentDoel`/`ChatContext`/annotatie-modellen/`ArtikelResult`; die horen bij de stories die de
-API-laag, de annotatieketen resp. het documentpaneel bouwen.
+Getrimd tot wat de antwoord-agent-loop (stories 044-046) en de enkele-ronde-annotatie (story 047)
+gebruiken — geen `ChatRequest`/`AgentDoel`/`ChatContext`/`ArtikelResult`, en van de
+annotatie-modellen bewust geen `CriticRonde`/`CriticOordeel`/`OntbrekendItem`/`AgentRun`; die
+horen bij de stories die de API-laag resp. de critic/patch/herzie/emit-keten bouwen.
 
 Poort van `wetsanalyse-ai/tools/graph-qa/agent/models.py`, 1:1 voor de hier opgenomen klassen.
 """
@@ -60,3 +61,46 @@ class DoneEvent(BaseModel):
 class ErrorEvent(BaseModel):
     type: Literal["error"] = "error"
     message: str
+
+
+# --- Annotatie (story 047: enkele ronde, geen critic) --------------------------------------
+
+
+class AnnotatieAlternatief(BaseModel):
+    """Een kandidaat-klasse bij twijfel, met korte motivatie (disambiguatie)."""
+
+    klasse: str
+    motivatie: str = ""
+
+
+class AnnotatieVoorstel(BaseModel):
+    """Eén door de agent voorgesteld JAS-annotatie-element voor een artikel.
+
+    `tekst` is een letterlijk fragment uit de artikeltekst; `grounded`/`vindplaats` worden
+    server-side ingevuld door de brongetrouwheid-check (nooit door het model). Bewust **zonder**
+    `aandacht`/`critic`/`critic_rondes` — die velden hoort de Critic-node te zetten (een latere
+    story); ze hebben hier nog geen consument.
+    """
+
+    # Stabiel id, hier toegekend (niet door het model). Een latere revisieronde matcht erop; op
+    # positie koppelen breekt zodra een herziening iets toevoegt of weglaat.
+    id: str = ""
+    klasse: str
+    tekst: str
+    lid: str = ""
+    toelichting: str = ""
+    alternatieven: list[AnnotatieAlternatief] = []
+    grounded: bool = False
+    vindplaats: str = ""  # bwbId/artikel/lid-notatie
+
+
+class VerworpenFragment(BaseModel):
+    """Een voorstel dat de grondingscheck niet haalde.
+
+    Anders alleen geteld en weggegooid. Juist deze informatie laat een latere herzieningsronde
+    zichzelf corrigeren: "dit citaat staat niet letterlijk in de tekst" is een aanwijzing, geen
+    fout."""
+
+    klasse: str
+    tekst: str
+    reden: str  # ongeldige_klasse | niet_letterlijk
