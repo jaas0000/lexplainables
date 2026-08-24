@@ -1,14 +1,14 @@
 """De antwoord-agent-loop: supervisor-routing, gelukkig pad, ongegrond-correctie, onbepaald,
-max-turns-vangnet, afwijzen.
+max-turns-vangnet, afwijzen, decompositie (multi-hop).
 
 Eigen tests (niet geport van de referentie se `tests/test_orchestrator.py`/`test_agent_loop.py` —
 niet gelezen, alleen hun bestandsgrootte gezien via een Explore-agent), tegen `agent/
-orchestrator.py`, dat zelf wél 1:1 op het legacy-QA-pad geport is (stories 044-045).
+orchestrator.py`, dat zelf wél 1:1 op het legacy-QA-pad geport is (stories 044-046).
 """
 
 from __future__ import annotations
 
-from agent.orchestrator import MAX_TURNS, build_graph
+from agent.orchestrator import MAX_TURNS, build_graph, parse_subquestions
 from tests.fakes import FakeGraph, FakeLLM, make_settings, response, text_block, tool_block
 
 
@@ -173,3 +173,165 @@ def test_onbekende_specialist_valt_terug_op_algemeen_volledige_toolset() -> None
 
     agent_call = llm.calls[1]
     assert len(agent_call["tools"]) == 13  # de volledige registry, net als vóór story 045
+
+
+# ---- Decompositie (story 046, enable_decomposition=True) -----------------------------------
+
+
+def test_parse_subquestions_herkent_genummerde_regels() -> None:
+    tekst = "1. Wat is een belastingschuldige?\n2. Wat is een belastingaanslag?"
+    assert parse_subquestions(tekst, cap=5) == [
+        "Wat is een belastingschuldige?",
+        "Wat is een belastingaanslag?",
+    ]
+
+
+def test_parse_subquestions_geen_match_geeft_lege_lijst() -> None:
+    # De aanroeper (decompose_node) vangt dit op met een terugval op de oorspronkelijke vraag —
+    # deze functie blijft zuiver en geeft gewoon niets terug.
+    assert parse_subquestions("gewoon een stukje proza zonder nummering", cap=5) == []
+
+
+def test_parse_subquestions_respecteert_de_cap() -> None:
+    tekst = "\n".join(f"{i}. deelvraag {i}" for i in range(1, 8))
+    assert len(parse_subquestions(tekst, cap=3)) == 3
+
+
+def test_decompositie_enkelvoudige_vraag_slaat_synthese_over() -> None:
+    llm = FakeLLM(
+        [
+            _supervisor_ok(),
+            response([text_block("1. Wat is een belastingschuldige?")], "end_turn"),
+            # Bewust geen vindplaats/citaat hier — anders keurt verify_node dit af als ongegrond
+            # (geen tool_use in deze solve-beurt, dus een lege source_trace) en loopt de test via
+            # resynth alsnog naar synthesize door. Dat pad heeft zijn eigen test hieronder.
+            response(
+                [text_block("Een belastingschuldige is degene die belasting betaalt.")], "end_turn"
+            ),
+        ]
+    )
+    graph = FakeGraph(result="")
+    settings = make_settings(enable_decomposition=True)
+
+    result = build_graph(settings, llm, graph).invoke(
+        {"question": "Wat is een belastingschuldige?"}
+    )
+
+    assert result["sub_questions"] == ["Wat is een belastingschuldige?"]
+    assert result["answer"] == "Een belastingschuldige is degene die belasting betaalt."
+    assert llm.index == 3  # supervisor + decompose + 1 solve-call, geen synthesize
+
+
+def test_decompositie_samengestelde_vraag_accumuleert_trace_en_synthetiseert() -> None:
+    llm = FakeLLM(
+        [
+            _supervisor_ok(),
+            response(
+                [text_block("1. Wat is een belastingschuldige?\n2. Wat is een belastingaanslag?")],
+                "end_turn",
+            ),
+            response(
+                [tool_block("t1", "search_wetgeving", {"query": "belastingschuldige"})],
+                "tool_use",
+            ),
+            response([text_block("Een belastingschuldige is degene die betaalt.")], "end_turn"),
+            response([text_block("Een belastingaanslag is de opgelegde aanslag.")], "end_turn"),
+            response([text_block("Samengevat: beide begrippen uitgelegd.")], "end_turn"),
+        ]
+    )
+    graph = FakeGraph(result="een graafresultaat")
+    settings = make_settings(enable_decomposition=True)
+
+    result = build_graph(settings, llm, graph).invoke(
+        {"question": "Wat is een belastingschuldige, en wat is een belastingaanslag?"}
+    )
+
+    assert result["sub_questions"] == [
+        "Wat is een belastingschuldige?",
+        "Wat is een belastingaanslag?",
+    ]
+    assert len(result["sub_findings"]) == 2
+    assert len(result["source_trace"]) == 1  # alleen sub 1 riep een tool aan
+    assert graph.queries  # de tool heeft de graaf daadwerkelijk geraakt
+    assert result["answer"] == "Samengevat: beide begrippen uitgelegd."
+    assert llm.index == 6  # supervisor + decompose + 3 solve-calls + 1 synthesize
+
+    # solve_node gebruikt de cachingsplit: een stabiele base_system + een groeiend variabel deel.
+    eerste_solve_call = llm.calls[2]
+    assert eerste_solve_call["system_delen"] is not None
+    assert len(eerste_solve_call["system_delen"]) == 2
+    tweede_deelvraag_call = llm.calls[4]
+    assert "EERDERE DEELBEVINDINGEN" in tweede_deelvraag_call["system_delen"][1]
+
+
+def test_decompositie_ongegronde_synthese_krijgt_precies_een_herkansing() -> None:
+    llm = FakeLLM(
+        [
+            _supervisor_ok(),
+            response([text_block("1. eerste\n2. tweede")], "end_turn"),
+            response([text_block("vinding 1")], "end_turn"),
+            response([text_block("vinding 2")], "end_turn"),
+            # Eerste synthese: verzonnen vindplaats + een citaat van >=5 woorden dat niet in de
+            # (lege) trace staat — beide grounding-categorieën tegelijk.
+            response(
+                [
+                    text_block(
+                        'Zie <urn:bwb:BWBR9999999:artikel:1>: "een citaat dat niet in de bron '
+                        'staat".'
+                    )
+                ],
+                "end_turn",
+            ),
+            # Herstelde synthese na de correctie-instructie.
+            response(
+                [text_block("Vinding 1 en vinding 2 samengevat, zonder vindplaats.")], "end_turn"
+            ),
+        ]
+    )
+    graph = FakeGraph(result="")
+    settings = make_settings(enable_decomposition=True)
+
+    result = build_graph(settings, llm, graph).invoke({"question": "Twee losse onderdelen?"})
+
+    assert result["corrected"] is True
+    assert result["answer"] == "Vinding 1 en vinding 2 samengevat, zonder vindplaats."
+    assert llm.index == 6  # geen derde synthese-poging
+
+    # De herkansing benoemt beide categorieën, niet alleen de verzonnen vindplaats.
+    herkansing_system = llm.calls[5]["system"]
+    assert "niet-gegronde verwijzingen" in herkansing_system
+    assert "niet letterlijk" in herkansing_system
+
+
+def test_decompositie_sub_max_turns_vangnet_stopt_tools_op_de_laatste_beurt() -> None:
+    llm = FakeLLM(
+        [
+            _supervisor_ok(),
+            response([text_block("1. Blijf maar zoeken")], "end_turn"),
+            response([tool_block("t1", "search_wetgeving", {"query": "x"})], "tool_use"),
+            response([tool_block("t2", "search_wetgeving", {"query": "x"})], "tool_use"),
+            # Laatste toegestane beurt: geen tools aangeboden, dus het model antwoordt in tekst.
+            response([text_block("Antwoord op basis van wat is gevonden.")], "end_turn"),
+        ]
+    )
+    graph = FakeGraph(result="niets relevants")
+    settings = make_settings(enable_decomposition=True, sub_max_turns=3)
+
+    result = build_graph(settings, llm, graph).invoke({"question": "Blijf maar zoeken"})
+
+    assert result["answer"] == "Antwoord op basis van wat is gevonden."
+    assert llm.calls[-1]["tools"] == []  # de laatste beurt bood geen tools aan
+    assert len(graph.queries) == 2
+    assert llm.index == 5  # supervisor + decompose + 3 solve-calls
+
+
+def test_decompositie_afwijzen_kort_nog_steeds_voor_decompose() -> None:
+    llm = FakeLLM([_supervisor_ok("algemeen", "AFWIJZEN")])
+    graph = FakeGraph(result="")
+    settings = make_settings(enable_decomposition=True)
+
+    result = build_graph(settings, llm, graph).invoke({"question": "Wat is het weer vandaag?"})
+
+    assert result["afwijzen"] is True
+    assert graph.queries == []
+    assert llm.index == 1  # geen decompose-call
