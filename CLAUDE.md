@@ -79,9 +79,13 @@ zonder supervisor/annotatieketen/decompositie/checkpointer/streaming/API-laag �
 tegen de Invorderingswet-fixture. Story 045 zet daar een supervisor vóór: kiest een specialist
 (`definitie`/`duiding`/`algemeen`, elk met een eigen prompt-addendum en beperkte toolset) en wijst
 een vraag buiten de wetgeving direct af zonder graafbevraging — live geverifieerd (begripsvraag →
-`definitie` met een letterlijk citaat, structuurvraag → `duiding`, weervraag → afgewezen). De rest
-van de agent-loop (annotatieketen, decompositie, checkpointer/streaming, API-laag, ~25-35 stories
-geschat in totaal) moet nog gebouwd worden.
+`definitie` met een letterlijk citaat, structuurvraag → `duiding`, weervraag → afgewezen). Story 046
+voegt een tweede graaf-topologie toe (`enable_decomposition`, standaard uit): een samengestelde
+vraag wordt gesplitst in deelvragen, elke deelvraag krijgt een eigen agent⇄tools-lus, en de
+bevindingen worden samengevoegd tot één antwoord — live geverifieerd (een vraag over twee begrippen
+routeerde correct naar twee verschillende onderdelen van hetzelfde artikel). De rest van de
+agent-loop (annotatieketen, checkpointer/streaming, API-laag, ~25-35 stories geschat in totaal)
+moet nog gebouwd worden.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -160,7 +164,10 @@ domein-toollaag (13 tools) — daadwerkelijk samenwerken: een minimale antwoord-
 (LangGraph) beantwoordt een vraag met een gegrond, letterlijk citaat uit de Invorderingswet-
 fixture. Story 045 voegde daar een supervisor aan toe die per vraag een specialist kiest
 (`definitie`/`duiding`/`algemeen`) of een vraag buiten de wetgeving direct afwijst zonder de
-graaf te raken — ook live geverifieerd. Nog geen annotatieketen/decompositie/checkpointer/
-streaming, en geen enkel aangesloten API- of UI-endpoint — dat is de rest van de eerstvolgende
-grote werkstroom (~25-35 stories geschat in totaal), daarna `frontend-chat`
-(`tools/wetsanalyse-admin-mcp/` is klaar).
+graaf te raken — ook live geverifieerd. Story 046 voegde een tweede graaf-topologie toe
+(`enable_decomposition`, standaard uit) die een samengestelde vraag splitst in deelvragen, elk
+apart beantwoordt met een gedeelde bronnenlijst, en samenvoegt tot één antwoord — ook live
+geverifieerd, en de eerste plek die de al bestaande prompt-cachingsplit (story 039) daadwerkelijk
+gebruikt. Nog geen annotatieketen/checkpointer/streaming, en geen enkel aangesloten API- of
+UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom (~25-35 stories geschat in
+totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
