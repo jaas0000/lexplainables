@@ -66,6 +66,10 @@ class Settings(BaseModel):
     checkpoint_db_url: str | None = None
     checkpoint_db_path: str | None = None
 
+    # HTTP-laag (story 053): optioneel bearer-token voor `POST /v1/chat`. Leeg = endpoint open
+    # (lokale dev) — timing-safe vergeleken in `api/main.py`.
+    qa_api_token: str | None = None
+
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
         e = env if env is not None else os.environ
@@ -85,6 +89,7 @@ class Settings(BaseModel):
             "critic_max_rondes": e.get("CRITIC_MAX_RONDES"),
             "checkpoint_db_url": e.get("CHECKPOINT_DB_URL"),
             "checkpoint_db_path": e.get("CHECKPOINT_DB_PATH"),
+            "qa_api_token": _read_secret(e, "QA_API_TOKEN"),
         }
         # None én lege string weglaten zodat de veld-defaults van kracht blijven.
         return cls(**{k: v for k, v in raw.items() if v is not None and v != ""})
