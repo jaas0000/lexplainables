@@ -11,8 +11,10 @@ from __future__ import annotations
 import asyncio
 import json
 
+import pytest
 from langgraph.checkpoint.memory import MemorySaver
 
+from agent.agent_common import BeurtGestopt
 from agent.orchestrator import (
     MAX_TURNS,
     _heeft_doel,
@@ -979,3 +981,54 @@ def test_supervisor_geen_gesprekscontext_bij_de_eerste_vraag() -> None:
     build_graph(settings, llm, FakeGraph(result="")).invoke({"question": "Een eerste vraag"})
 
     assert "GESPREKSCONTEXT" not in llm.calls[0]["system"]
+
+
+def test_stop_check_die_meteen_true_is_stopt_voor_de_eerste_node() -> None:
+    llm = FakeLLM([_supervisor_ok()])
+    settings = make_settings()
+
+    with pytest.raises(BeurtGestopt):
+        build_graph(settings, llm, FakeGraph(result=""), stop_check=lambda: True).invoke(
+            {"question": "Een vraag"}
+        )
+
+    assert llm.index == 0, "geen enkele node had mogen draaien"
+
+
+def test_stop_check_stopt_op_de_eerstvolgende_nodegrens() -> None:
+    """De supervisor draait nog (stop_check was nog False); ná de eerste node wordt de vlag
+    True, dus de tweede node (agent) start niet meer."""
+    llm = FakeLLM(
+        [
+            _supervisor_ok(),
+            response([text_block("dit antwoord komt er nooit")], "end_turn"),
+        ]
+    )
+    settings = make_settings()
+    aanroepen = 0
+
+    def stop_check() -> bool:
+        nonlocal aanroepen
+        aanroepen += 1
+        return aanroepen > 1  # eerste check (vóór supervisor) laat door, tweede stopt
+
+    with pytest.raises(BeurtGestopt):
+        build_graph(settings, llm, FakeGraph(result=""), stop_check=stop_check).invoke(
+            {"question": "Een vraag"}
+        )
+
+    assert llm.index == 1, "alleen de supervisor had mogen draaien"
+
+
+def test_zonder_stop_check_ongewijzigd_gedrag() -> None:
+    llm = FakeLLM(
+        [
+            _supervisor_ok(),
+            response([text_block("Dit volgt uit de algemene systematiek van de wet.")], "end_turn"),
+        ]
+    )
+    settings = make_settings()
+
+    result = build_graph(settings, llm, FakeGraph(result="")).invoke({"question": "Een vraag"})
+
+    assert result["answer"] == "Dit volgt uit de algemene systematiek van de wet."

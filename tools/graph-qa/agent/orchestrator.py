@@ -1,4 +1,4 @@
-"""Antwoord-/annotatie-agent-loop (LangGraph) — werkwijze-stories 044-051.
+"""Antwoord-/annotatie-agent-loop (LangGraph) — werkwijze-stories 044-052.
 
 Story 044 bouwde de kleinste snede die de drie losse bouwstenen (`ports.py`/story 029,
 `AnthropicLLM`/story 039, `MCPClient`/story 040, de toollaag/story 041) daadwerkelijk samenvoegt
@@ -42,14 +42,20 @@ velden) — zie `docs/project/stories/050-graph-qa-checkpointer.md` §Afwijkinge
 punt. Story 051 laat `agent_node`/`synthesize_node` het eind-antwoord streamen (`llm.stream()` +
 `get_stream_writer()`, custom-stream events `{"type": "token", ...}`) i.p.v. het antwoord in één
 stuk terug te geven — de nieuwe wrapper `agent/agent.py`'s `answer_stream()` consumeert die stream
-en levert het SSE-event-contract; zie `docs/project/stories/051-graph-qa-streaming.md`.
+en levert het SSE-event-contract; zie `docs/project/stories/051-graph-qa-streaming.md`. Story 052
+voegt `stop_check` toe aan `build_graph`: elke node-registratie loopt voortaan via een lokale
+`add()`/`stopbaar()`-wrapper die vóór de node checkt of er gestopt moet worden en zo ja
+`BeurtGestopt` (`agent/agent_common.py`) gooit — stoppen op een nodegrens, geen taak-annulering.
+Zie `docs/project/stories/052-graph-qa-stop-check.md`.
 """
 
 from __future__ import annotations
 
+import functools
 import logging
 import operator
 import re
+from collections.abc import Callable
 from functools import partial
 from typing import Annotated, Any, TypedDict
 
@@ -57,6 +63,7 @@ from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 
 from . import annotatie, annotatie_prompt, artikel, prompts, specialists, supervisor
+from .agent_common import BeurtGestopt
 from .config import Settings
 from .grounding import check_grounding, curate_sources
 from .ports import GraphPort, LLMPort
@@ -954,7 +961,12 @@ def nieuwe_beurt_invoer(
 
 
 def build_graph(
-    settings: Settings, llm: LLMPort, graph: GraphPort, *, checkpointer: Any = None
+    settings: Settings,
+    llm: LLMPort,
+    graph: GraphPort,
+    *,
+    checkpointer: Any = None,
+    stop_check: Callable[[], bool] | None = None,
 ) -> Any:
     """Compileert de antwoord-/annotatiegraaf. `checkpointer=None` (default) compileert zonder
     gespreksgeheugen — identiek aan stories 044-049; geef een checkpointer (`agent/
@@ -965,19 +977,40 @@ def build_graph(
     `settings.enable_decomposition=True` vertakt de antwoord-tak naar de multi-hop-topologie
     (story 046) i.p.v. de agent⇄tools-lus; de toggle-uit-stand blijft byte voor byte gelijk aan
     stories 044-045. `state["doel"]` routeert (via `_heeft_doel`) om de supervisor heen recht naar
-    de annotatieketen (story 049) — onafhankelijk van die toggle."""
+    de annotatieketen (story 049) — onafhankelijk van die toggle.
+
+    `stop_check` (story 052): elke node checkt 'm vóór hij start en gooit `BeurtGestopt` i.p.v. te
+    draaien zodra hij `True` teruggeeft — stoppen op een nodegrens, geen taak-annulering. Zonder
+    `stop_check` (default) is het gedrag byte voor byte gelijk aan stories 044-051."""
     builder = StateGraph(State)
-    builder.add_node("supervisor", partial(supervisor_node, settings=settings, llm=llm))
-    builder.add_node("afwijzen", afwijs_node)
-    builder.add_node("verify", verify_node)
-    builder.add_node("finalize", finalize_node)
+
+    def stopbaar(fn: Callable[..., dict[str, Any]]) -> Callable[..., dict[str, Any]]:
+        """Elke node begint met de vraag of er nog gewerkt moet worden — zie `stop_check`
+        hierboven."""
+
+        @functools.wraps(fn)
+        def bewaakt(state: State) -> dict[str, Any]:
+            if stop_check is not None and stop_check():
+                raise BeurtGestopt
+            return fn(state)
+
+        return bewaakt
+
+    def add(naam: str, fn: Callable[..., dict[str, Any]]) -> None:
+        """Registreer een node, altijd met de stopbewaking eromheen."""
+        builder.add_node(naam, stopbaar(fn))
+
+    add("supervisor", partial(supervisor_node, settings=settings, llm=llm))
+    add("afwijzen", afwijs_node)
+    add("verify", verify_node)
+    add("finalize", finalize_node)
 
     # Annotatieketen — zelfde nodes voor beide antwoord-topologieën hieronder.
-    builder.add_node("annoteer", partial(annoteer_node, settings=settings, llm=llm, graph=graph))
-    builder.add_node("critic", partial(critic_node, settings=settings, llm=llm))
-    builder.add_node("patch", patch_node)
-    builder.add_node("herzie", partial(herzie_node, settings=settings, llm=llm))
-    builder.add_node("emit", emit_node)
+    add("annoteer", partial(annoteer_node, settings=settings, llm=llm, graph=graph))
+    add("critic", partial(critic_node, settings=settings, llm=llm))
+    add("patch", patch_node)
+    add("herzie", partial(herzie_node, settings=settings, llm=llm))
+    add("emit", emit_node)
 
     builder.add_conditional_edges(
         START, _heeft_doel, {"annoteer": "annoteer", "supervisor": "supervisor"}
@@ -993,10 +1026,10 @@ def build_graph(
     builder.add_edge("emit", END)
 
     if settings.enable_decomposition:
-        builder.add_node("decompose", partial(decompose_node, settings=settings, llm=llm))
-        builder.add_node("solve", partial(solve_node, settings=settings, llm=llm, graph=graph))
-        builder.add_node("synthesize", partial(synthesize_node, settings=settings, llm=llm))
-        builder.add_node("resynth", resynth_node)
+        add("decompose", partial(decompose_node, settings=settings, llm=llm))
+        add("solve", partial(solve_node, settings=settings, llm=llm, graph=graph))
+        add("synthesize", partial(synthesize_node, settings=settings, llm=llm))
+        add("resynth", resynth_node)
 
         builder.add_conditional_edges(
             "supervisor", route_after_supervisor, {"afwijzen": "afwijzen", "agent": "decompose"}
@@ -1014,9 +1047,9 @@ def build_graph(
         builder.add_edge("finalize", END)
         return builder.compile(checkpointer=checkpointer)
 
-    builder.add_node("agent", partial(agent_node, settings=settings, llm=llm))
-    builder.add_node("tools", partial(tools_node, settings=settings, graph=graph))
-    builder.add_node("correct", correct_node)
+    add("agent", partial(agent_node, settings=settings, llm=llm))
+    add("tools", partial(tools_node, settings=settings, graph=graph))
+    add("correct", correct_node)
 
     builder.add_conditional_edges(
         "supervisor", route_after_supervisor, {"afwijzen": "afwijzen", "agent": "agent"}
