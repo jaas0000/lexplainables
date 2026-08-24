@@ -86,10 +86,13 @@ bevindingen worden samengevoegd tot één antwoord — live geverifieerd (een vr
 routeerde correct naar twee verschillende onderdelen van hetzelfde artikel). Story 047 begint de
 **annotatieketen**: `annoteer_node` classificeert één bepaling volgens het Juridisch
 Analyseschema (JAS) in één LLM-call, brongetrouw en ontdubbeld — bewust losstaand (nog niet in de
-graaf gewired), geen critic/patch/herzie/emit/advance nog. Live geverifieerd tegen artikel 1 van
-de Invorderingswet 1990. De rest van de agent-loop (critic/patch/herzie/emit/advance, de
-graaf-wiring naar een annotatie-worker, checkpointer/streaming, API-laag, ~25-35 stories geschat
-in totaal) moet nog gebouwd worden.
+graaf gewired). Story 048 voegt `critic_node` toe: beoordeelt diezelfde voorstellen met een
+aandacht-niveau (groen/geel/rood) + actie per element, dempt zelfweerspreking bij een tweede
+ronde, en breekt de keten nooit op een mislukte call — ook losstaand. Live geverifieerd tegen
+artikel 1 van de Invorderingswet 1990; de Critic ving daarbij een echte misclassificatie van de
+annotator. Nog geen patch/herzie/emit/advance, geen graaf-wiring naar een annotatie-worker,
+checkpointer/streaming of API-laag (~25-35 stories geschat in totaal voor de hele werkstroom)
+moet nog gebouwd worden.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -175,7 +178,10 @@ geverifieerd, en de eerste plek die de al bestaande prompt-cachingsplit (story 0
 gebruikt. Story 047 begint de annotatieketen: `annoteer_node` classificeert één bepaling volgens
 het JAS in één LLM-call, brongetrouw en ontdubbeld — losstaand, nog niet in de graaf gewired. Live
 geverifieerd tegen artikel 1 van de Invorderingswet 1990 (5 grounded voorstellen, 0 verworpen).
-Nog geen critic/patch/herzie/emit/advance, geen graaf-wiring naar een annotatie-worker, geen
-checkpointer/streaming, en geen enkel aangesloten API- of UI-endpoint — dat is de rest van de
-eerstvolgende grote werkstroom (~25-35 stories geschat in totaal), daarna `frontend-chat`
-(`tools/wetsanalyse-admin-mcp/` is klaar).
+Story 048 voegt `critic_node` toe: beoordeelt diezelfde voorstellen met een aandacht-niveau
+(groen/geel/rood) + actie per element, dempt zelfweerspreking bij een tweede beoordelingsronde, en
+breekt de keten nooit op een mislukte call — ook losstaand. Live geverifieerd: de Critic ving een
+echte misclassificatie van de annotator op artikel 1. Nog geen patch/herzie/emit/advance, geen
+graaf-wiring naar een annotatie-worker, geen checkpointer/streaming, en geen enkel aangesloten
+API- of UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom (~25-35 stories
+geschat in totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
