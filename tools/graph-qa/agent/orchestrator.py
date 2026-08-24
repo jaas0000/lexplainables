@@ -1,4 +1,4 @@
-"""Antwoord-/annotatie-agent-loop (LangGraph) — werkwijze-stories 044-050.
+"""Antwoord-/annotatie-agent-loop (LangGraph) — werkwijze-stories 044-051.
 
 Story 044 bouwde de kleinste snede die de drie losse bouwstenen (`ports.py`/story 029,
 `AnthropicLLM`/story 039, `MCPClient`/story 040, de toollaag/story 041) daadwerkelijk samenvoegt
@@ -39,7 +39,10 @@ API-laag, geen NL-vraag-gebaseerde annotatie-routing via de supervisor. Story 05
 **gespreksgeheugen** toe: `build_graph(..., checkpointer=...)` (`agent/checkpointer.py`, Postgres
 → SQLite → in-memory) + `nieuwe_beurt_invoer()` (zaait de nieuwe vraag, reset alle ephemere
 velden) — zie `docs/project/stories/050-graph-qa-checkpointer.md` §Afwijkingen voor de reden per
-punt.
+punt. Story 051 laat `agent_node`/`synthesize_node` het eind-antwoord streamen (`llm.stream()` +
+`get_stream_writer()`, custom-stream events `{"type": "token", ...}`) i.p.v. het antwoord in één
+stuk terug te geven — de nieuwe wrapper `agent/agent.py`'s `answer_stream()` consumeert die stream
+en levert het SSE-event-contract; zie `docs/project/stories/051-graph-qa-streaming.md`.
 """
 
 from __future__ import annotations
@@ -50,6 +53,7 @@ import re
 from functools import partial
 from typing import Annotated, Any, TypedDict
 
+from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 
 from . import annotatie, annotatie_prompt, artikel, prompts, specialists, supervisor
@@ -171,6 +175,20 @@ def _parse_final(final: Any) -> tuple[list[dict[str, Any]], list[str]]:
     return tool_uses, text_parts
 
 
+def _stream_final(llm: LLMPort, **kwargs: Any) -> Any:
+    """Stream tekst-deltas naar de LangGraph-custom-stream (`{"type": "token", ...}`, story 051)
+    en geef het volledige response-object terug — dezelfde vorm als `llm.create(...)`, dus
+    `_parse_final` hoeft niet te weten dat dit een streamende call was. Buiten een graaf-run
+    (bv. `graph.invoke(...)` in een test die geen `stream_mode` opgeeft) is `get_stream_writer()`
+    een no-op — veilig voor de bestaande, ongewijzigde sync-tests."""
+    writer = get_stream_writer()
+    with llm.stream(**kwargs) as stream:
+        for delta in stream.text_deltas:
+            if delta:
+                writer({"type": "token", "content": delta})
+        return stream.final_message()
+
+
 def _recent_context(state: State) -> str:
     """Korte samenvatting van eerdere berichten in dit gesprek — puur als aanknopingspunt voor
     verwijzingen als "dat begrip"/"dat artikel", nooit als vervanging van de eigen vraag.
@@ -255,7 +273,8 @@ def agent_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[str, A
         prompts.SYSTEM_PROMPT if not spec.system else f"{prompts.SYSTEM_PROMPT}\n\n{spec.system}"
     )
 
-    final = llm.create(
+    final = _stream_final(
+        llm,
         model=settings.llm_model,
         max_tokens=_MAX_TOKENS,
         system=system,
@@ -518,7 +537,8 @@ def synthesize_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[s
     user = (
         f"OORSPRONKELIJKE VRAAG:\n{state['question']}\n\nBEVINDINGEN PER DEELVRAAG:\n{bevindingen}"
     )
-    final = llm.create(
+    final = _stream_final(
+        llm,
         model=settings.llm_model,
         max_tokens=_MAX_TOKENS,
         system=system,
