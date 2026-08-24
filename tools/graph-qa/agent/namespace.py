@@ -13,12 +13,15 @@ per vraag opnieuw bepaald.
 `tests/test_namespace_drift.py` bewaakt dat deze defaults gelijk blijven aan
 `tools/bwb-import/app/rdf_vocab.py`'s `DEFAULT_BASE_IRI`/`DEFAULT_ONTOLOGY_IRI`.
 
-Poort van `wetsanalyse-ai/tools/graph-qa/agent/namespace.py`, 1:1.
+Poort van `wetsanalyse-ai/tools/graph-qa/agent/namespace.py`, 1:1. `vindplaats_patroon()` kwam er
+in story 044 bij (`provenance.py` is de eerste echte consument; story 041 liet 'm bewust weg toen
+er nog geen consument was).
 """
 
 from __future__ import annotations
 
 import os
+import re
 
 #: Documentruimte: de IRI's van regelingen, artikelen en leden.
 BASIS = os.getenv("GRAPHDB_BASE_IRI") or "urn:bwb:"
@@ -29,3 +32,16 @@ ONTOLOGIE = os.getenv("GRAPHDB_ONTOLOGY_IRI") or "urn:bwb-ns:"
 #: Scheidingsteken tussen segmenten: ``:`` in een URN-ruimte, ``/`` in een http-IRI.
 #: Spiegelt `Vocab._sep` in `tools/bwb-import/app/rdf_vocab.py`.
 SEP = ":" if BASIS.startswith("urn:") else "/"
+
+
+def vindplaats_patroon(basis: str = BASIS) -> str:
+    """Regex-patroon dat een vindplaats-IRI in vrije tekst herkent.
+
+    Bij een http(s)-basis blijven beide schema's toegestaan: een model of een tool-antwoord dat
+    `http://` teruggeeft waar de graaf `https://` voert, wijst nog steeds dezelfde bron aan en mag
+    niet als niet-onderbouwd wegvallen.
+    """
+    if basis.startswith("https://"):
+        kern = re.escape(basis[len("https://") :])
+        return r"https?://" + kern + r"[^\s\"'<>)\]}\\]+"
+    return re.escape(basis) + r"[^\s\"'<>)\]}\\]+"
