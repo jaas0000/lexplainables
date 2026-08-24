@@ -14,6 +14,8 @@ géén citaat noemt, is niet "gegrond" — er valt niets te controleren. Dat als
 schijnzekerheid, en juist die wil dit platform bestrijden.
 
 Poort van `wetsanalyse-ai/tools/graph-qa/agent/grounding.py`, 1:1 (werkwijze-story 044).
+`komt_letterlijk_voor`/de normalisatie zijn sinds story 047 gedeeld met `annotatie.py` — zie
+`agent/brongetrouw.py`.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from .brongetrouw import komt_letterlijk_voor
 from .models import Source
 from .provenance import _BWB_RE, citations_in, first_bwb
 
@@ -33,25 +36,6 @@ _CITAAT_RE = re.compile(r'"([^"\n]{2,400})"' r"|“([^”\n]{2,400})”")
 # ("belastingschuldige", "de ontvanger") en geen citaat van een passage; daar is de kans op een
 # terechte afwijking (verbuiging, hoofdletter) groter dan de opbrengst van de controle.
 _MIN_WOORDEN = 5
-
-_WS = re.compile(r"\s+")
-
-
-def _normaliseer(s: str) -> str:
-    """Collapse witruimte, zodat een fragment ondanks layout-verschillen matcht."""
-    return _WS.sub(" ", s or "").strip()
-
-
-def komt_letterlijk_voor(corpus: str, fragment: str) -> bool:
-    """Staat dit fragment letterlijk in de opgehaalde tekst?
-
-    Tijdelijk hier ondergebracht (`grounding.py`'s enige consument in deze story) — de referentie
-    heeft deze functie in `annotatie.py`, dat hier nog niet bestaat. Zodra de annotatieketen-story
-    'm ook nodig heeft (dezelfde brongetrouwheidseis geldt daar voor elke markering), verhuist hij
-    naar een gedeelde plek (`feature-bouwen` regel 8: pas delen ná een tweede consument).
-    """
-    norm = _normaliseer(fragment)
-    return bool(norm) and _normaliseer(corpus).find(norm) >= 0
 
 
 @dataclass
