@@ -4,6 +4,14 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #91 — graph-qa HTTP-laag (story 053)
+
+- **Geen `uvicorn`-launcher of Dockerfile voor `tools/graph-qa/api/main.py`.** Er is nog geen
+  deploy-doel voor graph-qa in lexplainables — hoort bij de story die het eerste deploybare image
+  bouwt, niet bij deze.
+
+---
+
 ## PR #81 — graph-qa antwoord-agent-loop (story 044) ✅ opgelost (story 047)
 
 - **`komt_letterlijk_voor`/`_normaliseer` stonden tijdelijk in `agent/grounding.py`.** Story 047
