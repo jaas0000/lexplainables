@@ -51,6 +51,12 @@ class Settings(BaseModel):
     # vooraf uitzetten (bv. lokale dev tegen een resource zonder de beta).
     prompt_caching: bool = True
 
+    # Decompositie (story 046): multi-hop-graaf-variant, standaard uit — zie orchestrator.py
+    # build_graph() voor de vertakking.
+    enable_decomposition: bool = False
+    max_subquestions: int = 5  # cap op het aantal deelvragen (kosten/latency begrenzen)
+    sub_max_turns: int = 8  # agent⇄tools-beurten per deelvraag, los van MAX_TURNS
+
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
         e = env if env is not None else os.environ
@@ -64,6 +70,9 @@ class Settings(BaseModel):
             "azure_foundry_resource": e.get("AZURE_FOUNDRY_RESOURCE"),
             "llm_model": e.get("LLM_MODEL"),
             "prompt_caching": e.get("PROMPT_CACHING"),
+            "enable_decomposition": e.get("ENABLE_DECOMPOSITION"),
+            "max_subquestions": e.get("MAX_SUBQUESTIONS"),
+            "sub_max_turns": e.get("SUB_MAX_TURNS"),
         }
         # None én lege string weglaten zodat de veld-defaults van kracht blijven.
         return cls(**{k: v for k, v in raw.items() if v is not None and v != ""})

@@ -1,4 +1,4 @@
-"""Antwoord-agent-loop (LangGraph) — werkwijze-stories 044-045.
+"""Antwoord-agent-loop (LangGraph) — werkwijze-stories 044-046.
 
 Story 044 bouwde de kleinste snede die de drie losse bouwstenen (`ports.py`/story 029,
 `AnthropicLLM`/story 039, `MCPClient`/story 040, de toollaag/story 041) daadwerkelijk samenvoegt
@@ -6,23 +6,35 @@ tot een werkende agent: vraag in, tools aanroepen, antwoord formuleren, op brong
 controleren — zonder keuze, één vaste systeemprompt, alle tools. Story 045 zet daar een
 **supervisor** vóór: kiest een specialist (`definitie`/`duiding`/`algemeen`, elk met een eigen
 prompt-addendum en beperkte toolset) en wijst een vraag buiten de wetgeving direct af, zonder
-tool-call.
+tool-call. Story 046 voegt een **tweede graaf-topologie** toe (`settings.enable_decomposition`,
+standaard uit): een samengestelde vraag wordt eerst in deelvragen gesplitst, elke deelvraag krijgt
+een eigen agent⇄tools-lus, en de bevindingen worden samengevoegd tot één antwoord. Staat de toggle
+uit, dan is de graaf-opbouw byte voor byte gelijk aan stories 044-045.
 
-Bewust nog **geen** annotatieketen, decompositie, checkpointer/gespreksgeheugen of streaming —
-zie `docs/project/stories/044-graph-qa-antwoord-loop.md` en `docs/project/stories/
-045-graph-qa-supervisor.md` §Afwijkingen voor de reden per punt (o.a.: de referentie se
-supervisor kiest ook tussen een antwoord- en een annotatie-worker en kan ze ketenen — met maar
-één worker hier is er niets om tussen te routeren of te ketenen).
+Bewust nog **geen** annotatieketen, checkpointer/gespreksgeheugen of streaming — zie
+`docs/project/stories/044-graph-qa-antwoord-loop.md`, `docs/project/stories/
+045-graph-qa-supervisor.md` en `docs/project/stories/046-graph-qa-decompositie.md` §Afwijkingen
+voor de reden per punt (o.a.: de referentie se supervisor kiest ook tussen een antwoord- en een
+annotatie-worker en kan ze ketenen — met maar één worker hier is er niets om tussen te routeren of
+te ketenen).
 
     START → supervisor_node → (afwijs_node → END)
                              → agent_node ⇄ tools_node → verify_node
                                → (correct_node → agent_node | finalize_node) → END
+
+    Met enable_decomposition=True vervangt dit de agent/tools/correct-tak:
+    START → supervisor_node → (afwijs_node → END)
+                             → decompose_node → solve_node
+                               → (verify_node, 1 deelvraag)
+                               → (synthesize_node → verify_node, >1 deelvraag)
+                             → verify_node → (resynth_node → synthesize_node | finalize_node) → END
 """
 
 from __future__ import annotations
 
 import logging
 import operator
+import re
 from functools import partial
 from typing import Annotated, Any, TypedDict
 
@@ -61,11 +73,39 @@ _AFWIJS_MELDING = (
     "helpen. Vraag me gerust naar een bepaling, een begrip of de samenhang tussen artikelen."
 )
 
+_MAX_DECOMPOSE_TOKENS = 400
+
+_DECOMPOSE_SYSTEM = (
+    "Je splitst een juridische vraag over de kennisgraaf op in de deelvragen die je apart moet "
+    "beantwoorden om de hele vraag te dekken. Geef ELKE deelvraag op een eigen regel, genummerd "
+    "(1., 2., …), in logische volgorde (een deelvraag mag voortbouwen op een eerdere). Splits "
+    "ALLEEN als de vraag echt meerdere losse onderdelen heeft; een enkelvoudige vraag geef je als "
+    "één regel terug (de vraag zelf). Verzin geen deelvragen die niet in de oorspronkelijke vraag "
+    "liggen. Geen inleiding of uitleg — alleen de genummerde regels."
+)
+
+_SYNTHESE_SYSTEM = (
+    "Je stelt één samenhangend eindantwoord samen uit de per-deelvraag verzamelde bevindingen. "
+    "Steun UITSLUITEND op die bevindingen — voeg geen nieuwe feiten toe en verzin geen "
+    "vindplaatsen. Behoud de vindplaatsen (regeling/artikel/lid) letterlijk zoals ze in de "
+    "bevindingen staan. "
+    "Antwoord bondig en goed gestructureerd; adresseer elk onderdeel van de oorspronkelijke vraag."
+)
+
+_SUBQUESTION_RE = re.compile(r"^\s*\d+[.)]\s*(.+)$")
+
 
 def _truncate(text: str, max_chars: int = _MAX_TOOL_RESULT_CHARS) -> str:
     if len(text) > max_chars:
         return text[:max_chars] + f"\n...[resultaat ingekort op {max_chars} tekens]"
     return text
+
+
+def parse_subquestions(text: str, cap: int) -> list[str]:
+    """Genummerde regels (`1. …`) naar een lijst deelvragen; geen match → geen fallback hier (de
+    aanroeper geeft de oorspronkelijke vraag mee als terugval, zodat deze functie zuiver blijft)."""
+    subs = [m.group(1).strip() for line in text.splitlines() if (m := _SUBQUESTION_RE.match(line))]
+    return subs[:cap]
 
 
 class State(TypedDict, total=False):
@@ -85,6 +125,8 @@ class State(TypedDict, total=False):
     niet_letterlijk: list[str]
     grounding_niveau: str
     sources: list[Source]
+    sub_questions: list[str]
+    sub_findings: list[dict[str, str]]
 
 
 def _parse_final(final: Any) -> tuple[list[dict[str, Any]], list[str]]:
@@ -257,7 +299,168 @@ def finalize_node(state: State) -> dict[str, Any]:
         )
 
     sources = curate_sources(collect_sources(state.get("source_trace", [])), antwoord)
-    return {"answer": antwoord, "sources": sources}
+    upd: dict[str, Any] = {"answer": antwoord, "sources": sources}
+    # In de decompositie-stroom komt het eind-antwoord uit synthesize_node/solve_node en is het
+    # nog niet in het messages-kanaal beland (agent_node doet dat wél, via de zaai-message). Zet
+    # het hier één keer zodat een latere checkpointer-story het gespreksgeheugen kan lezen zonder
+    # deze functie opnieuw aan te passen — en zodat de State-vorm gelijk blijft aan het legacy-pad.
+    if state.get("sub_questions") is not None:
+        upd["messages"] = [{"role": "assistant", "content": [{"type": "text", "text": antwoord}]}]
+    return upd
+
+
+# ---- Decompositie-nodes (multi-hop; alleen actief bij settings.enable_decomposition) ---------
+
+
+def decompose_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[str, Any]:
+    """Splitst de vraag in geordende deelvragen (één LLM-call). Enkelvoudig → één deelvraag."""
+    resp = llm.create(
+        model=settings.llm_model,
+        max_tokens=_MAX_DECOMPOSE_TOKENS,
+        system=_DECOMPOSE_SYSTEM,
+        tools=[],
+        messages=[{"role": "user", "content": state["question"]}],
+    )
+    text = "".join(b.text for b in resp.content if b.type == "text")
+    subs = parse_subquestions(text, settings.max_subquestions) or [state["question"]]
+    return {"sub_questions": subs}
+
+
+def solve_node(
+    state: State, *, settings: Settings, llm: LLMPort, graph: GraphPort
+) -> dict[str, Any]:
+    """Beantwoordt elke deelvraag met een eigen agent⇄tools-lus (lokale scratch-messages).
+
+    De gedeelde `source_trace` accumuleert over alle deelvragen zodat grounding/provenance op het
+    eind-antwoord ongewijzigd werken. Bij precies één deelvraag is er geen synthese nodig: de
+    tool-loze eindbeurt ís het eindantwoord (`route_after_solve` slaat `synthesize` dan over).
+    """
+    spec = specialists.get(state.get("specialist"))
+    subs = state.get("sub_questions") or [state["question"]]
+    enkelvoudig = len(subs) == 1
+    base_system = (
+        prompts.SYSTEM_PROMPT if not spec.system else f"{prompts.SYSTEM_PROMPT}\n\n{spec.system}"
+    )
+    schemas = anthropic_schemas(only=spec.tools)
+    trace = list(state.get("source_trace", []))
+    findings: list[dict[str, str]] = []
+
+    for sub in subs:
+        # base_system is stabiel over alle deelvragen heen (identiteit + specialist-addendum);
+        # variabel groeit per deelvraag met de bevindingen tot dan toe. Dit is de eerste plek in
+        # de orkestrator die herhaalde calls met hetzelfde stabiele systeemblok doet binnen één
+        # graafinvocatie — de cachingsplit (`ports.Systeem`, story 039) heeft hier voor het eerst
+        # iets om op te herhalen.
+        variabel = ""
+        if findings:
+            ctx = "\n".join(f"- {f['vraag']} → {f['antwoord'][:300]}" for f in findings)
+            variabel += (
+                "EERDERE DEELBEVINDINGEN (context; verifieer elk feit opnieuw via de tools):\n"
+                + ctx
+            )
+        msgs: list[dict[str, Any]] = [{"role": "user", "content": sub}]
+        antwoord = ""
+        for turn in range(settings.sub_max_turns):
+            # Op de laatste toegestane beurt geen tools meer aanbieden — anders kan het model
+            # blijven zoeken tot de lus afloopt en `antwoord` leeg blijft (zelfde vangnet als
+            # `agent_node`'s MAX_TURNS, maar hier per deelvraag i.p.v. per hele beurt).
+            laatste_beurt = turn == settings.sub_max_turns - 1
+            final = llm.create(
+                model=settings.llm_model,
+                max_tokens=_MAX_TOKENS,
+                system=[base_system, variabel],
+                tools=[] if laatste_beurt else schemas,
+                messages=msgs,
+            )
+            tool_uses, text_parts = _parse_final(final)
+            assistant_content: list[dict[str, Any]] = [
+                {"type": "text", "text": t} for t in text_parts if t
+            ]
+            assistant_content += [
+                {"type": "tool_use", "id": t["id"], "name": t["name"], "input": t["input"]}
+                for t in tool_uses
+            ]
+            msgs.append({"role": "assistant", "content": assistant_content})
+            if not tool_uses:
+                antwoord = "".join(text_parts)
+                break
+            results = []
+            for tu in tool_uses:
+                result_text = _truncate(dispatch(tu["name"], graph, tu["input"], settings))
+                trace.append((tu["name"], result_text))
+                results.append(
+                    {"type": "tool_result", "tool_use_id": tu["id"], "content": result_text}
+                )
+            msgs.append({"role": "user", "content": results})
+        if not antwoord.strip():
+            logger.warning(
+                "deelvraag zonder antwoord",
+                extra={
+                    "deelvraag": sub[:120],
+                    "beurten": settings.sub_max_turns,
+                    "specialist": state.get("specialist"),
+                    "bronnen": len(trace),
+                },
+            )
+        findings.append({"vraag": sub, "antwoord": antwoord})
+
+    upd: dict[str, Any] = {"sub_findings": findings, "source_trace": trace}
+    if enkelvoudig:
+        upd["answer"] = findings[0]["antwoord"] if findings else ""
+    return upd
+
+
+def route_after_solve(state: State) -> str:
+    return "verify" if len(state.get("sub_questions") or []) <= 1 else "synthesize"
+
+
+def synthesize_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[str, Any]:
+    """Stelt het eind-antwoord samen uit de deelbevindingen (één LLM-call)."""
+    findings = state.get("sub_findings") or []
+    bevindingen = "\n\n".join(
+        f"DEELVRAAG: {f['vraag']}\nBEVINDING: {f['antwoord']}" for f in findings
+    )
+    system = _SYNTHESE_SYSTEM
+    # Beide categorieën benoemen, niet alleen `unsupported` — zelfde bugklasse-fix als
+    # `correct_node` al toepast op het legacy-pad (werkwijze-story 046 §Afwijkingen punt 5): een
+    # synthese die alleen op een citaat struikelde kreeg anders een herkansing met een lege
+    # opsomming.
+    if state.get("corrected"):
+        opdrachten: list[str] = []
+        if state.get("unsupported"):
+            opdrachten.append(
+                "Verwijder of onderbouw deze eerder niet-gegronde verwijzingen: "
+                + ", ".join(state["unsupported"])
+                + "."
+            )
+        if state.get("niet_letterlijk"):
+            passages = "; ".join(
+                f'"{c[:120]}…"' if len(c) > 120 else f'"{c}"' for c in state["niet_letterlijk"]
+            )
+            opdrachten.append(
+                "Deze passages stonden tussen aanhalingstekens maar niet letterlijk in de "
+                f"bevindingen: {passages}. Herstel ze woord voor woord of haal de "
+                "aanhalingstekens weg."
+            )
+        if opdrachten:
+            system += "\n\n" + " ".join(opdrachten)
+    user = (
+        f"OORSPRONKELIJKE VRAAG:\n{state['question']}\n\nBEVINDINGEN PER DEELVRAAG:\n{bevindingen}"
+    )
+    final = llm.create(
+        model=settings.llm_model,
+        max_tokens=_MAX_TOKENS,
+        system=system,
+        tools=[],
+        messages=[{"role": "user", "content": user}],
+    )
+    _, text_parts = _parse_final(final)
+    return {"answer": "".join(text_parts).strip()}
+
+
+def resynth_node(state: State) -> dict[str, Any]:
+    """Ongegronde synthese → markeer voor één her-synthese (synthesize_node leest `corrected`)."""
+    return {"corrected": True, "answer": ""}
 
 
 def route_after_supervisor(state: State) -> str:
@@ -278,15 +481,43 @@ def route_after_verify(state: State) -> str:
 
 def build_graph(settings: Settings, llm: LLMPort, graph: GraphPort) -> Any:
     """Compileert de antwoord-graaf. Geen checkpointer: deze snede kent nog geen
-    multi-turn-gespreksgeheugen (dat komt met de story die de API-laag bouwt)."""
+    multi-turn-gespreksgeheugen (dat komt met de story die de API-laag bouwt).
+
+    `settings.enable_decomposition=True` vertakt naar de multi-hop-topologie (story 046) i.p.v.
+    de agent⇄tools-lus; de toggel-uit-stand hieronder blijft byte voor byte gelijk aan
+    stories 044-045."""
     builder = StateGraph(State)
     builder.add_node("supervisor", partial(supervisor_node, settings=settings, llm=llm))
     builder.add_node("afwijzen", afwijs_node)
+    builder.add_node("verify", verify_node)
+    builder.add_node("finalize", finalize_node)
+
+    if settings.enable_decomposition:
+        builder.add_node("decompose", partial(decompose_node, settings=settings, llm=llm))
+        builder.add_node("solve", partial(solve_node, settings=settings, llm=llm, graph=graph))
+        builder.add_node("synthesize", partial(synthesize_node, settings=settings, llm=llm))
+        builder.add_node("resynth", resynth_node)
+
+        builder.add_edge(START, "supervisor")
+        builder.add_conditional_edges(
+            "supervisor", route_after_supervisor, {"afwijzen": "afwijzen", "agent": "decompose"}
+        )
+        builder.add_edge("afwijzen", END)
+        builder.add_edge("decompose", "solve")
+        builder.add_conditional_edges(
+            "solve", route_after_solve, {"verify": "verify", "synthesize": "synthesize"}
+        )
+        builder.add_edge("synthesize", "verify")
+        builder.add_conditional_edges(
+            "verify", route_after_verify, {"correct": "resynth", "finalize": "finalize"}
+        )
+        builder.add_edge("resynth", "synthesize")
+        builder.add_edge("finalize", END)
+        return builder.compile()
+
     builder.add_node("agent", partial(agent_node, settings=settings, llm=llm))
     builder.add_node("tools", partial(tools_node, settings=settings, graph=graph))
-    builder.add_node("verify", verify_node)
     builder.add_node("correct", correct_node)
-    builder.add_node("finalize", finalize_node)
 
     builder.add_edge(START, "supervisor")
     builder.add_conditional_edges(

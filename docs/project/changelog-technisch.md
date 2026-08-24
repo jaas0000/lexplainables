@@ -1,5 +1,18 @@
 # Technische changelog
 
+- graph-qa decompositie — multi-hop-graaf-variant (PR #83, story 046): tweede graaf-topologie
+  (`decompose_node → solve_node → synthesize_node → verify_node → (resynth_node) →
+  finalize_node`), selecteerbaar via `settings.enable_decomposition` (standaard uit — de
+  bestaande agent⇄tools-lus uit stories 044-045 blijft dan byte voor byte ongewijzigd, bewezen
+  doordat alle 136 bestaande tests ongewijzigd blijven slagen). Een samengestelde vraag wordt
+  eerst in deelvragen gesplitst, elke deelvraag krijgt een eigen agent⇄tools-lus met een gedeelde
+  `source_trace`, en de bevindingen worden samengevoegd tot één antwoord. `solve_node` is de
+  eerste plek die de al bestaande prompt-cachingsplit (`ports.Systeem`, story 039) daadwerkelijk
+  gebruikt. `synthesize_node`'s herkansing benoemt zowel `unsupported` als `niet_letterlijk`,
+  dezelfde bugklasse-fix als `correct_node` op het legacy-pad. Live geverifieerd: een
+  samengestelde vraag over twee begrippen wordt correct gesplitst en elk deel tegen het juiste
+  onderdeel van artikel 2 lid 1 beantwoord (belastingschuldige → k, belastingaanslag → m), 27
+  bronnen, gegrond.
 - graph-qa supervisor — specialist-routing + afwijzen (PR #82, story 045): nieuwe
   `supervisor_node` vóór `agent_node` kiest een specialist (`definitie`/`duiding`/`algemeen`,
   elk met een eigen prompt-addendum en beperkte toolset via het al bestaande

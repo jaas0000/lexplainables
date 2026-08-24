@@ -1,5 +1,5 @@
 """Live integratietests: de volledige antwoord-agent-loop tegen de echte GraphDB + Foundry
-(werkwijze-stories 044-045).
+(werkwijze-stories 044-046).
 
 Standaard geskipt (`-m "not integration"`) — vereist een draaiende `deploy/graphdb`-stack (gevuld
 met de Invorderingswet-fixture, zie stories 040/041) en een geldige Foundry-key/-resource in de
@@ -81,4 +81,32 @@ def test_live_afwijst_vraag_buiten_de_wetgeving_zonder_de_graaf_te_raken() -> No
 
     assert result["afwijzen"] is True
     assert result["source_trace"] == [], "een afgewezen vraag hoort de graaf niet te raken"
+    assert (result["answer"] or "").strip() != ""
+
+
+@pytest.mark.integration
+def test_live_decompositie_splitst_een_samengestelde_vraag() -> None:
+    settings = Settings.from_env(os.environ)
+    if not settings.azure_foundry_api_key or not settings.azure_foundry_resource:
+        pytest.skip("AZURE_FOUNDRY_API_KEY(_FILE)/AZURE_FOUNDRY_RESOURCE niet in de omgeving")
+    if not settings.graphdb_mcp_url or not settings.graphdb_token:
+        pytest.skip("GRAPHDB_MCP_URL/GRAPHDB_TOKEN niet in de omgeving")
+    settings = settings.model_copy(update={"enable_decomposition": True})
+
+    llm = AnthropicLLM(settings)
+    graph = make_graph(settings)
+    try:
+        vraag = (
+            "Wat is een belastingschuldige, en wat is een belastingaanslag, volgens de "
+            "Invorderingswet 1990?"
+        )
+        result = build_graph(settings, llm, graph).invoke({"question": vraag})
+    finally:
+        graph.close()
+
+    assert len(result["sub_questions"]) >= 2, f"geen splitsing: {result.get('sub_questions')}"
+    assert result["source_trace"], "de decompositie-lus heeft geen enkele tool aangeroepen"
+    assert result["grounding_niveau"] in {"gegrond", "onbepaald"}, (
+        f"onverwacht ongegrond: {result.get('unsupported')} / {result.get('niet_letterlijk')}"
+    )
     assert (result["answer"] or "").strip() != ""
