@@ -10,7 +10,13 @@ from __future__ import annotations
 
 import json
 
-from agent.orchestrator import MAX_TURNS, annoteer_node, build_graph, parse_subquestions
+from agent.orchestrator import (
+    MAX_TURNS,
+    annoteer_node,
+    build_graph,
+    critic_node,
+    parse_subquestions,
+)
 from tests.fakes import FakeGraph, FakeLLM, make_settings, response, text_block, tool_block
 
 
@@ -389,3 +395,176 @@ def test_annoteer_node_haalt_corpus_op_en_verwerkt_de_classificatie() -> None:
     assert result["verworpen_fragmenten"] == []
     # De prompt kreeg geen tools mee — dit is een pure classificatiestap, geen tool-lus.
     assert llm.calls[0]["tools"] == []
+
+
+# ---- Critic (story 048, enkele ronde) — losstaande functie, geen build_graph ----------------
+
+
+def test_critic_node_gelukkig_pad_zet_aandacht_en_motivatie() -> None:
+    voorstellen = [
+        {"id": "elementid01", "klasse": "Rechtssubject", "tekst": "Degene die aangifte doet"},
+        {"id": "elementid02", "klasse": "Rechtsfeit", "tekst": "aangifte doet"},
+    ]
+    llm = FakeLLM(
+        [
+            response(
+                [
+                    text_block(
+                        json.dumps(
+                            {
+                                "oordelen": [
+                                    {
+                                        "id": "elementid01",
+                                        "aandacht": "groen",
+                                        "motivatie": "helder",
+                                        "actie": "behoud",
+                                    },
+                                    {
+                                        "id": "elementid02",
+                                        "aandacht": "geel",
+                                        "motivatie": "grensgeval",
+                                        "actie": "behoud",
+                                    },
+                                ],
+                                "ontbrekend": [],
+                            }
+                        )
+                    )
+                ],
+                "end_turn",
+            )
+        ]
+    )
+    settings = make_settings()
+
+    result = critic_node(
+        {"voorstellen": voorstellen, "corpus": "corpus-tekst"}, settings=settings, llm=llm
+    )
+
+    assert result["critic_gefaald"] is False
+    assert result["critic_ronde"] == 1
+    voorstel1, voorstel2 = result["voorstellen"]
+    assert voorstel1["aandacht"] == "groen"
+    assert voorstel1["critic"] == "helder"
+    assert voorstel2["aandacht"] == "geel"
+    assert len(voorstel1["critic_rondes"]) == 1
+    assert voorstel1["critic_rondes"][0]["ronde"] == 1
+
+
+def test_critic_node_meldt_nieuw_ontbrekend_en_dedupliceert_bij_herhaling() -> None:
+    voorstellen = [{"id": "elementid01", "klasse": "Rechtssubject", "tekst": "iets"}]
+    respons = response(
+        [
+            text_block(
+                json.dumps(
+                    {
+                        "oordelen": [{"id": "elementid01", "aandacht": "groen", "actie": "behoud"}],
+                        "ontbrekend": [
+                            {"klasse": "Rechtsfeit", "reden": "mist", "tekst": "een handeling"}
+                        ],
+                    }
+                )
+            )
+        ],
+        "end_turn",
+    )
+    settings = make_settings()
+
+    eerste = critic_node(
+        {"voorstellen": voorstellen, "corpus": "corpus-tekst"},
+        settings=settings,
+        llm=FakeLLM([respons]),
+    )
+    assert len(eerste["nieuw_ontbrekend"]) == 1
+    assert len(eerste["gemeld_ontbrekend"]) == 1
+
+    # Tweede ronde: hetzelfde ontbrekend-item, nu al gemeld — geen nieuw item meer.
+    tweede = critic_node(
+        {
+            "voorstellen": voorstellen,
+            "corpus": "corpus-tekst",
+            "gemeld_ontbrekend": eerste["gemeld_ontbrekend"],
+        },
+        settings=settings,
+        llm=FakeLLM([respons]),
+    )
+    assert tweede["nieuw_ontbrekend"] == []
+
+
+def test_critic_node_ronde_twee_dempt_zelfweerspreking() -> None:
+    voorstel = {
+        "id": "elementid01",
+        "klasse": "Rechtsbetrekking",  # resultaat van een al toegepaste ronde-1-correctie
+        "alternatieven": [],
+        "critic_rondes": [
+            {
+                "ronde": 1,
+                "aandacht": "rood",
+                "actie": "vervang",
+                "voorstel_klasse": "Rechtsbetrekking",
+                "toegepast": True,
+            }
+        ],
+    }
+    llm = FakeLLM(
+        [
+            response(
+                [
+                    text_block(
+                        json.dumps(
+                            {
+                                "oordelen": [
+                                    {
+                                        "id": "elementid01",
+                                        "aandacht": "rood",
+                                        "actie": "vervang",
+                                        "motivatie": "toch geen Rechtsbetrekking",
+                                        "voorstel_klasse": "Rechtsobject",
+                                    }
+                                ],
+                                "ontbrekend": [],
+                            }
+                        )
+                    )
+                ],
+                "end_turn",
+            )
+        ]
+    )
+    settings = make_settings()
+
+    result = critic_node(
+        {"voorstellen": [voorstel], "corpus": "corpus-tekst", "critic_ronde": 1},
+        settings=settings,
+        llm=llm,
+    )
+
+    assert result["critic_ronde"] == 2
+    uitkomst = result["voorstellen"][0]
+    assert uitkomst["aandacht"] == "geel"  # gedempt, niet rood
+    assert any(a["klasse"] == "Rechtsobject" for a in uitkomst["alternatieven"])
+
+
+def test_critic_node_faalpad_laat_voorstellen_ongemoeid() -> None:
+    voorstellen = [{"id": "elementid01", "klasse": "Rechtssubject", "tekst": "iets"}]
+    # `content=None` breekt de content-iteratie in critic_node — simuleert een kapotte respons
+    # zonder de FakeLLM zelf te hoeven aanpassen.
+    llm = FakeLLM([response(None, "end_turn")])
+    settings = make_settings()
+
+    result = critic_node(
+        {"voorstellen": voorstellen, "corpus": "corpus-tekst"}, settings=settings, llm=llm
+    )
+
+    assert result["critic_gefaald"] is True
+    assert result["voorstellen"] == voorstellen
+    assert result["critic_feedback"] == []
+
+
+def test_critic_node_zonder_voorstellen_doet_geen_llm_call() -> None:
+    llm = FakeLLM([])  # een aanroep zou IndexError geven
+    settings = make_settings()
+
+    result = critic_node({"voorstellen": []}, settings=settings, llm=llm)
+
+    assert result == {}

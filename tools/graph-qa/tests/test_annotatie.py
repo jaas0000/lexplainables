@@ -1,15 +1,22 @@
 """`_verwerk`/`_parse_elementen`: brongetrouwheid, klasse-validatie, ontdubbeling via
-`sleutel_van`, id-behoud.
+`sleutel_van`, id-behoud. `_verwerk_critic`/`demp_zelfweerspreking`/`vervang_ids_door_citaat`:
+Critic-JSON-parsing, normalisatie, zelfweerspreking-demping, id-naar-citaat.
 
 Eigen tests (niet geport van de referentie se `tests/test_annotatie.py` — niet gelezen), tegen
-`agent/annotatie.py`, dat zelf wél 1:1 geport is voor de kernfuncties (werkwijze-story 047).
+`agent/annotatie.py`, dat zelf wél 1:1 geport is voor de kernfuncties (werkwijze-stories 047-048).
 """
 
 from __future__ import annotations
 
 import json
 
-from agent.annotatie import _parse_elementen, _verwerk
+from agent.annotatie import (
+    _parse_elementen,
+    _verwerk,
+    _verwerk_critic,
+    demp_zelfweerspreking,
+    vervang_ids_door_citaat,
+)
 
 _CORPUS = (
     "1. Degene die aangifte doet, is verplicht de gegevens waarheidsgetrouw te verstrekken.\n\n"
@@ -179,3 +186,205 @@ def test_verwerk_scope_lid_overschrijft_het_modelveld() -> None:
 
     assert voorstellen[0].lid == "1"
     assert voorstellen[0].vindplaats == "BWBR0004770 art. 10 lid 1"
+
+
+# ---- _verwerk_critic (story 048) -------------------------------------------------------------
+
+
+def test_verwerk_critic_koppelt_op_id() -> None:
+    tekst = json.dumps(
+        {
+            "oordelen": [
+                {"id": "abc123456789", "aandacht": "groen", "motivatie": "prima", "actie": "behoud"}
+            ],
+            "ontbrekend": [],
+        }
+    )
+    oordelen, ontbrekend = _verwerk_critic(tekst, ["abc123456789"])
+
+    assert ontbrekend == []
+    assert oordelen["abc123456789"].aandacht == "groen"
+    assert oordelen["abc123456789"].actie == "behoud"
+
+
+def test_verwerk_critic_index_terugval_bij_ontbrekend_id() -> None:
+    tekst = json.dumps({"oordelen": [{"index": 0, "aandacht": "geel", "actie": "behoud"}]})
+    oordelen, _ = _verwerk_critic(tekst, ["idA"])
+
+    assert oordelen["idA"].aandacht == "geel"
+
+
+def test_verwerk_critic_onbekende_aandacht_genegeerd() -> None:
+    tekst = json.dumps({"oordelen": [{"id": "idA", "aandacht": "blauw", "actie": "behoud"}]})
+    oordelen, _ = _verwerk_critic(tekst, ["idA"])
+
+    assert oordelen == {}
+
+
+def test_verwerk_critic_verwijder_zonder_rood_degradeert_naar_vervang() -> None:
+    tekst = json.dumps(
+        {
+            "oordelen": [
+                {
+                    "id": "idA",
+                    "aandacht": "geel",
+                    "actie": "verwijder",
+                    "voorstel_klasse": "Rechtsobject",
+                }
+            ]
+        }
+    )
+    oordelen, _ = _verwerk_critic(tekst, ["idA"])
+
+    assert oordelen["idA"].actie == "vervang"
+
+
+def test_verwerk_critic_vervang_zonder_voorstel_degradeert_naar_behoud() -> None:
+    tekst = json.dumps({"oordelen": [{"id": "idA", "aandacht": "rood", "actie": "vervang"}]})
+    oordelen, _ = _verwerk_critic(tekst, ["idA"])
+
+    assert oordelen["idA"].actie == "behoud"
+
+
+def test_verwerk_critic_ongeldige_voorstel_klasse_wordt_leeggemaakt() -> None:
+    tekst = json.dumps(
+        {
+            "oordelen": [
+                {
+                    "id": "idA",
+                    "aandacht": "geel",
+                    "actie": "vervang",
+                    "voorstel_klasse": "Onzin",
+                    "voorstel_tekst": "iets",
+                }
+            ]
+        }
+    )
+    oordelen, _ = _verwerk_critic(tekst, ["idA"])
+
+    assert oordelen["idA"].voorstel_klasse == ""
+    assert oordelen["idA"].voorstel_tekst == "iets"
+    assert oordelen["idA"].actie == "vervang"  # voorstel_tekst alleen is genoeg
+
+
+def test_verwerk_critic_ontbrekend_geldige_klasse_behouden_ongeldige_genegeerd() -> None:
+    tekst = json.dumps(
+        {
+            "oordelen": [],
+            "ontbrekend": [
+                {"klasse": "Rechtssubject", "reden": "mist", "tekst": "iets"},
+                {"klasse": "Onzin", "reden": "x"},
+            ],
+        }
+    )
+    _, ontbrekend = _verwerk_critic(tekst, [])
+
+    assert len(ontbrekend) == 1
+    assert ontbrekend[0].klasse == "Rechtssubject"
+
+
+# ---- demp_zelfweerspreking (story 048) -------------------------------------------------------
+
+
+def test_demp_zelfweerspreking_dempt_teruggedraaide_eigen_correctie() -> None:
+    voorstel = {
+        "klasse": "Rechtsbetrekking",  # het resultaat van de al toegepaste ronde-1-correctie
+        "alternatieven": [],
+        "critic_rondes": [
+            {
+                "ronde": 1,
+                "aandacht": "rood",
+                "actie": "vervang",
+                "voorstel_klasse": "Rechtsbetrekking",
+                "toegepast": True,
+            },
+            {
+                "ronde": 2,
+                "aandacht": "rood",
+                "actie": "vervang",
+                "voorstel_klasse": "Rechtsobject",  # draait de eigen correctie terug
+                "motivatie": "toch geen Rechtsbetrekking",
+                "toegepast": False,
+            },
+        ],
+    }
+    gedempt = demp_zelfweerspreking([voorstel])
+
+    assert gedempt == 1
+    assert voorstel["aandacht"] == "geel"
+    assert voorstel["critic_rondes"][-1]["aandacht"] == "geel"
+    assert any(a["klasse"] == "Rechtsobject" for a in voorstel["alternatieven"])
+
+
+def test_demp_zelfweerspreking_laat_eerste_ronde_ongemoeid() -> None:
+    voorstel = {
+        "klasse": "Rechtsobject",
+        "alternatieven": [],
+        "critic_rondes": [
+            {
+                "ronde": 1,
+                "aandacht": "rood",
+                "voorstel_klasse": "Rechtsbetrekking",
+                "toegepast": False,
+            }
+        ],
+    }
+    gedempt = demp_zelfweerspreking([voorstel])
+
+    assert gedempt == 0
+    assert "aandacht" not in voorstel or voorstel.get("aandacht") != "geel"
+
+
+def test_demp_zelfweerspreking_laat_ongerelateerd_oordeel_ongemoeid() -> None:
+    voorstel = {
+        "klasse": "Rechtsbetrekking",
+        "alternatieven": [],
+        "critic_rondes": [
+            {
+                "ronde": 1,
+                "aandacht": "rood",
+                "voorstel_klasse": "Rechtsbetrekking",
+                "toegepast": True,
+            },
+            {
+                "ronde": 2,
+                "aandacht": "geel",  # geen rood eindoordeel — niets om te dempen
+                "voorstel_klasse": "Rechtsobject",
+                "toegepast": False,
+            },
+        ],
+    }
+    gedempt = demp_zelfweerspreking([voorstel])
+
+    assert gedempt == 0
+
+
+# ---- vervang_ids_door_citaat (story 048) -----------------------------------------------------
+
+
+def test_vervang_ids_door_citaat_bekend_id() -> None:
+    voorstellen = [{"id": "abc123456789", "tekst": "een kort fragment"}]
+    resultaat = vervang_ids_door_citaat("zie [abc123456789] voor context", voorstellen)
+
+    assert "abc123456789" not in resultaat
+    assert "'een kort fragment'" in resultaat
+
+
+def test_vervang_ids_door_citaat_onbekend_id() -> None:
+    voorstellen = [{"id": "abc123456789", "tekst": "iets"}]
+    resultaat = vervang_ids_door_citaat("zie [999999999999] voor context", voorstellen)
+
+    assert "een ander element" in resultaat
+
+
+def test_vervang_ids_door_citaat_kapt_lange_tekst_af() -> None:
+    lange_tekst = "x" * 60
+    voorstellen = [{"id": "abc123456789", "tekst": lange_tekst}]
+    resultaat = vervang_ids_door_citaat("zie [abc123456789]", voorstellen)
+
+    assert "…" in resultaat
+    assert lange_tekst not in resultaat
+
+
+def test_vervang_ids_door_citaat_lege_motivatie_blijft_leeg() -> None:
+    assert vervang_ids_door_citaat("", [{"id": "abc123456789", "tekst": "iets"}]) == ""
