@@ -1,14 +1,17 @@
 """De antwoord-agent-loop: supervisor-routing, gelukkig pad, ongegrond-correctie, onbepaald,
-max-turns-vangnet, afwijzen, decompositie (multi-hop), volledige annotatieketen.
+max-turns-vangnet, afwijzen, decompositie (multi-hop), volledige annotatieketen, gespreksgeheugen.
 
 Eigen tests (niet geport van de referentie se `tests/test_orchestrator.py`/`test_agent_loop.py` —
 niet gelezen, alleen hun bestandsgrootte gezien via een Explore-agent), tegen `agent/
-orchestrator.py`, dat zelf wél 1:1 op het legacy-QA-pad geport is (stories 044-049).
+orchestrator.py`, dat zelf wél 1:1 op het legacy-QA-pad geport is (stories 044-050).
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
+
+from langgraph.checkpoint.memory import MemorySaver
 
 from agent.orchestrator import (
     MAX_TURNS,
@@ -18,6 +21,7 @@ from agent.orchestrator import (
     critic_node,
     emit_node,
     herzie_node,
+    nieuwe_beurt_invoer,
     parse_subquestions,
     patch_node,
     route_na_critic,
@@ -813,3 +817,165 @@ def test_build_graph_volledige_annotatieketen_met_doel() -> None:
     assert result["voorstellen"][0]["klasse"] == "Rechtsfeit"  # gepatcht
     assert result["voorstellen"][0]["aandacht"] == "groen"  # eindoordeel
     assert result["answer"]
+
+
+# ---- Gespreksgeheugen: checkpointer + nieuwe_beurt_invoer (story 050) -------------------------
+
+
+def test_nieuwe_beurt_invoer_met_vraag_zaait_bericht_en_reset() -> None:
+    invoer = nieuwe_beurt_invoer(question="Wat is een belastingschuldige?")
+
+    assert invoer["question"] == "Wat is een belastingschuldige?"
+    assert invoer["messages"] == [{"role": "user", "content": "Wat is een belastingschuldige?"}]
+    assert invoer["turns"] == 0
+    assert invoer["critic_ronde"] == 0
+    assert invoer["voorstellen"] == []
+    assert invoer["doel"] == {}
+
+
+def test_nieuwe_beurt_invoer_met_doel_zaait_geen_bericht() -> None:
+    invoer = nieuwe_beurt_invoer(doel={"bwbId": "BWBR0004770", "artikel": "1"})
+
+    assert invoer["doel"] == {"bwbId": "BWBR0004770", "artikel": "1"}
+    assert "messages" not in invoer
+    assert invoer["question"] == ""
+
+
+def test_checkpointer_onthoudt_het_gesprek_over_twee_beurten() -> None:
+    async def _run() -> None:
+        saver = MemorySaver()
+        graph = FakeGraph(result="")
+        thread = {"configurable": {"thread_id": "gesprek-1"}}
+
+        app1 = build_graph(
+            make_settings(),
+            FakeLLM([_supervisor_ok(), response([text_block("Eerste antwoord.")], "end_turn")]),
+            graph,
+            checkpointer=saver,
+        )
+        await app1.ainvoke(nieuwe_beurt_invoer(question="Wat is een belastingschuldige?"), thread)
+
+        app2 = build_graph(
+            make_settings(),
+            FakeLLM([_supervisor_ok(), response([text_block("Tweede antwoord.")], "end_turn")]),
+            graph,
+            checkpointer=saver,
+        )
+        result2 = await app2.ainvoke(nieuwe_beurt_invoer(question="En de aanslag dan?"), thread)
+
+        gespreks_tekst = json.dumps(result2["messages"])
+        assert "Wat is een belastingschuldige?" in gespreks_tekst
+        assert "Eerste antwoord." in gespreks_tekst
+        assert "En de aanslag dan?" in gespreks_tekst
+
+        # Een ANDER gesprek deelt geen geheugen.
+        ander_thread = {"configurable": {"thread_id": "gesprek-2"}}
+        app3 = build_graph(
+            make_settings(),
+            FakeLLM([_supervisor_ok(), response([text_block("Los antwoord.")], "end_turn")]),
+            graph,
+            checkpointer=saver,
+        )
+        result3 = await app3.ainvoke(
+            nieuwe_beurt_invoer(question="Geheel andere vraag"), ander_thread
+        )
+        gespreks_tekst_3 = json.dumps(result3["messages"])
+        assert "belastingschuldige" not in gespreks_tekst_3
+
+    asyncio.run(_run())
+
+
+def test_checkpointer_reset_ephemere_annotatievelden_bij_een_nieuwe_beurt() -> None:
+    """Een annotatiebeurt laat `critic_ronde`/`corpus`/`voorstellen` gevuld achter; een
+    daaropvolgende QA-beurt in hetzelfde gesprek raakt die velden niet, maar hoort ze via de
+    reset in `nieuwe_beurt_invoer` toch weer op de default te zien."""
+
+    async def _run() -> None:
+        saver = MemorySaver()
+        thread = {"configurable": {"thread_id": "gesprek-annotatie"}}
+        corpus_tsv = (
+            "?tekst\t?jci\t?lid\t?lidnummer\t?lidtekst\t?onderdeel\t?onderdeeltekst\n"
+            '\t\t\t"1"\t"Degene die aangifte doet."@nl\t\t'
+        )
+
+        app1 = build_graph(
+            make_settings(),
+            FakeLLM(
+                [
+                    response(
+                        [
+                            text_block(
+                                json.dumps(
+                                    {
+                                        "elementen": [
+                                            {
+                                                "klasse": "Rechtssubject",
+                                                "tekst": "Degene die aangifte doet",
+                                            }
+                                        ]
+                                    }
+                                )
+                            )
+                        ],
+                        "end_turn",
+                    ),
+                    response(
+                        [text_block(json.dumps({"oordelen": [{"index": 0, "aandacht": "groen"}]}))],
+                        "end_turn",
+                    ),
+                ]
+            ),
+            FakeGraph(result=corpus_tsv),
+            checkpointer=saver,
+        )
+        eerste = await app1.ainvoke(
+            nieuwe_beurt_invoer(doel={"bwbId": "BWBR0004770", "artikel": "1"}), thread
+        )
+        assert eerste["critic_ronde"] == 1  # critic_max_rondes-default stopt na 1 (geel/groen)
+
+        app2 = build_graph(
+            make_settings(),
+            FakeLLM([_supervisor_ok(), response([text_block("Gewoon antwoord.")], "end_turn")]),
+            FakeGraph(result=""),
+            checkpointer=saver,
+        )
+        tweede = await app2.ainvoke(
+            nieuwe_beurt_invoer(question="Een gewone vraag, geen annotatie"), thread
+        )
+
+        assert tweede["critic_ronde"] == 0
+        assert tweede["corpus"] == ""
+        assert tweede["voorstellen"] == []
+        assert tweede["doel"] == {}
+
+    asyncio.run(_run())
+
+
+def test_supervisor_krijgt_eerdere_berichten_als_gesprekscontext() -> None:
+    """Zonder dit ziet de supervisor een vervolgvraag als 'en welk artikel regelt dat begrip
+    precies?' los van het gesprek — live gevonden tijdens de verificatie van story 050."""
+    voorgeschiedenis = [
+        {"role": "user", "content": "Wat is een belastingschuldige?"},
+        {"role": "assistant", "content": [{"type": "text", "text": "Dat is degene die betaalt."}]},
+    ]
+    # AFWIJZEN als canned respons: de graaf stopt na de supervisor, dus we hoeven de rest van de
+    # keten niet mee te geven — deze test toetst alleen wát de supervisor kreeg te lezen.
+    llm = FakeLLM([_supervisor_ok("algemeen", "AFWIJZEN")])
+    settings = make_settings()
+
+    build_graph(settings, llm, FakeGraph(result="")).invoke(
+        {"question": "En welk artikel regelt dat begrip?", "messages": voorgeschiedenis}
+    )
+
+    system = llm.calls[0]["system"]
+    assert "GESPREKSCONTEXT" in system
+    assert "belastingschuldige" in system
+
+
+def test_supervisor_geen_gesprekscontext_bij_de_eerste_vraag() -> None:
+    llm = FakeLLM([_supervisor_ok("algemeen", "AFWIJZEN")])
+    settings = make_settings()
+
+    build_graph(settings, llm, FakeGraph(result="")).invoke({"question": "Een eerste vraag"})
+
+    assert "GESPREKSCONTEXT" not in llm.calls[0]["system"]
