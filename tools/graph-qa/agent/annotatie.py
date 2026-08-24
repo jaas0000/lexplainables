@@ -5,17 +5,18 @@ Niet-onderbouwde of ongeldig-geclassificeerde voorstellen worden verworpen (nooi
 doorgelaten). Gebruikt door `annoteer_node` in `orchestrator.py`.
 
 Poort van `wetsanalyse-ai/tools/graph-qa/agent/annotatie.py`, 1:1 voor de hier opgenomen functies
-— de kern van de enkele-annotatieronde (werkwijze-story 047). Bewust **niet** meegenomen:
-`PatchTelling`, `pas_critic_toe`, `demp_zelfweerspreking`, `vervang_ids_door_citaat`,
-`openstaand_voorstel`, `_markeer_toegepast`, `_verwerk_critic` — die horen bij de critic/patch/
-herzie-keten, een latere story. `komt_letterlijk_voor`/de normalisatie komen uit
-`agent/brongetrouw.py` (gedeeld met `grounding.py`, dat dezelfde eis stelt aan het antwoord).
+— de kern van de enkele-annotatieronde (werkwijze-story 047) plus de Critic-verwerking
+(werkwijze-story 048). Bewust **niet** meegenomen: `PatchTelling`, `pas_critic_toe`,
+`openstaand_voorstel`, `_markeer_toegepast` — die horen bij de patch/herzie-keten, een latere
+story. `komt_letterlijk_voor`/de normalisatie komen uit `agent/brongetrouw.py` (gedeeld met
+`grounding.py`, dat dezelfde eis stelt aan het antwoord).
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 from collections.abc import Iterator
 from typing import Any
@@ -23,9 +24,18 @@ from typing import Any
 from .brongetrouw import komt_letterlijk_voor  # noqa: F401 — los bruikbaar, zie module-docstring
 from .brongetrouw import normaliseer as _normaliseer
 from .jas_klassen import GELDIGE_JAS_KLASSEN
-from .models import AnnotatieAlternatief, AnnotatieVoorstel, VerworpenFragment
+from .models import (
+    AnnotatieAlternatief,
+    AnnotatieVoorstel,
+    CriticOordeel,
+    OntbrekendItem,
+    VerworpenFragment,
+)
 
 logger = logging.getLogger("graph_qa.annotatie")
+
+_AANDACHT = {"groen", "geel", "rood"}
+_ACTIES = {"behoud", "vervang", "verwijder"}
 
 
 def sleutel_van(tekst: str, lid: str) -> tuple[str, str]:
@@ -208,3 +218,183 @@ def _verwerk(
         gezien[sleutel] = voorstel
         voorstellen.append(voorstel)
     return voorstellen, verworpen
+
+
+def _verwerk_critic(
+    llm_text: str, ids: list[str]
+) -> tuple[dict[str, CriticOordeel], list[OntbrekendItem]]:
+    """Parse het Critic-JSON: per element-id een oordeel + een ontbrekend-lijst.
+
+    Koppelt op `id`, met `index` (positie in `ids`) als terugval — een model dat het id-veld
+    vergeet verliest zo niet stilzwijgend álles. Op positie alleen koppelen kan niet meer: zodra
+    een herzieningsronde een element toevoegt of weglaat, schuiven de indices en landt een
+    oordeel op het verkeerde element.
+
+    Robuust tegen proza/afkapping (fast-path hele-JSON, anders de gebalanceerde {…}-objecten).
+    Ongeldige aandacht-waarden, onbekende id's en indices buiten bereik worden genegeerd. Nooit
+    exceptions naar de caller — de Critic mag de annotatie niet breken.
+    """
+    oordelen: dict[str, CriticOordeel] = {}
+    ontbrekend: list[OntbrekendItem] = []
+    geldige_ids = set(ids)
+
+    data: dict[str, Any] | None = None
+    raw = (llm_text or "").strip()
+    kandidaat = raw.strip("`")
+    if kandidaat.lower().startswith("json"):
+        kandidaat = kandidaat[4:]
+    s, e = kandidaat.find("{"), kandidaat.rfind("}")
+    if s != -1 and e > s:
+        try:
+            parsed = json.loads(kandidaat[s : e + 1])
+            if isinstance(parsed, dict):
+                data = parsed
+        except json.JSONDecodeError:
+            data = None
+    # Fallback: los de gebalanceerde objecten op en herken oordeel-/ontbrekend-objecten.
+    oordeel_objs: list[dict[str, Any]] = []
+    ontbrekend_objs: list[dict[str, Any]] = []
+    if isinstance(data, dict):
+        oordeel_objs = [o for o in data.get("oordelen", []) if isinstance(o, dict)]
+        ontbrekend_objs = [o for o in data.get("ontbrekend", []) if isinstance(o, dict)]
+    else:
+        for obj in _balanced_objecten(raw):
+            try:
+                d = json.loads(obj)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(d, dict):
+                continue
+            if ("id" in d or "index" in d) and "aandacht" in d:
+                oordeel_objs.append(d)
+            elif "klasse" in d and "reden" in d:
+                ontbrekend_objs.append(d)
+
+    for o in oordeel_objs:
+        element_id = str(o.get("id", "")).strip()
+        if element_id not in geldige_ids:
+            # Terugval: positie in de aangeboden lijst.
+            try:
+                idx = int(o.get("index"))
+            except (TypeError, ValueError):
+                continue
+            if not (0 <= idx < len(ids)):
+                continue
+            element_id = ids[idx]
+
+        aandacht = str(o.get("aandacht", "")).strip().lower()
+        if aandacht not in _AANDACHT:
+            continue
+
+        actie = str(o.get("actie", "behoud")).strip().lower()
+        if actie not in _ACTIES:
+            actie = "behoud"
+        voorstel_klasse = str(o.get("voorstel_klasse", "")).strip()
+        if voorstel_klasse and voorstel_klasse not in GELDIGE_JAS_KLASSEN:
+            voorstel_klasse = ""
+        voorstel_tekst = str(o.get("voorstel_tekst", "")).strip()
+
+        # Weggooien is de zwaarste ingreep: alleen bij een expliciet rood oordeel. En vervangen
+        # zonder te zeggen wát het moet worden is geen instructie maar een klacht.
+        if actie == "verwijder" and aandacht != "rood":
+            actie = "vervang"
+        if actie == "vervang" and not (voorstel_klasse or voorstel_tekst):
+            actie = "behoud"
+
+        oordelen[element_id] = CriticOordeel(
+            aandacht=aandacht,
+            motivatie=str(o.get("motivatie", "")).strip(),
+            actie=actie,
+            voorstel_klasse=voorstel_klasse,
+            voorstel_tekst=voorstel_tekst,
+        )
+
+    for o in ontbrekend_objs:
+        klasse = str(o.get("klasse", "")).strip()
+        if klasse in GELDIGE_JAS_KLASSEN:
+            ontbrekend.append(
+                OntbrekendItem(
+                    klasse=klasse,
+                    reden=str(o.get("reden", "")).strip(),
+                    tekst=str(o.get("tekst", "")).strip(),
+                )
+            )
+
+    return oordelen, ontbrekend
+
+
+def demp_zelfweerspreking(voorstellen: list[dict[str, Any]]) -> int:
+    """Zwak een eindoordeel af dat de eigen uitgevoerde correctie terugdraait. Geeft het aantal
+    gedempte oordelen terug.
+
+    De eindbeoordeling gaat rechtstreeks naar de jurist — daar zit geen patcher meer achter die
+    hem kan wegen. Komt de Critic daar terug op een klasse die hij zélf in de vorige ronde liet
+    aanbrengen, dan levert dat een rode kaart op waarin de agent zichzelf tegenspreekt.
+
+    Dat is geen zekerheid maar twijfel: hetzelfde fragment, twee keer gewogen, twee uitkomsten.
+    Dus behandelen we het als twijfel — de klasse blijft staan, het niveau zakt naar geel en de
+    andere lezing komt als alternatief naast de kaart te liggen. De jurist ziet beide en kiest.
+
+    Een eindoordeel over iets ánders (het fragment, overlap, een klasse die de Critic niet zelf
+    heeft aangebracht) blijft onaangeroerd: dat is wél een nieuw bezwaar.
+    """
+    gedempt = 0
+    for v in voorstellen:
+        rondes = v.get("critic_rondes") or []
+        if len(rondes) < 2 or str(rondes[-1].get("aandacht", "")) != "rood":
+            continue
+        klasse = str(rondes[-1].get("voorstel_klasse", "")).strip()
+        huidig = str(v.get("klasse", ""))
+        if not klasse or klasse == huidig:
+            continue
+        if not any(
+            r.get("toegepast") and str(r.get("voorstel_klasse", "")) == huidig for r in rondes[:-1]
+        ):
+            continue
+
+        alts = list(v.get("alternatieven") or [])
+        if not any(str(a.get("klasse")) == klasse for a in alts):
+            alts.append(
+                {"klasse": klasse, "motivatie": str(rondes[-1].get("motivatie", "")).strip()}
+            )
+            v["alternatieven"] = alts
+        v["aandacht"] = "geel"
+        rondes[-1]["aandacht"] = "geel"
+        gedempt += 1
+    return gedempt
+
+
+# De spaties eromheen blijven van de motivatie, niet van de match — anders plakken de woorden
+# aan weerszijden van een vervangen id aan elkaar.
+_ELEMENT_ID = re.compile(r"(?:\[|\()?(?:id\s*=\s*)?\b([0-9a-f]{12})\b(?:\]|\))?")
+
+
+def vervang_ids_door_citaat(motivatie: str, voorstellen: list[dict[str, Any]]) -> str:
+    """Zet interne element-ids in een Critic-motivatie om naar het fragment waar ze op slaan.
+
+    De Critic krijgt de ids in zijn prompt omdat hij zijn oordeel eraan moet hangen, en verwijst
+    vervolgens naar buurelementen met diezelfde id — "de Voorwaarde zit eigenlijk in
+    [635074d49a74]". Die motivatie staat één-op-één op de reviewkaart, dus de jurist las anders
+    een hexcode.
+
+    Een id dat bij geen enkel voorstel hoort (de Critic verzint er soms een) wordt neutraal
+    weggeschreven in plaats van blijven staan; anders ruilt de kaart een hexcode in voor een
+    verkeerde verwijzing.
+    """
+    if not motivatie:
+        return motivatie
+    op_id = {str(v.get("id", "")): str(v.get("tekst", "")) for v in voorstellen}
+
+    def _vervang(m: re.Match[str]) -> str:
+        tekst = op_id.get(m.group(1), "")
+        if not tekst:
+            return "een ander element"
+        kort = tekst if len(tekst) <= 45 else tekst[:44].rstrip() + "…"
+        # Zette de Critic er zelf al aanhalingstekens omheen ("element '[<id>]'"), dan zouden die
+        # van ons erbij komen: element ''zo'n fragment''. De zijne winnen.
+        omsloten = motivatie[m.start() - 1 : m.start()] in "'‘“" and (
+            motivatie[m.end() : m.end() + 1] in "'’”"
+        )
+        return kort if omsloten else f"'{kort}'"
+
+    return _ELEMENT_ID.sub(_vervang, motivatie).strip()

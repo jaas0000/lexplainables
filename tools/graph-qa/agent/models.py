@@ -1,9 +1,8 @@
 """Pydantic-modellen voor de agent-loop.
 
-Getrimd tot wat de antwoord-agent-loop (stories 044-046) en de enkele-ronde-annotatie (story 047)
+Getrimd tot wat de antwoord-agent-loop (stories 044-046) en de annotatieketen (stories 047-048)
 gebruiken — geen `ChatRequest`/`AgentDoel`/`ChatContext`/`ArtikelResult`, en van de
-annotatie-modellen bewust geen `CriticRonde`/`CriticOordeel`/`OntbrekendItem`/`AgentRun`; die
-horen bij de stories die de API-laag resp. de critic/patch/herzie/emit-keten bouwen.
+annotatie-modellen bewust geen `AgentRun`; die hoort bij de story die `emit_node` bouwt.
 
 Poort van `wetsanalyse-ai/tools/graph-qa/agent/models.py`, 1:1 voor de hier opgenomen klassen.
 """
@@ -63,7 +62,7 @@ class ErrorEvent(BaseModel):
     message: str
 
 
-# --- Annotatie (story 047: enkele ronde, geen critic) --------------------------------------
+# --- Annotatie (stories 047-048: enkele ronde + critic) ------------------------------------
 
 
 class AnnotatieAlternatief(BaseModel):
@@ -73,13 +72,33 @@ class AnnotatieAlternatief(BaseModel):
     motivatie: str = ""
 
 
+class CriticRonde(BaseModel):
+    """Wat de Critic in één pas van dit element vond, en wat hij ermee wilde.
+
+    Dit is drie dingen tegelijk: het geheugen van de Critic in een volgende ronde (`_stand_van`),
+    het spoor dat de jurist op de kaart terugziet, en de reden dat een latere patch-stap kan zien
+    of een punt al eens is gemaakt.
+    """
+
+    ronde: int
+    aandacht: str = ""  # groen | geel | rood
+    motivatie: str = ""
+    actie: str = "behoud"  # behoud | vervang | verwijder
+    # Is de instructie ook uitgevoerd? Een latere patch-story zet dit. Zonder dit verschilt "de
+    # Critic vroeg erom" niet van "het is ook gebeurd" — en dat verschil moet een auditspoor
+    # kunnen laten zien.
+    toegepast: bool = False
+    voorstel_klasse: str = ""
+    voorstel_tekst: str = ""
+
+
 class AnnotatieVoorstel(BaseModel):
     """Eén door de agent voorgesteld JAS-annotatie-element voor een artikel.
 
     `tekst` is een letterlijk fragment uit de artikeltekst; `grounded`/`vindplaats` worden
-    server-side ingevuld door de brongetrouwheid-check (nooit door het model). Bewust **zonder**
-    `aandacht`/`critic`/`critic_rondes` — die velden hoort de Critic-node te zetten (een latere
-    story); ze hebben hier nog geen consument.
+    server-side ingevuld door de brongetrouwheid-check (nooit door het model). `aandacht`/
+    `critic`/`critic_rondes` worden door `critic_node` (story 048) gezet — bij `annoteer_node`'s
+    eigen output blijven ze op hun default.
     """
 
     # Stabiel id, hier toegekend (niet door het model). Een latere revisieronde matcht erop; op
@@ -92,6 +111,34 @@ class AnnotatieVoorstel(BaseModel):
     alternatieven: list[AnnotatieAlternatief] = []
     grounded: bool = False
     vindplaats: str = ""  # bwbId/artikel/lid-notatie
+    aandacht: str = ""  # "" | groen | geel | rood — gezet door critic_node
+    critic: str = ""  # korte Critic-motivatie bij het aandacht-niveau
+    critic_rondes: list[CriticRonde] = []  # het heen-en-weer per ronde; leeg tot de eerste pas
+
+
+class CriticOordeel(BaseModel):
+    """Wat de Critic van één voorstel vindt, inclusief wat de annoteerder ermee moet doen.
+
+    Zonder `actie`/`voorstel_*` is een herzieningsronde onmogelijk: dan weet de annoteerder wél
+    dat er iets mis is, maar niet wat.
+    """
+
+    aandacht: str = ""  # groen | geel | rood
+    motivatie: str = ""
+    actie: str = "behoud"  # behoud | vervang | verwijder
+    voorstel_klasse: str = ""
+    voorstel_tekst: str = ""
+
+
+class OntbrekendItem(BaseModel):
+    """Een door de Critic vermoed ontbrekend element: een JAS-klasse die waarschijnlijk óók in de
+    tekst zit maar niet is gemarkeerd. `tekst` is optioneel — staat er een letterlijk fragment
+    bij, dan kan een latere herzieningsronde het element daadwerkelijk toevoegen in plaats van
+    alleen een klasse te noemen."""
+
+    klasse: str
+    reden: str = ""
+    tekst: str = ""
 
 
 class VerworpenFragment(BaseModel):

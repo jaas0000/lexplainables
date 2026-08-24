@@ -1,5 +1,5 @@
 """Live integratietests: de volledige antwoord-agent-loop tegen de echte GraphDB + Foundry
-(werkwijze-stories 044-047).
+(werkwijze-stories 044-048).
 
 Standaard geskipt (`-m "not integration"`) — vereist een draaiende `deploy/graphdb`-stack (gevuld
 met de Invorderingswet-fixture, zie stories 040/041) en een geldige Foundry-key/-resource in de
@@ -16,7 +16,7 @@ from agent.adapters.anthropic_llm import AnthropicLLM
 from agent.adapters.graphdb_graph import make_graph
 from agent.config import Settings
 from agent.jas_klassen import GELDIGE_JAS_KLASSEN
-from agent.orchestrator import annoteer_node, build_graph
+from agent.orchestrator import annoteer_node, build_graph, critic_node
 
 
 @pytest.mark.integration
@@ -138,3 +138,37 @@ def test_live_annoteer_node_classificeert_een_echte_bepaling() -> None:
         assert v["klasse"] in GELDIGE_JAS_KLASSEN, f"onbekende klasse: {v['klasse']}"
         assert v["grounded"] is True
         assert v["tekst"].strip()
+
+
+@pytest.mark.integration
+def test_live_critic_node_beoordeelt_echte_voorstellen() -> None:
+    settings = Settings.from_env(os.environ)
+    if not settings.azure_foundry_api_key or not settings.azure_foundry_resource:
+        pytest.skip("AZURE_FOUNDRY_API_KEY(_FILE)/AZURE_FOUNDRY_RESOURCE niet in de omgeving")
+    if not settings.graphdb_mcp_url or not settings.graphdb_token:
+        pytest.skip("GRAPHDB_MCP_URL/GRAPHDB_TOKEN niet in de omgeving")
+
+    llm = AnthropicLLM(settings)
+    graph = make_graph(settings)
+    try:
+        doel = {"bwbId": "BWBR0004770", "artikel": "1"}
+        annotatie = annoteer_node({"doel": doel}, settings=settings, llm=llm, graph=graph)
+        assert annotatie["voorstellen"], "annoteer_node leverde geen voorstellen om te beoordelen"
+        result = critic_node(
+            {"voorstellen": annotatie["voorstellen"], "corpus": annotatie["corpus"]},
+            settings=settings,
+            llm=llm,
+        )
+    finally:
+        graph.close()
+
+    assert result["critic_gefaald"] is False
+    assert result["critic_ronde"] == 1
+    for v in result["voorstellen"]:
+        assert v["aandacht"] in {"", "groen", "geel", "rood"}
+        # Geen enkele Critic-motivatie hoort een rauwe interne id te bevatten — die is via
+        # vervang_ids_door_citaat vertaald naar een citaat (of "een ander element").
+        assert not any(
+            other["id"] and other["id"] != v["id"] and other["id"] in v["critic"]
+            for other in result["voorstellen"]
+        )

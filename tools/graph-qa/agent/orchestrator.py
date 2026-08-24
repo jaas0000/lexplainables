@@ -1,4 +1,4 @@
-"""Antwoord-agent-loop (LangGraph) — werkwijze-stories 044-047.
+"""Antwoord-agent-loop (LangGraph) — werkwijze-stories 044-048.
 
 Story 044 bouwde de kleinste snede die de drie losse bouwstenen (`ports.py`/story 029,
 `AnthropicLLM`/story 039, `MCPClient`/story 040, de toollaag/story 041) daadwerkelijk samenvoegt
@@ -24,11 +24,14 @@ uit, dan is de graaf-opbouw byte voor byte gelijk aan stories 044-045.
 
 Story 047 begint de **annotatieketen**: `annoteer_node` is de kleinste zelfstandig bewijsbare
 snede daarvan — één LLM-call die een aangeleverde bepaling classificeert volgens het Juridisch
-Analyseschema (JAS), brongetrouw en ontdubbeld. Bewust **losstaand**, niet in `build_graph`
-gewired (geen supervisor-routing naar een annotatie-worker) — critic/patch/herzie/emit/advance en
-de graaf-wiring zijn stuk voor stuk latere stories, zie `docs/project/stories/
-047-graph-qa-annotatie-enkele-ronde.md` §Afwijkingen. Bewust nog **geen** checkpointer/
-gespreksgeheugen of streaming — zie de story-docs' §Afwijkingen voor de reden per punt.
+Analyseschema (JAS), brongetrouw en ontdubbeld. Story 048 voegt `critic_node` toe: één LLM-call
+die diezelfde voorstellen beoordeelt (aandacht-niveau groen/geel/rood + actie
+behoud/vervang/verwijder per element, plus waarschijnlijk gemiste elementen). Beide bewust
+**losstaand**, niet in `build_graph` gewired (geen supervisor-routing naar een annotatie-worker)
+— patch/herzie/emit/advance en de graaf-wiring zijn stuk voor stuk latere stories, zie
+`docs/project/stories/047-graph-qa-annotatie-enkele-ronde.md` en `docs/project/stories/
+048-graph-qa-annotatie-critic.md` §Afwijkingen. Bewust nog **geen** checkpointer/gespreksgeheugen
+of streaming — zie de story-docs' §Afwijkingen voor de reden per punt.
 """
 
 from __future__ import annotations
@@ -79,6 +82,9 @@ _MAX_DECOMPOSE_TOKENS = 400
 # Een volledig artikel met veel JAS-elementen kan een lange JSON-respons opleveren — ruim boven de
 # 4096 van de antwoord-loop, matcht de referentie.
 _MAX_ANNOTATIE_TOKENS = 8192
+
+# De Critic levert een compacter oordeel per element dan de annotator een heel artikel.
+_MAX_CRITIC_TOKENS = 2048
 
 _DECOMPOSE_SYSTEM = (
     "Je splitst een juridische vraag over de kennisgraaf op in de deelvragen die je apart moet "
@@ -136,6 +142,12 @@ class State(TypedDict, total=False):
     corpus: str
     voorstellen: list[dict[str, Any]]
     verworpen_fragmenten: list[dict[str, Any]]
+    critic_feedback: list[dict[str, Any]]
+    critic_ontbrekend: list[dict[str, Any]]
+    critic_gefaald: bool
+    critic_ronde: int
+    nieuw_ontbrekend: list[dict[str, Any]]
+    gemeld_ontbrekend: list[str]
 
 
 def _parse_final(final: Any) -> tuple[list[dict[str, Any]], list[str]]:
@@ -472,7 +484,7 @@ def resynth_node(state: State) -> dict[str, Any]:
     return {"corrected": True, "answer": ""}
 
 
-# ---- Annotatie (story 047: enkele ronde, geen critic) — losstaand, niet in build_graph gewired ---
+# ---- Annotatie (stories 047-048) — losstaand, niet in build_graph gewired -----------------
 
 
 def annoteer_node(
@@ -480,8 +492,8 @@ def annoteer_node(
 ) -> dict[str, Any]:
     """Classificeert één bepaling (`state["doel"]`) volgens het JAS in één LLM-call.
 
-    Geen ophaal-agent, geen graaf-routing: `doel` (bwbId/artikel/lid) is al bekend. Geen critic/
-    patch/herzie — dat zijn latere stories die op deze ruwe, gegronde voorstellen voortbouwen."""
+    Geen ophaal-agent, geen graaf-routing: `doel` (bwbId/artikel/lid) is al bekend. Geen patch/
+    herzie — dat zijn latere stories die op deze ruwe, gegronde voorstellen voortbouwen."""
     doel = state["doel"]
     corpus = artikel.artikel_corpus(doel["bwbId"], doel["artikel"], graph, doel.get("lid"))
     resp = llm.create(
@@ -506,6 +518,104 @@ def annoteer_node(
         "corpus": corpus,
         "voorstellen": [v.model_dump() for v in voorstellen],
         "verworpen_fragmenten": [v.model_dump() for v in verworpen],
+    }
+
+
+def _ontbrekend_sleutel(item: dict[str, Any]) -> str:
+    """Identiteit van een gemeld gemist element: klasse + het genoemde fragment."""
+    klasse = str(item.get("klasse", "")).strip()
+    fragment = " ".join(str(item.get("tekst", "")).split()).lower()
+    return f"{klasse}|{fragment}"
+
+
+def critic_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[str, Any]:
+    """Critic-pas: beoordeelt de gegronde voorstellen en zet per element een aandacht-niveau
+    (groen/geel/rood) + motivatie, plus een lijst waarschijnlijk ontbrekende elementen. Eén
+    LLM-call (geen tools).
+
+    Faalt de Critic → `critic_gefaald`, elementen komen door met lege aandacht (nooit de
+    annotatie breken)."""
+    voorstellen = list(state.get("voorstellen") or [])
+    if not voorstellen:
+        return {}
+
+    corpus = state.get("corpus", "")
+    try:
+        resp = llm.create(
+            model=settings.llm_model,
+            max_tokens=_MAX_CRITIC_TOKENS,
+            system=annotatie_prompt.critic_systeemprompt(),
+            tools=[],
+            messages=[
+                {
+                    "role": "user",
+                    "content": annotatie_prompt.critic_userprompt(
+                        voorstellen, corpus, list(state.get("gemeld_ontbrekend") or [])
+                    ),
+                }
+            ],
+        )
+        crit_text = "".join(b.text for b in resp.content if b.type == "text")
+        oordelen, ontbrekend = annotatie._verwerk_critic(
+            crit_text, [str(v.get("id", "")) for v in voorstellen]
+        )
+    except Exception:  # noqa: BLE001 — de Critic mag de annotatie nooit breken
+        logger.warning(
+            "critic: beoordeling mislukt; elementen zonder aandacht doorgelaten", exc_info=True
+        )
+        # Laat de voorstellen ONGEMOEID. In een tweede ronde staat er al een oordeel van de
+        # eerste pas op; dat overschrijven met lege waarden zou een geslaagde beoordeling
+        # ongedaan maken omdat een latere poging mislukte.
+        return {"voorstellen": voorstellen, "critic_feedback": [], "critic_gefaald": True}
+
+    # Rondenummer voor het spoor: 1 = het eerste oordeel, 2 = de eindbeoordeling na correctie.
+    ronde = int(state.get("critic_ronde") or 0) + 1
+
+    feedback: list[dict[str, Any]] = []
+    for v in voorstellen:
+        oordeel = oordelen.get(str(v.get("id", "")))
+        aandacht = oordeel.aandacht if oordeel else ""
+        # De motivatie gaat één-op-één naar de reviewkaart. Interne ids horen daar niet: de
+        # Critic gebruikt ze om naar buurelementen te verwijzen, de jurist leest een hexcode.
+        motivatie = (
+            annotatie.vervang_ids_door_citaat(oordeel.motivatie, voorstellen) if oordeel else ""
+        )
+        v["aandacht"] = aandacht
+        v["critic"] = motivatie
+        if oordeel is not None:
+            feedback.append({"id": v.get("id", ""), **oordeel.model_dump()})
+            v.setdefault("critic_rondes", []).append(
+                {
+                    "ronde": ronde,
+                    "aandacht": aandacht,
+                    "motivatie": motivatie,
+                    "actie": oordeel.actie,
+                    "toegepast": False,
+                    "voorstel_klasse": oordeel.voorstel_klasse,
+                    "voorstel_tekst": oordeel.voorstel_tekst,
+                }
+            )
+
+    al_gemeld = set(state.get("gemeld_ontbrekend") or [])
+    huidig = {_ontbrekend_sleutel(o.model_dump()) for o in ontbrekend}
+    nieuw_ontbrekend = [
+        o.model_dump() for o in ontbrekend if _ontbrekend_sleutel(o.model_dump()) not in al_gemeld
+    ]
+
+    # De eindbeoordeling gaat rechtstreeks naar de jurist; er komt geen patcher meer overheen die
+    # haar kan wegen. Dus hier, en alleen hier, dempen we een oordeel dat de eigen uitgevoerde
+    # correctie terugdraait.
+    if ronde >= 2:
+        annotatie.demp_zelfweerspreking(voorstellen)
+
+    return {
+        "voorstellen": voorstellen,
+        "critic_feedback": feedback,
+        "critic_ontbrekend": [o.model_dump() for o in ontbrekend],
+        "critic_gefaald": False,
+        "critic_ronde": ronde,
+        "nieuw_ontbrekend": nieuw_ontbrekend,
+        "gemeld_ontbrekend": sorted(al_gemeld | huidig),
     }
 
 
