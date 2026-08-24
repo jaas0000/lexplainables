@@ -1,5 +1,10 @@
 # Technische changelog
 
+- graph-qa dedup `komt_letterlijk_voor`/`normaliseer` (PR #85): zelf ontdekt na de merge van
+  PR #84 dat story 047 deze functies opnieuw kopieerde in `agent/annotatie.py`, terwijl een
+  vervolgpunt uit PR #81 al vastlegde dat ze naar een gedeelde plek moesten verhuizen zodra er
+  een tweede consument kwam. Verhuisd naar nieuw `agent/brongetrouw.py`; `grounding.py` en
+  `annotatie.py` importeren er nu allebei uit. Geen gedragswijziging.
 - graph-qa annotatie — enkele ronde, geen critic (PR #84, story 047): eerste story van de
   annotatieketen-werkstroom. `annoteer_node` (losstaand, nog niet in `build_graph` gewired)
   classificeert één bepaling volgens het JAS in één LLM-call — brongetrouw en ontdubbeld via
