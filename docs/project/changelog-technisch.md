@@ -1,5 +1,14 @@
 # Technische changelog
 
+- graph-qa antwoord-agent-loop (PR #81, story 044): eerste werkende agent-loop (LangGraph) die de
+  drie eerdere bouwstenen (LLM-adapter/039, GraphDB-adapter/040, toollaag/041) samenvoegt —
+  `agent_node ⇄ tools_node → verify_node → (correct_node → agent_node | finalize_node)`, bewust
+  zonder supervisor/annotatieketen/decompositie/checkpointer/streaming/API-laag (de kleinste
+  zelfstandig bewijsbare snede, eerste story van de agent-loop-werkstroom). Nieuwe modules
+  `agent/{models,provenance,grounding,prompts,orchestrator}.py`; `namespace.py` kreeg
+  `vindplaats_patroon()` terug (story 041 liet 'm bewust weg zonder consument). Nieuwe
+  dependency: `langgraph`. Live geverifieerd tegen de Invorderingswet-fixture: een gegrond
+  antwoord met een correct letterlijk citaat en 40 reële bronnen.
 - uitklapmenu-parity met wetsanalyse-ai (PR #80, story 043): sidebar-uitklapmenu 1:1 met de
   referentie — "Account & instellingen", "Beheer" (verhuisd uit de hoofdnavigatie, alleen
   beheerder), "Feedback geven" (nieuw menu-item), "Uitloggen"; trigger-knop toont nu ook een

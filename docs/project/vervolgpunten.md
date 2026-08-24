@@ -4,6 +4,14 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #81 — graph-qa antwoord-agent-loop (story 044)
+
+- **`komt_letterlijk_voor`/`_normaliseer` staan tijdelijk in `agent/grounding.py`** (enige
+  consument nu). Zodra de annotatieketen-story ze ook nodig heeft (dezelfde
+  brongetrouwheidseis geldt daar voor elke markering), verhuizen naar een gedeelde plek.
+
+---
+
 ## PR #80 — sidebar-uitklapmenu-parity (story 043)
 
 - **`InstellingenDialog` en `FeedbackDialoog` dupliceren nu dezelfde kop-markup** (titel +
