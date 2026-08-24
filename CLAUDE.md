@@ -134,13 +134,23 @@ naar een aparte werkwijze-repo triviaal (`.claude/skills/` + `docs/project/werkw
 
 ## Volgende stap
 
-Geen resterende API/frontend-story meer (story 017 bleek al gebouwd; story 023's laatste open
-acceptatiecriterium — echte wetsartikeltekst i.p.v. placeholder — is gesloten via story 037,
-PR #68: nieuw GraphDB-SPARQL-leesendpoint `GET /v1/annotatie/documenten/{slug}/wetsartikel`;
-PR #70 bracht die weergave op parity met wetsanalyse-ai's `graph-qa`-agent: onderdelen a/b/c
-onder een lid, numerieke lid-sortering, bepaling-fallback voor decimale circulaire-nummers).
-`tools/bwb-import` heeft
-zijn volledige scope uit story 027 §Buiten scope afgerond (stories 024-028, 030-036, zie
-hierboven) — inhoudelijk klaar. Vervolg: `tools/graph-qa` (service 3, zie
-`ai-notes/fase-4-aparte-services-plan.md`) zodra de Azure Foundry-key beschikbaar is, daarna
-`frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
+Geen resterende API/frontend-story meer op de kernfeatures (story 017 bleek al gebouwd; story
+023's laatste open acceptatiecriterium — echte wetsartikeltekst i.p.v. placeholder — is gesloten
+via story 037, PR #68: nieuw GraphDB-SPARQL-leesendpoint
+`GET /v1/annotatie/documenten/{slug}/wetsartikel`; PR #70 bracht die weergave op parity met
+wetsanalyse-ai's `graph-qa`-agent: onderdelen a/b/c onder een lid, numerieke lid-sortering,
+bepaling-fallback voor decimale circulaire-nummers). `tools/bwb-import` heeft zijn volledige
+scope uit story 027 §Buiten scope afgerond (stories 024-028, 030-036, zie hierboven) — inhoudelijk
+klaar. Story 038 voegde BFF-rolautorisatie toe voor alle admin-routes (PR #75). Stories 042-043
+trokken de frontend-GUI gelijk met de `wetsanalyse-ai`-referentie: Account/Beheer zijn nu tabs van
+één instellingenvenster (`/instellingen/[[...tab]]`, dialoog- en volle-paginavorm, PR #79), en het
+sidebar-uitklapmenu is 1:1 met de referentie (Account & instellingen/Beheer/Feedback geven/
+Uitloggen, PR #80).
+
+De Azure Foundry-key is beschikbaar en al live geverifieerd (stories 039-041): `tools/graph-qa`
+heeft de drie bouwstenen — `LLMPort` (`AnthropicLLM`), `GraphPort` (`MCPClient`) en de
+domein-toollaag (13 tools) — maar nog geen orkestrator/supervisor/annotatieketen die ze
+daadwerkelijk aan elkaar knoopt tot een werkende agent, en geen enkel aangesloten API- of
+UI-endpoint. Dat is de eerstvolgende grote werkstroom (~25-35 stories geschat, zie
+`ai-notes/fase-4-aparte-services-plan.md`), daarna `frontend-chat`
+(`tools/wetsanalyse-admin-mcp/` is klaar).
