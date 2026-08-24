@@ -1,5 +1,14 @@
 # Technische changelog
 
+- graph-qa supervisor — specialist-routing + afwijzen (PR #82, story 045): nieuwe
+  `supervisor_node` vóór `agent_node` kiest een specialist (`definitie`/`duiding`/`algemeen`,
+  elk met een eigen prompt-addendum en beperkte toolset via het al bestaande
+  `anthropic_schemas(only=...)`) en wijst een vraag buiten de wetgeving direct af, zonder
+  tool-/graafaanroep. Nieuwe modules `agent/{specialists,supervisor}.py`. Bewust geen
+  worker-keten (antwoord+annotatie), geen apart routermodel, geen prompt-caching-split — zie
+  story §Afwijkingen. Live geverifieerd: een begripsvraag routeert naar `definitie` met een
+  letterlijk citaat uit art. 2 lid 1 onderdeel k, een structuurvraag naar `duiding`, een
+  weervraag wordt afgewezen zonder de graaf te raken.
 - graph-qa antwoord-agent-loop (PR #81, story 044): eerste werkende agent-loop (LangGraph) die de
   drie eerdere bouwstenen (LLM-adapter/039, GraphDB-adapter/040, toollaag/041) samenvoegt —
   `agent_node ⇄ tools_node → verify_node → (correct_node → agent_node | finalize_node)`, bewust
