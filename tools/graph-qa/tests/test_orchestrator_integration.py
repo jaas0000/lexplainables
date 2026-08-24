@@ -1,5 +1,5 @@
 """Live integratietests: de volledige antwoord-agent-loop tegen de echte GraphDB + Foundry
-(werkwijze-stories 044-050).
+(werkwijze-stories 044-051).
 
 Standaard geskipt (`-m "not integration"`) — vereist een draaiende `deploy/graphdb`-stack (gevuld
 met de Invorderingswet-fixture, zie stories 040/041) en een geldige Foundry-key/-resource in de
@@ -16,6 +16,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from agent.adapters.anthropic_llm import AnthropicLLM
 from agent.adapters.graphdb_graph import make_graph
+from agent.agent import answer_stream
 from agent.config import Settings
 from agent.jas_klassen import GELDIGE_JAS_KLASSEN
 from agent.orchestrator import annoteer_node, build_graph, critic_node, nieuwe_beurt_invoer
@@ -235,5 +236,34 @@ def test_live_gespreksgeheugen_over_twee_beurten() -> None:
         gespreks_tekst = json.dumps(tweede["messages"])
         assert "belastingschuldige" in gespreks_tekst.lower()
         assert (tweede.get("answer") or "").strip() != ""
+
+    asyncio.run(_run())
+
+
+@pytest.mark.integration
+def test_live_answer_stream_levert_tokens_vóór_done() -> None:
+    """`agent/agent.py`'s `answer_stream()` (story 051) tegen de echte GraphDB + Foundry — bewijst
+    dat er daadwerkelijk token-events binnenkomen vóór het `done`-event, niet alleen dat de graaf
+    ergens een antwoord aflevert."""
+    settings = Settings.from_env(os.environ)
+    if not settings.azure_foundry_api_key or not settings.azure_foundry_resource:
+        pytest.skip("AZURE_FOUNDRY_API_KEY(_FILE)/AZURE_FOUNDRY_RESOURCE niet in de omgeving")
+    if not settings.graphdb_mcp_url or not settings.graphdb_token:
+        pytest.skip("GRAPHDB_MCP_URL/GRAPHDB_TOKEN niet in de omgeving")
+
+    import asyncio
+
+    async def _run() -> None:
+        llm = AnthropicLLM(settings)
+        graph = make_graph(settings)
+        vraag = "Wat is een belastingschuldige volgens de Invorderingswet 1990?"
+        events = [e async for e in answer_stream(vraag, settings=settings, llm=llm, graph=graph)]
+
+        types = [e["type"] for e in events]
+        assert types[-1] == "done"
+        assert "token" in types, f"geen token-events: {types}"
+        assert types.index("token") < types.index("done")
+        antwoord = "".join(e["content"] for e in events if e["type"] == "token")
+        assert antwoord.strip() != ""
 
     asyncio.run(_run())
