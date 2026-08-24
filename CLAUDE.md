@@ -99,8 +99,11 @@ nodig — één worker per beurt). Story 050 voegt LangGraph-checkpointing toe (
 checkpointer.py`: Postgres → SQLite-bestand → `MemorySaver`) plus `nieuwe_beurt_invoer()` voor het
 per-beurt-resetpatroon, zodat `messages` daadwerkelijk over losse `.ainvoke()`-aanroepen heen
 blijft bestaan — live geverifieerd, en onderweg twee zelf gevonden bugs gefixt (Source-
-serialisatie, en een supervisor die de gesprekshistorie niet meelas). Streaming/API-laag
-(~25-35 stories geschat in totaal voor de hele werkstroom) moet nog gebouwd worden.
+serialisatie, en een supervisor die de gesprekshistorie niet meelas). Story 051 voegt streaming
+toe: `agent_node`/`synthesize_node` sturen hun eind-antwoord nu token-voor-token via
+`get_stream_writer()`, en de nieuwe wrapper `agent/agent.py`'s `answer_stream()` levert het
+SSE-event-contract (token/sources/grounding/done/error) als async generator — nog geen HTTP.
+API-laag (~25-35 stories geschat in totaal voor de hele werkstroom) moet nog gebouwd worden.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -198,6 +201,10 @@ bestand → `MemorySaver`) plus `nieuwe_beurt_invoer()` die alle ephemere State-
 reset, zodat een vervolgvraag in hetzelfde gesprek de context van eerdere vragen kent — live
 geverifieerd, met twee zelf gevonden en binnen dezelfde PR gefixte bugs (Source-Pydantic-objecten
 i.p.v. plain dicts in de state; de supervisor las de gesprekshistorie niet mee bij het routeren).
-Geen streaming, en geen enkel aangesloten API- of UI-endpoint — dat is de rest van de
+Story 051 voegt streaming toe: `agent_node`/`synthesize_node` streamen hun eind-antwoord
+token-voor-token (`llm.stream()` + `get_stream_writer()`), en de nieuwe wrapper `agent/agent.py`'s
+`answer_stream()` levert het SSE-event-contract (token/sources/grounding/conversation_id/done/
+error) als async generator — live geverifieerd (token-events komen aantoonbaar vóór `done`). Nog
+geen HTTP-laag en geen enkel aangesloten API- of UI-endpoint — dat is de rest van de
 eerstvolgende grote werkstroom (~25-35 stories geschat in totaal), daarna `frontend-chat`
 (`tools/wetsanalyse-admin-mcp/` is klaar).
