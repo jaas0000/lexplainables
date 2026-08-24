@@ -1,4 +1,4 @@
-"""Antwoord-/annotatie-agent-loop (LangGraph) — werkwijze-stories 044-049.
+"""Antwoord-/annotatie-agent-loop (LangGraph) — werkwijze-stories 044-050.
 
 Story 044 bouwde de kleinste snede die de drie losse bouwstenen (`ports.py`/story 029,
 `AnthropicLLM`/story 039, `MCPClient`/story 040, de toollaag/story 041) daadwerkelijk samenvoegt
@@ -34,10 +34,12 @@ graaf-wiring: `state["doel"]` routeert (via `_heeft_doel`) om de supervisor heen
                             → herzie → critic → emit → END)
                          → supervisor_node → (afwijs_node → END) → (antwoord-tak, zie hierboven)
 
-Bewust nog **geen** `advance_node`/worker-chaining (één worker per beurt), geen
-checkpointer/gespreksgeheugen, geen streaming, geen API-laag, geen NL-vraag-gebaseerde
-annotatie-routing via de supervisor — zie `docs/project/stories/049-graph-qa-annotatie-
-afronden.md` §Afwijkingen voor de reden per punt.
+Bewust nog **geen** `advance_node`/worker-chaining (één worker per beurt), geen streaming, geen
+API-laag, geen NL-vraag-gebaseerde annotatie-routing via de supervisor. Story 050 voegt
+**gespreksgeheugen** toe: `build_graph(..., checkpointer=...)` (`agent/checkpointer.py`, Postgres
+→ SQLite → in-memory) + `nieuwe_beurt_invoer()` (zaait de nieuwe vraag, reset alle ephemere
+velden) — zie `docs/project/stories/050-graph-qa-checkpointer.md` §Afwijkingen voor de reden per
+punt.
 """
 
 from __future__ import annotations
@@ -53,7 +55,6 @@ from langgraph.graph import END, START, StateGraph
 from . import annotatie, annotatie_prompt, artikel, prompts, specialists, supervisor
 from .config import Settings
 from .grounding import check_grounding, curate_sources
-from .models import Source
 from .ports import GraphPort, LLMPort
 from .provenance import collect_sources
 from .tools import anthropic_schemas, dispatch
@@ -141,7 +142,7 @@ class State(TypedDict, total=False):
     unsupported: list[str]
     niet_letterlijk: list[str]
     grounding_niveau: str
-    sources: list[Source]
+    sources: list[dict[str, Any]]  # plain dicts (net als voorstellen), checkpointer-safe
     sub_questions: list[str]
     sub_findings: list[dict[str, str]]
     doel: dict[str, str]
@@ -170,6 +171,44 @@ def _parse_final(final: Any) -> tuple[list[dict[str, Any]], list[str]]:
     return tool_uses, text_parts
 
 
+def _recent_context(state: State) -> str:
+    """Korte samenvatting van eerdere berichten in dit gesprek — puur als aanknopingspunt voor
+    verwijzingen als "dat begrip"/"dat artikel", nooit als vervanging van de eigen vraag.
+
+    Zonder dit ziet de supervisor (story 050: `messages` persisteert nu over beurten heen via de
+    checkpointer) een vervolgvraag als "en welk artikel regelt dat begrip precies?" volledig
+    los van het gesprek — en zo'n contextloze, pronomenrijke vraag kan dan onterecht als
+    "niet over de wetgeving" worden afgewezen. Zelf gevonden tijdens de live-verificatie van deze
+    story: exact dit gebeurde bij een tweede vraag in hetzelfde gesprek.
+    """
+    berichten = state.get("messages") or []
+    if not berichten:
+        return ""
+    regels: list[str] = []
+    for m in berichten[-6:]:
+        content = m.get("content")
+        if isinstance(content, str):
+            tekst = content
+        elif isinstance(content, list):
+            tekst = " ".join(
+                b.get("text", "")
+                for b in content
+                if isinstance(b, dict) and b.get("type") == "text"
+            )
+        else:
+            tekst = ""
+        tekst = tekst.strip()
+        if tekst:
+            rol = "jurist" if m.get("role") == "user" else "jij"
+            regels.append(f"- {rol}: {tekst[:200]}")
+    if not regels:
+        return ""
+    return (
+        "\n\nGESPREKSCONTEXT — eerder in dit gesprek (alléén als aanknopingspunt voor "
+        "verwijzingen, de huidige vraag blijft leidend):\n" + "\n".join(regels)
+    )
+
+
 def supervisor_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[str, Any]:
     """Kiest een specialist voor de vraag, of wijst hem af als hij buiten de wetgeving valt.
 
@@ -178,7 +217,7 @@ def supervisor_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[s
     resp = llm.create(
         model=settings.llm_model,
         max_tokens=_MAX_SUPERVISOR_TOKENS,
-        system=supervisor.SUPERVISOR_SYSTEM,
+        system=supervisor.SUPERVISOR_SYSTEM + _recent_context(state),
         tools=[],
         messages=[{"role": "user", "content": state["question"]}],
     )
@@ -328,7 +367,10 @@ def finalize_node(state: State) -> dict[str, Any]:
         )
 
     sources = curate_sources(collect_sources(state.get("source_trace", [])), antwoord)
-    upd: dict[str, Any] = {"answer": antwoord, "sources": sources}
+    # `.model_dump()`: state moet plain-dict-serialiseerbaar blijven zodra een checkpointer 'm
+    # opslaat (story 050) — een Pydantic-object in de state gaf een msgpack-deserialisatie-
+    # waarschuwing ("unregistered type"), zelf gevonden tijdens de live-verificatie van die story.
+    upd: dict[str, Any] = {"answer": antwoord, "sources": [s.model_dump() for s in sources]}
     # In de decompositie-stroom komt het eind-antwoord uit synthesize_node/solve_node en is het
     # nog niet in het messages-kanaal beland (agent_node doet dat wél, via de zaai-message). Zet
     # het hier één keer zodat een latere checkpointer-story het gespreksgeheugen kan lezen zonder
@@ -841,9 +883,64 @@ def route_after_verify(state: State) -> str:
     return "finalize"
 
 
-def build_graph(settings: Settings, llm: LLMPort, graph: GraphPort) -> Any:
-    """Compileert de antwoord-/annotatiegraaf. Geen checkpointer: deze snede kent nog geen
-    multi-turn-gespreksgeheugen (dat komt met de story die de API-laag bouwt).
+def nieuwe_beurt_invoer(
+    question: str | None = None, doel: dict[str, str] | None = None
+) -> dict[str, Any]:
+    """Bouwt de `.ainvoke()`/`.invoke()`-input voor één nieuwe beurt: zaait de vraag (via de
+    `messages`-append-reducer) en reset alle ephemere velden.
+
+    Zonder deze reset draagt een tweede beurt in hetzelfde gesprek (checkpointer, story 050) de
+    staat van de eerste mee — een vervolgvraag zou annoteren tegen de vórige bepaling, of een
+    nieuwe kritiekronde zou beginnen met de oude `critic_ronde`. `messages` zelf reset NIET: dat
+    is de bewaarde gespreksgeschiedenis, en de append-reducer plakt de nieuwe vraag erachteraan.
+
+    Een `doel`-gedreven annotatiebeurt zaait geen `messages`-entry — matcht hoe `_heeft_doel` de
+    supervisor al overslaat zonder een user-bericht toe te voegen.
+    """
+    invoer: dict[str, Any] = {
+        "question": question or "",
+        "specialist": "",
+        "plan": "",
+        "afwijzen": False,
+        "source_trace": [],
+        "answer": "",
+        "pending_tools": [],
+        "turns": 0,
+        "corrected": False,
+        "grounded": True,
+        "cited": [],
+        "unsupported": [],
+        "niet_letterlijk": [],
+        "grounding_niveau": "",
+        "sources": [],
+        "sub_questions": [],
+        "sub_findings": [],
+        "doel": doel or {},
+        "corpus": "",
+        "voorstellen": [],
+        "verworpen_fragmenten": [],
+        "critic_feedback": [],
+        "critic_ontbrekend": [],
+        "critic_gefaald": False,
+        "critic_ronde": 0,
+        "nieuw_ontbrekend": [],
+        "gemeld_ontbrekend": [],
+        "patch_toegepast": 0,
+        "suggesties": [],
+    }
+    if question:
+        invoer["messages"] = [{"role": "user", "content": question}]
+    return invoer
+
+
+def build_graph(
+    settings: Settings, llm: LLMPort, graph: GraphPort, *, checkpointer: Any = None
+) -> Any:
+    """Compileert de antwoord-/annotatiegraaf. `checkpointer=None` (default) compileert zonder
+    gespreksgeheugen — identiek aan stories 044-049; geef een checkpointer (`agent/
+    checkpointer.py`, story 050) mee voor multi-turn-persistentie via `thread_id`. Een
+    async-only checkpointer (Postgres/SQLite) vereist `.ainvoke()`/`.astream()` i.p.v. `.invoke()`
+    — de node-functies zelf blijven synchroon.
 
     `settings.enable_decomposition=True` vertakt de antwoord-tak naar de multi-hop-topologie
     (story 046) i.p.v. de agent⇄tools-lus; de toggle-uit-stand blijft byte voor byte gelijk aan
@@ -895,7 +992,7 @@ def build_graph(settings: Settings, llm: LLMPort, graph: GraphPort) -> Any:
         )
         builder.add_edge("resynth", "synthesize")
         builder.add_edge("finalize", END)
-        return builder.compile()
+        return builder.compile(checkpointer=checkpointer)
 
     builder.add_node("agent", partial(agent_node, settings=settings, llm=llm))
     builder.add_node("tools", partial(tools_node, settings=settings, graph=graph))
@@ -915,4 +1012,4 @@ def build_graph(settings: Settings, llm: LLMPort, graph: GraphPort) -> Any:
     builder.add_edge("correct", "agent")
     builder.add_edge("finalize", END)
 
-    return builder.compile()
+    return builder.compile(checkpointer=checkpointer)

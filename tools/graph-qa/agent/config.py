@@ -61,6 +61,11 @@ class Settings(BaseModel):
     # >0 = aan.
     critic_max_rondes: int = 1
 
+    # Gespreksgeheugen (story 050): LangGraph-checkpointer, voorrang Postgres → SQLite-bestand →
+    # in-memory. Zie agent/checkpointer.py.
+    checkpoint_db_url: str | None = None
+    checkpoint_db_path: str | None = None
+
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
         e = env if env is not None else os.environ
@@ -78,6 +83,8 @@ class Settings(BaseModel):
             "max_subquestions": e.get("MAX_SUBQUESTIONS"),
             "sub_max_turns": e.get("SUB_MAX_TURNS"),
             "critic_max_rondes": e.get("CRITIC_MAX_RONDES"),
+            "checkpoint_db_url": e.get("CHECKPOINT_DB_URL"),
+            "checkpoint_db_path": e.get("CHECKPOINT_DB_PATH"),
         }
         # None én lege string weglaten zodat de veld-defaults van kracht blijven.
         return cls(**{k: v for k, v in raw.items() if v is not None and v != ""})

@@ -1,5 +1,5 @@
 """Live integratietests: de volledige antwoord-agent-loop tegen de echte GraphDB + Foundry
-(werkwijze-stories 044-049).
+(werkwijze-stories 044-050).
 
 Standaard geskipt (`-m "not integration"`) — vereist een draaiende `deploy/graphdb`-stack (gevuld
 met de Invorderingswet-fixture, zie stories 040/041) en een geldige Foundry-key/-resource in de
@@ -8,15 +8,17 @@ omgeving.
 
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
+from langgraph.checkpoint.memory import MemorySaver
 
 from agent.adapters.anthropic_llm import AnthropicLLM
 from agent.adapters.graphdb_graph import make_graph
 from agent.config import Settings
 from agent.jas_klassen import GELDIGE_JAS_KLASSEN
-from agent.orchestrator import annoteer_node, build_graph, critic_node
+from agent.orchestrator import annoteer_node, build_graph, critic_node, nieuwe_beurt_invoer
 
 
 @pytest.mark.integration
@@ -197,3 +199,41 @@ def test_live_build_graph_met_doel_doorloopt_de_volledige_annotatieketen() -> No
     assert (result.get("answer") or "").strip() != ""
     for v in result["voorstellen"]:
         assert v["klasse"] in GELDIGE_JAS_KLASSEN
+
+
+@pytest.mark.integration
+def test_live_gespreksgeheugen_over_twee_beurten() -> None:
+    """Een echte tweede vraag in hetzelfde gesprek (checkpointer, story 050) — de agent moet de
+    eerste vraag/het eerste antwoord terugzien in zijn messages-historie."""
+    import asyncio
+
+    settings = Settings.from_env(os.environ)
+    if not settings.azure_foundry_api_key or not settings.azure_foundry_resource:
+        pytest.skip("AZURE_FOUNDRY_API_KEY(_FILE)/AZURE_FOUNDRY_RESOURCE niet in de omgeving")
+    if not settings.graphdb_mcp_url or not settings.graphdb_token:
+        pytest.skip("GRAPHDB_MCP_URL/GRAPHDB_TOKEN niet in de omgeving")
+
+    async def _run() -> None:
+        llm = AnthropicLLM(settings)
+        graph = make_graph(settings)
+        saver = MemorySaver()
+        thread = {"configurable": {"thread_id": "live-gesprek-1"}}
+        try:
+            app = build_graph(settings, llm, graph, checkpointer=saver)
+            await app.ainvoke(
+                nieuwe_beurt_invoer(
+                    question="Wat is een belastingschuldige volgens de Invorderingswet 1990?"
+                ),
+                thread,
+            )
+            tweede = await app.ainvoke(
+                nieuwe_beurt_invoer(question="En wat is een belastingaanslag?"), thread
+            )
+        finally:
+            graph.close()
+
+        gespreks_tekst = json.dumps(tweede["messages"])
+        assert "belastingschuldige" in gespreks_tekst.lower()
+        assert (tweede.get("answer") or "").strip() != ""
+
+    asyncio.run(_run())
