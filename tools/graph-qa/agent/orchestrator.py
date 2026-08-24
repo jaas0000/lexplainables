@@ -1,4 +1,4 @@
-"""Antwoord-agent-loop (LangGraph) — werkwijze-stories 044-048.
+"""Antwoord-/annotatie-agent-loop (LangGraph) — werkwijze-stories 044-049.
 
 Story 044 bouwde de kleinste snede die de drie losse bouwstenen (`ports.py`/story 029,
 `AnthropicLLM`/story 039, `MCPClient`/story 040, de toollaag/story 041) daadwerkelijk samenvoegt
@@ -22,16 +22,22 @@ uit, dan is de graaf-opbouw byte voor byte gelijk aan stories 044-045.
                                → (synthesize_node → verify_node, >1 deelvraag)
                              → verify_node → (resynth_node → synthesize_node | finalize_node) → END
 
-Story 047 begint de **annotatieketen**: `annoteer_node` is de kleinste zelfstandig bewijsbare
-snede daarvan — één LLM-call die een aangeleverde bepaling classificeert volgens het Juridisch
-Analyseschema (JAS), brongetrouw en ontdubbeld. Story 048 voegt `critic_node` toe: één LLM-call
-die diezelfde voorstellen beoordeelt (aandacht-niveau groen/geel/rood + actie
-behoud/vervang/verwijder per element, plus waarschijnlijk gemiste elementen). Beide bewust
-**losstaand**, niet in `build_graph` gewired (geen supervisor-routing naar een annotatie-worker)
-— patch/herzie/emit/advance en de graaf-wiring zijn stuk voor stuk latere stories, zie
-`docs/project/stories/047-graph-qa-annotatie-enkele-ronde.md` en `docs/project/stories/
-048-graph-qa-annotatie-critic.md` §Afwijkingen. Bewust nog **geen** checkpointer/gespreksgeheugen
-of streaming — zie de story-docs' §Afwijkingen voor de reden per punt.
+Stories 047-049 bouwen de **annotatieketen**: `annoteer_node` (047) classificeert een bepaling
+volgens het JAS; `critic_node` (048) beoordeelt de voorstellen (aandacht-niveau groen/geel/rood +
+actie per element); story 049 rondt af met `patch_node` (voert rood+vervang-instructies
+code-only uit), `herzie_node` (één LLM-call: herstelt verworpen fragmenten, voegt gemiste
+elementen toe) en `emit_node` (finale structuur, geen SSE — geen streaming-laag), plus de
+graaf-wiring: `state["doel"]` routeert (via `_heeft_doel`) om de supervisor heen recht naar
+`annoteer`, onafhankelijk van `enable_decomposition`.
+
+    START → _heeft_doel → (annoteer → critic → (patch → (herzie|critic|emit) | emit)
+                            → herzie → critic → emit → END)
+                         → supervisor_node → (afwijs_node → END) → (antwoord-tak, zie hierboven)
+
+Bewust nog **geen** `advance_node`/worker-chaining (één worker per beurt), geen
+checkpointer/gespreksgeheugen, geen streaming, geen API-laag, geen NL-vraag-gebaseerde
+annotatie-routing via de supervisor — zie `docs/project/stories/049-graph-qa-annotatie-
+afronden.md` §Afwijkingen voor de reden per punt.
 """
 
 from __future__ import annotations
@@ -148,6 +154,8 @@ class State(TypedDict, total=False):
     critic_ronde: int
     nieuw_ontbrekend: list[dict[str, Any]]
     gemeld_ontbrekend: list[str]
+    patch_toegepast: int
+    suggesties: list[dict[str, Any]]
 
 
 def _parse_final(final: Any) -> tuple[list[dict[str, Any]], list[str]]:
@@ -619,6 +627,204 @@ def critic_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[str, 
     }
 
 
+def route_na_critic(state: State, *, settings: Settings) -> str:
+    """Naar de correctiestap, of naar de jurist? De keten is lineair: `critic₁ → patch → [herzie]
+    → [critic₂] → emit` — er valt hier niets te kiezen behalve of er nog een correctieronde ís."""
+    if settings.critic_max_rondes <= 0:
+        return "emit"
+    if state.get("critic_gefaald"):
+        return "emit"
+    if int(state.get("critic_ronde") or 0) >= 2:
+        return "emit"
+    return "patch"
+
+
+def patch_node(state: State) -> dict[str, Any]:
+    """Voer de correcties van de Critic uit — in code, niet via een tweede taalmodel. Geen
+    LLM-call, geen graafverkeer."""
+    voorstellen, telling, rest = annotatie.pas_critic_toe(
+        list(state.get("voorstellen") or []),
+        list(state.get("critic_feedback") or []),
+        state.get("corpus", ""),
+    )
+    return {
+        "voorstellen": voorstellen,
+        "patch_toegepast": telling.toegepast,
+        # Teruggebracht tot wat de patcher NIET heeft afgehandeld — anders krijgt de herziener
+        # dezelfde instructies opnieuw voorgelegd.
+        "critic_feedback": rest,
+    }
+
+
+def _open_werk(state: State) -> bool:
+    """Ligt er werk dat alléén het model kan doen: een gemeld ontbrekend element, of een eerder
+    verworpen fragment? Correctie-instructies (vervang/verwijder) staan hier niet meer bij — die
+    voert de patcher al exact uit."""
+    return bool(state.get("nieuw_ontbrekend")) or bool(state.get("verworpen_fragmenten"))
+
+
+def route_na_patch(state: State) -> str:
+    """Restant voor het model → `herzie`. Alleen gepatcht (geen open werk) → nog een
+    Critic-beoordeling over de gecorrigeerde versie. Niets veranderd → klaar."""
+    if _open_werk(state):
+        return "herzie"
+    return "critic" if state.get("patch_toegepast") else "emit"
+
+
+def herzie_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[str, Any]:
+    """Laat de annoteerder de resterende Critic-instructies verwerken (een bijna-goed citaat
+    repareren, een gemeld ontbrekend element toevoegen). Eén LLM-call, geen tools.
+
+    Conservatief samenvoegen: wat de herziening niet noemt blijft staan. Alleen een expliciete
+    `verwijder`-instructie laat een element verdwijnen."""
+    alle = list(state.get("voorstellen") or [])
+    # Markeringen van de jurist gaan de herziening niet in: de agent herschrijft ze niet.
+    van_jurist = [v for v in alle if v.get("van_jurist")]
+    voorstellen = [v for v in alle if not v.get("van_jurist")]
+    if not voorstellen:
+        return {}
+
+    doel = state["doel"]
+    corpus = state.get("corpus", "")
+    feedback = [
+        f
+        for f in (state.get("critic_feedback") or [])
+        if f.get("id") not in {v.get("id") for v in van_jurist}
+    ]
+    try:
+        resp = llm.create(
+            model=settings.llm_model,
+            max_tokens=_MAX_ANNOTATIE_TOKENS,
+            system=annotatie_prompt.herziening_systeemprompt(),
+            tools=[],
+            messages=[
+                {
+                    "role": "user",
+                    "content": annotatie_prompt.herziening_userprompt(
+                        voorstellen,
+                        feedback,
+                        state.get("critic_ontbrekend") or [],
+                        state.get("verworpen_fragmenten") or [],
+                        corpus,
+                    ),
+                }
+            ],
+        )
+        llm_text = "".join(b.text for b in resp.content if b.type == "text")
+        herzien, verworpen = annotatie._verwerk(
+            llm_text,
+            corpus,
+            doel.get("bwbId", ""),
+            doel.get("artikel", ""),
+            doel.get("lid"),
+            geldige_ids={str(v.get("id", "")) for v in voorstellen if v.get("id")},
+        )
+    except Exception:  # noqa: BLE001 — een mislukte herziening mag de annotatie niet breken
+        logger.warning("herziening: mislukt; vorige voorstellen behouden", exc_info=True)
+        return {"critic_feedback": []}
+
+    if not herzien:
+        logger.warning("herziening: leverde niets gegronds op; vorige voorstellen behouden")
+        return {"critic_feedback": []}
+
+    te_verwijderen = {f.get("id") for f in feedback if f.get("actie") == "verwijder"}
+    samengevoegd = {v["id"]: v for v in voorstellen if v.get("id") not in te_verwijderen}
+    op_inhoud = {
+        annotatie.sleutel_van(v.get("tekst", ""), v.get("lid", "")): v["id"]
+        for v in samengevoegd.values()
+    }
+    for nieuw_v in herzien:
+        bestaand_id = op_inhoud.get(annotatie.sleutel_van(nieuw_v.tekst, nieuw_v.lid))
+        if bestaand_id and bestaand_id != nieuw_v.id:
+            # Het OUDSTE id wint: daar hangen de beslissingen van de jurist aan.
+            nieuw_v = nieuw_v.model_copy(update={"id": bestaand_id})
+        nieuw_dict = nieuw_v.model_dump()
+        vorig = samengevoegd.get(nieuw_v.id)
+        if vorig:
+            nieuw_dict["critic_rondes"] = list(vorig.get("critic_rondes") or [])
+            bestaand = list(vorig.get("alternatieven") or [])
+            gezien_alt = {str(a.get("klasse")) for a in bestaand}
+            nieuw_dict["alternatieven"] = bestaand + [
+                a
+                for a in (nieuw_dict.get("alternatieven") or [])
+                if str(a.get("klasse")) not in gezien_alt
+            ]
+        # Inhoudelijk ongewijzigd → het vorige oordeel geldt nog. Echt gewijzigd → aandacht leeg,
+        # die versie is nog niet beoordeeld.
+        if vorig and all(vorig.get(k) == nieuw_dict.get(k) for k in ("klasse", "tekst", "lid")):
+            nieuw_dict["aandacht"] = vorig.get("aandacht", "")
+            nieuw_dict["critic"] = vorig.get("critic", "")
+        samengevoegd[nieuw_v.id] = nieuw_dict
+
+    uit = list(samengevoegd.values())
+    voor_op_id = {v.get("id"): v for v in voorstellen}
+    gewijzigd = {
+        v.get("id")
+        for v in uit
+        if v.get("id") not in voor_op_id
+        or any(voor_op_id[v["id"]].get(k) != v.get(k) for k in ("klasse", "tekst", "lid"))
+    }
+    for v in uit:
+        v["aangepast_na_kritiek"] = v.get("id") in gewijzigd
+
+    return {
+        "voorstellen": uit + van_jurist,
+        "critic_feedback": [],
+        "nieuw_ontbrekend": [],
+        "verworpen_fragmenten": [x.model_dump() for x in verworpen] if gewijzigd else [],
+    }
+
+
+def emit_node(state: State) -> dict[str, Any]:
+    """Bouwt de finale annotatiestructuur. Geen SSE-events (geen streaming-laag) — de referentie
+    stuurt hier `run`/`element`/`suggestie`/`ontbrekend`/`token`-events; hier komt in plaats
+    daarvan één finale structuur terug in de state."""
+    voorstellen = list(state.get("voorstellen") or [])
+    if not voorstellen:
+        return {}
+    corpus = state.get("corpus", "")
+    ontbrekend = state.get("critic_ontbrekend") or []
+
+    suggesties: list[dict[str, Any]] = []
+    met_aandacht = 0
+    for v in voorstellen:
+        if v.get("van_jurist"):
+            continue
+        if v.get("aandacht") in ("geel", "rood"):
+            met_aandacht += 1
+        klasse, tekst, waarom = annotatie.openstaand_voorstel(v, corpus)
+        if klasse or tekst:
+            suggesties.append(
+                {
+                    "element_id": v.get("id", ""),
+                    "aandacht": v.get("aandacht", ""),
+                    "motivatie": waarom,
+                    "voorstel_klasse": klasse,
+                    "voorstel_tekst": tekst,
+                }
+            )
+
+    eigen = [v for v in voorstellen if v.get("van_jurist")]
+    voorstellen_zonder_jurist = [v for v in voorstellen if not v.get("van_jurist")]
+    delen = [f"Ik heb {len(voorstellen_zonder_jurist)} JAS-elementen voorgesteld"]
+    if met_aandacht:
+        delen.append(f"{met_aandacht} met aandacht")
+    if ontbrekend:
+        delen.append(f"{len(ontbrekend)} mogelijk ontbrekend")
+    if eigen:
+        delen.append(f"{len(eigen)} eigen markering(en) beoordeeld")
+    samenvatting = "; ".join(delen) + "."
+
+    return {"voorstellen": voorstellen, "suggesties": suggesties, "answer": samenvatting}
+
+
+def _heeft_doel(state: State) -> str:
+    """Is de bepaling al bekend (`state["doel"]`)? Dan valt er niets te routeren — recht naar
+    `annoteer`, geen supervisor-LLM-call nodig. Zonder `doel` werkt de bestaande QA-routing
+    ongewijzigd."""
+    return "annoteer" if state.get("doel") else "supervisor"
+
+
 def route_after_supervisor(state: State) -> str:
     return "afwijzen" if state.get("afwijzen") else "agent"
 
@@ -636,17 +842,38 @@ def route_after_verify(state: State) -> str:
 
 
 def build_graph(settings: Settings, llm: LLMPort, graph: GraphPort) -> Any:
-    """Compileert de antwoord-graaf. Geen checkpointer: deze snede kent nog geen
+    """Compileert de antwoord-/annotatiegraaf. Geen checkpointer: deze snede kent nog geen
     multi-turn-gespreksgeheugen (dat komt met de story die de API-laag bouwt).
 
-    `settings.enable_decomposition=True` vertakt naar de multi-hop-topologie (story 046) i.p.v.
-    de agent⇄tools-lus; de toggel-uit-stand hieronder blijft byte voor byte gelijk aan
-    stories 044-045."""
+    `settings.enable_decomposition=True` vertakt de antwoord-tak naar de multi-hop-topologie
+    (story 046) i.p.v. de agent⇄tools-lus; de toggle-uit-stand blijft byte voor byte gelijk aan
+    stories 044-045. `state["doel"]` routeert (via `_heeft_doel`) om de supervisor heen recht naar
+    de annotatieketen (story 049) — onafhankelijk van die toggle."""
     builder = StateGraph(State)
     builder.add_node("supervisor", partial(supervisor_node, settings=settings, llm=llm))
     builder.add_node("afwijzen", afwijs_node)
     builder.add_node("verify", verify_node)
     builder.add_node("finalize", finalize_node)
+
+    # Annotatieketen — zelfde nodes voor beide antwoord-topologieën hieronder.
+    builder.add_node("annoteer", partial(annoteer_node, settings=settings, llm=llm, graph=graph))
+    builder.add_node("critic", partial(critic_node, settings=settings, llm=llm))
+    builder.add_node("patch", patch_node)
+    builder.add_node("herzie", partial(herzie_node, settings=settings, llm=llm))
+    builder.add_node("emit", emit_node)
+
+    builder.add_conditional_edges(
+        START, _heeft_doel, {"annoteer": "annoteer", "supervisor": "supervisor"}
+    )
+    builder.add_edge("annoteer", "critic")
+    builder.add_conditional_edges(
+        "critic", partial(route_na_critic, settings=settings), {"patch": "patch", "emit": "emit"}
+    )
+    builder.add_conditional_edges(
+        "patch", route_na_patch, {"herzie": "herzie", "critic": "critic", "emit": "emit"}
+    )
+    builder.add_edge("herzie", "critic")
+    builder.add_edge("emit", END)
 
     if settings.enable_decomposition:
         builder.add_node("decompose", partial(decompose_node, settings=settings, llm=llm))
@@ -654,7 +881,6 @@ def build_graph(settings: Settings, llm: LLMPort, graph: GraphPort) -> Any:
         builder.add_node("synthesize", partial(synthesize_node, settings=settings, llm=llm))
         builder.add_node("resynth", resynth_node)
 
-        builder.add_edge(START, "supervisor")
         builder.add_conditional_edges(
             "supervisor", route_after_supervisor, {"afwijzen": "afwijzen", "agent": "decompose"}
         )
@@ -675,7 +901,6 @@ def build_graph(settings: Settings, llm: LLMPort, graph: GraphPort) -> Any:
     builder.add_node("tools", partial(tools_node, settings=settings, graph=graph))
     builder.add_node("correct", correct_node)
 
-    builder.add_edge(START, "supervisor")
     builder.add_conditional_edges(
         "supervisor", route_after_supervisor, {"afwijzen": "afwijzen", "agent": "agent"}
     )

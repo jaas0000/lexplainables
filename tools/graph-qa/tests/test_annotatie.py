@@ -15,6 +15,8 @@ from agent.annotatie import (
     _verwerk,
     _verwerk_critic,
     demp_zelfweerspreking,
+    openstaand_voorstel,
+    pas_critic_toe,
     vervang_ids_door_citaat,
 )
 
@@ -388,3 +390,132 @@ def test_vervang_ids_door_citaat_kapt_lange_tekst_af() -> None:
 
 def test_vervang_ids_door_citaat_lege_motivatie_blijft_leeg() -> None:
     assert vervang_ids_door_citaat("", [{"id": "abc123456789", "tekst": "iets"}]) == ""
+
+
+# ---- pas_critic_toe (story 049) ---------------------------------------------------------------
+
+
+def _voorstel(**overrides: object) -> dict:
+    basis = {
+        "id": "elementid01",
+        "klasse": "Rechtssubject",
+        "tekst": "Degene die aangifte doet",
+        "alternatieven": [],
+        "critic_rondes": [],
+    }
+    basis.update(overrides)
+    return basis
+
+
+def test_pas_critic_toe_rood_vervang_wijzigt_klasse_en_tekst() -> None:
+    voorstel = _voorstel(critic_rondes=[{"ronde": 1}])
+    feedback = [
+        {
+            "id": "elementid01",
+            "aandacht": "rood",
+            "actie": "vervang",
+            "voorstel_klasse": "Rechtsfeit",
+            "voorstel_tekst": "aangifte doet",
+        }
+    ]
+    uit, telling, rest = pas_critic_toe([voorstel], feedback, _CORPUS)
+
+    assert telling.toegepast == 1
+    assert rest == []
+    assert uit[0]["klasse"] == "Rechtsfeit"
+    assert uit[0]["tekst"] == "aangifte doet"
+    assert uit[0]["critic_rondes"][-1]["toegepast"] is True
+    assert uit[0]["aandacht"] == ""  # opnieuw te beoordelen
+
+
+def test_pas_critic_toe_geel_vervang_wordt_alternatief_niet_hoofdklasse() -> None:
+    voorstel = _voorstel()
+    feedback = [
+        {
+            "id": "elementid01",
+            "aandacht": "geel",
+            "actie": "vervang",
+            "voorstel_klasse": "Rechtsfeit",
+            "motivatie": "twijfel",
+        }
+    ]
+    uit, telling, rest = pas_critic_toe([voorstel], feedback, _CORPUS)
+
+    assert telling.alternatief == 1
+    assert uit[0]["klasse"] == "Rechtssubject"  # ongewijzigd
+    assert any(a["klasse"] == "Rechtsfeit" for a in uit[0]["alternatieven"])
+
+
+def test_pas_critic_toe_laat_jurist_markering_ongemoeid() -> None:
+    voorstel = _voorstel(van_jurist=True)
+    feedback = [
+        {
+            "id": "elementid01",
+            "aandacht": "rood",
+            "actie": "vervang",
+            "voorstel_klasse": "Rechtsfeit",
+        }
+    ]
+    uit, telling, rest = pas_critic_toe([voorstel], feedback, _CORPUS)
+
+    assert telling.toegepast == 0
+    assert uit[0]["klasse"] == "Rechtssubject"
+
+
+def test_pas_critic_toe_rood_vervang_niet_letterlijk_gaat_naar_rest() -> None:
+    voorstel = _voorstel(critic_rondes=[{"ronde": 1}])
+    feedback = [
+        {
+            "id": "elementid01",
+            "aandacht": "rood",
+            "actie": "vervang",
+            "voorstel_tekst": "een verzonnen fragment",
+        }
+    ]
+    uit, telling, rest = pas_critic_toe([voorstel], feedback, _CORPUS)
+
+    assert telling.toegepast == 0
+    assert len(rest) == 1
+    assert uit[0]["tekst"] == "Degene die aangifte doet"  # ongewijzigd
+
+
+def test_pas_critic_toe_zonder_feedback_laat_voorstel_ongemoeid() -> None:
+    voorstel = _voorstel()
+    uit, telling, rest = pas_critic_toe([voorstel], [], _CORPUS)
+
+    assert telling.toegepast == 0
+    assert telling.alternatief == 0
+    assert uit == [voorstel]
+
+
+# ---- openstaand_voorstel (story 049) -----------------------------------------------------------
+
+
+def test_openstaand_voorstel_niet_uitgevoerde_eindronde() -> None:
+    voorstel = _voorstel(
+        critic_rondes=[
+            {
+                "actie": "vervang",
+                "toegepast": False,
+                "voorstel_klasse": "Rechtsfeit",
+                "voorstel_tekst": "aangifte doet",
+                "motivatie": "beter zo",
+            }
+        ]
+    )
+    klasse, tekst, reden = openstaand_voorstel(voorstel, _CORPUS)
+
+    assert klasse == "Rechtsfeit"
+    assert tekst == "aangifte doet"
+    assert reden == "beter zo"
+
+
+def test_openstaand_voorstel_toegepast_levert_niets() -> None:
+    voorstel = _voorstel(
+        critic_rondes=[{"actie": "vervang", "toegepast": True, "voorstel_klasse": "Rechtsfeit"}]
+    )
+    assert openstaand_voorstel(voorstel, _CORPUS) == ("", "", "")
+
+
+def test_openstaand_voorstel_zonder_geschiedenis_levert_niets() -> None:
+    assert openstaand_voorstel(_voorstel(), _CORPUS) == ("", "", "")

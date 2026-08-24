@@ -57,6 +57,10 @@ class Settings(BaseModel):
     max_subquestions: int = 5  # cap op het aantal deelvragen (kosten/latency begrenzen)
     sub_max_turns: int = 8  # agent⇄tools-beurten per deelvraag, los van MAX_TURNS
 
+    # Annotatie-critic (story 049): 0 = uit (annoteer → critic → emit, geen patch/herziening),
+    # >0 = aan.
+    critic_max_rondes: int = 1
+
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
         e = env if env is not None else os.environ
@@ -73,6 +77,7 @@ class Settings(BaseModel):
             "enable_decomposition": e.get("ENABLE_DECOMPOSITION"),
             "max_subquestions": e.get("MAX_SUBQUESTIONS"),
             "sub_max_turns": e.get("SUB_MAX_TURNS"),
+            "critic_max_rondes": e.get("CRITIC_MAX_RONDES"),
         }
         # None én lege string weglaten zodat de veld-defaults van kracht blijven.
         return cls(**{k: v for k, v in raw.items() if v is not None and v != ""})
