@@ -90,9 +90,13 @@ graaf gewired). Story 048 voegt `critic_node` toe: beoordeelt diezelfde voorstel
 aandacht-niveau (groen/geel/rood) + actie per element, dempt zelfweerspreking bij een tweede
 ronde, en breekt de keten nooit op een mislukte call — ook losstaand. Live geverifieerd tegen
 artikel 1 van de Invorderingswet 1990; de Critic ving daarbij een echte misclassificatie van de
-annotator. Nog geen patch/herzie/emit/advance, geen graaf-wiring naar een annotatie-worker,
-checkpointer/streaming of API-laag (~25-35 stories geschat in totaal voor de hele werkstroom)
-moet nog gebouwd worden.
+annotator. Story 049 rondt de annotatieketen af: `patch_node` (code-only, voert rood+vervang
+door), `herzie_node` (LLM-call, herstelt verworpen fragmenten/gemiste elementen), `emit_node`
+(finale structuur, geen SSE), en de graaf-wiring — `state["doel"]` routeert om de supervisor heen
+recht naar de annotatieketen. Live geverifieerd: 4 correcties daadwerkelijk toegepast op artikel
+1. De annotatieketen zelf is daarmee inhoudelijk compleet (geen `advance_node`/worker-chaining
+nodig — één worker per beurt). Checkpointer/streaming/API-laag (~25-35 stories geschat in totaal
+voor de hele werkstroom) moet nog gebouwd worden.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -181,7 +185,10 @@ geverifieerd tegen artikel 1 van de Invorderingswet 1990 (5 grounded voorstellen
 Story 048 voegt `critic_node` toe: beoordeelt diezelfde voorstellen met een aandacht-niveau
 (groen/geel/rood) + actie per element, dempt zelfweerspreking bij een tweede beoordelingsronde, en
 breekt de keten nooit op een mislukte call — ook losstaand. Live geverifieerd: de Critic ving een
-echte misclassificatie van de annotator op artikel 1. Nog geen patch/herzie/emit/advance, geen
-graaf-wiring naar een annotatie-worker, geen checkpointer/streaming, en geen enkel aangesloten
-API- of UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom (~25-35 stories
-geschat in totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
+echte misclassificatie van de annotator op artikel 1. Story 049 rondt de annotatieketen af:
+`patch_node` (code-only), `herzie_node` (LLM-call), `emit_node` (finale structuur, geen SSE), en
+de graaf-wiring (`state["doel"]` routeert om de supervisor heen). Live geverifieerd: 4 correcties
+daadwerkelijk toegepast op artikel 1 — de annotatieketen zelf is nu inhoudelijk compleet. Geen
+checkpointer/streaming, en geen enkel aangesloten API- of UI-endpoint — dat is de rest van de
+eerstvolgende grote werkstroom (~25-35 stories geschat in totaal), daarna `frontend-chat`
+(`tools/wetsanalyse-admin-mcp/` is klaar).
