@@ -3,19 +3,22 @@
 `answer_stream()` levert het SSE-event-contract (werkwijze-story 051) als Python-generator — nog
 **geen HTTP**, dat is de eerstvolgende API-laag-story (`tools/graph-qa/api/` is nu een leeg
 skelet). Poort van `wetsanalyse-ai/tools/graph-qa/agent/agent.py`, bewust smal: geen
-`stop_check`/observability/runs-model — zie `docs/project/stories/051-graph-qa-streaming.md`
-§Afwijkingen.
+observability/runs-model — zie `docs/project/stories/051-graph-qa-streaming.md` §Afwijkingen.
+Story 052 voegt `stop_check` door: een aanroeper kan een lopende beurt op een nodegrens laten
+stoppen (`BeurtGestopt`) — er is hier nog geen aanroeper die 'm daadwerkelijk zet, dat wacht op
+het latere runs-model, zie `docs/project/stories/052-graph-qa-stop-check.md`.
 """
 
 from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 from langgraph.errors import GraphRecursionError
 
+from .agent_common import BeurtGestopt
 from .checkpointer import checkpointer_ctx
 from .config import Settings
 from .orchestrator import State, build_graph, nieuwe_beurt_invoer
@@ -60,6 +63,7 @@ async def answer_stream(
     settings: Settings | None = None,
     llm: LLMPort | None = None,
     graph: GraphPort | None = None,
+    stop_check: Callable[[], bool] | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     """Async generator die SSE-events yield:
     {"type": "token", "content": "..."}
@@ -92,7 +96,7 @@ async def answer_stream(
     laatste_state: State = {}
     try:
         async with checkpointer_ctx(settings) as saver:
-            app = build_graph(settings, llm, graph, checkpointer=saver)
+            app = build_graph(settings, llm, graph, checkpointer=saver, stop_check=stop_check)
             async for mode, chunk in app.astream(
                 invoer, config=config, stream_mode=["custom", "values"]
             ):
@@ -112,6 +116,17 @@ async def answer_stream(
                 yield {"type": "conversation_id", "conversation_id": conversation_id}
             yield {"type": "done"}
 
+    except BeurtGestopt:
+        # Geen fout: de jurist vroeg om te stoppen en de graaf is op een nodegrens uitgestapt.
+        # Wat er tot hier geëmit is (tokens) blijft geldig; `sources`/`grounding` slaan we over —
+        # de beurt kwam nooit bij `finalize`/`emit`, dus die velden voegen niets toe.
+        logger.info(
+            "beurt gestopt op verzoek",
+            extra={"chat_session_id": conversation_id or ""},
+        )
+        if conversation_id:
+            yield {"type": "conversation_id", "conversation_id": conversation_id}
+        yield {"type": "done"}
     except GraphRecursionError:
         logger.warning(
             "beurt raakte de stappenlimiet",

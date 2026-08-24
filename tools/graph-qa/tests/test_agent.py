@@ -1,4 +1,5 @@
-"""`agent/agent.py`'s `answer_stream()`: het SSE-event-contract (werkwijze-story 051).
+"""`agent/agent.py`'s `answer_stream()`: het SSE-event-contract (werkwijze-story 051) + `stop_check`
+(werkwijze-story 052).
 
 Draait via `asyncio.run(...)` in gewone sync testfuncties — geen pytest-asyncio-plugin nodig,
 zelfde patroon als `tests/test_checkpointer.py`.
@@ -101,6 +102,19 @@ def test_onverwachte_fout_geeft_gesaniteerde_melding() -> None:
                 "misgaan, dan staat de oorzaak in het server-log."
             ),
         }
+    ]
+    assert graph.closed
+
+
+def test_beurt_gestopt_levert_done_zonder_error_of_sources() -> None:
+    llm = FakeLLM([_supervisor_ok()])
+    graph = FakeGraph(result="")
+
+    events = _events(llm, graph, "Een vraag", conversation_id="gesprek-1", stop_check=lambda: True)
+
+    assert events == [
+        {"type": "conversation_id", "conversation_id": "gesprek-1"},
+        {"type": "done"},
     ]
     assert graph.closed
 
