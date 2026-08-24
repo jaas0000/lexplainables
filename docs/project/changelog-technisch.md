@@ -1,5 +1,17 @@
 # Technische changelog
 
+- graph-qa annotatie — enkele ronde, geen critic (PR #84, story 047): eerste story van de
+  annotatieketen-werkstroom. `annoteer_node` (losstaand, nog niet in `build_graph` gewired)
+  classificeert één bepaling volgens het JAS in één LLM-call — brongetrouw en ontdubbeld via
+  `sleutel_van`, met een balanced-braces-salvage voor een afgekapte/omkaderde LLM-respons.
+  Twee nieuwe voorwaardelijke modules (`agent/graph/results.py` SPARQL-TSV-parser,
+  `agent/artikel.py` corpus-tekst per bepaling) hergebruiken de bestaande SPARQL-bouwers uit
+  story 041, geen nieuwe queries. `agent/jas_klassen.py` heeft een echte drift-guard-test tegen
+  `api/references/jas-klassen-referentie.md`. Bewust nog geen critic/patch/herzie/emit/advance,
+  kandidaten/ONDERWERP-afhandeling, jurist-marking-merge of integratie met
+  `api/app/features/annotatie` — allemaal latere stories. Live geverifieerd tegen artikel 1 van
+  de Invorderingswet 1990: 5 grounded voorstellen, 0 verworpen fragmenten, correcte ontdubbeling
+  naar alternatieven bij genuine classificatie-ambiguïteit.
 - graph-qa decompositie — multi-hop-graaf-variant (PR #83, story 046): tweede graaf-topologie
   (`decompose_node → solve_node → synthesize_node → verify_node → (resynth_node) →
   finalize_node`), selecteerbaar via `settings.enable_decomposition` (standaard uit — de

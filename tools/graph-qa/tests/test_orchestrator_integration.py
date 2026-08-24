@@ -1,5 +1,5 @@
 """Live integratietests: de volledige antwoord-agent-loop tegen de echte GraphDB + Foundry
-(werkwijze-stories 044-046).
+(werkwijze-stories 044-047).
 
 Standaard geskipt (`-m "not integration"`) — vereist een draaiende `deploy/graphdb`-stack (gevuld
 met de Invorderingswet-fixture, zie stories 040/041) en een geldige Foundry-key/-resource in de
@@ -15,7 +15,8 @@ import pytest
 from agent.adapters.anthropic_llm import AnthropicLLM
 from agent.adapters.graphdb_graph import make_graph
 from agent.config import Settings
-from agent.orchestrator import build_graph
+from agent.jas_klassen import GELDIGE_JAS_KLASSEN
+from agent.orchestrator import annoteer_node, build_graph
 
 
 @pytest.mark.integration
@@ -110,3 +111,30 @@ def test_live_decompositie_splitst_een_samengestelde_vraag() -> None:
         f"onverwacht ongegrond: {result.get('unsupported')} / {result.get('niet_letterlijk')}"
     )
     assert (result["answer"] or "").strip() != ""
+
+
+@pytest.mark.integration
+def test_live_annoteer_node_classificeert_een_echte_bepaling() -> None:
+    settings = Settings.from_env(os.environ)
+    if not settings.azure_foundry_api_key or not settings.azure_foundry_resource:
+        pytest.skip("AZURE_FOUNDRY_API_KEY(_FILE)/AZURE_FOUNDRY_RESOURCE niet in de omgeving")
+    if not settings.graphdb_mcp_url or not settings.graphdb_token:
+        pytest.skip("GRAPHDB_MCP_URL/GRAPHDB_TOKEN niet in de omgeving")
+
+    llm = AnthropicLLM(settings)
+    graph = make_graph(settings)
+    try:
+        # Artikel 1 heeft echte normatieve inhoud (toepassingsbereik + een uitzonderingsbepaling
+        # op de Awb) — anders dan artikel 2's pure definitie-opsomming een betere proef voor JAS-
+        # classificatie (Rechtsbetrekking/Voorwaarde/Delegatiebevoegdheid-achtige elementen).
+        doel = {"bwbId": "BWBR0004770", "artikel": "1"}
+        result = annoteer_node({"doel": doel}, settings=settings, llm=llm, graph=graph)
+    finally:
+        graph.close()
+
+    assert result["corpus"].strip(), "geen corpus opgehaald"
+    assert result["voorstellen"], "geen enkel voorstel geleverd"
+    for v in result["voorstellen"]:
+        assert v["klasse"] in GELDIGE_JAS_KLASSEN, f"onbekende klasse: {v['klasse']}"
+        assert v["grounded"] is True
+        assert v["tekst"].strip()
