@@ -95,8 +95,12 @@ door), `herzie_node` (LLM-call, herstelt verworpen fragmenten/gemiste elementen)
 (finale structuur, geen SSE), en de graaf-wiring — `state["doel"]` routeert om de supervisor heen
 recht naar de annotatieketen. Live geverifieerd: 4 correcties daadwerkelijk toegepast op artikel
 1. De annotatieketen zelf is daarmee inhoudelijk compleet (geen `advance_node`/worker-chaining
-nodig — één worker per beurt). Checkpointer/streaming/API-laag (~25-35 stories geschat in totaal
-voor de hele werkstroom) moet nog gebouwd worden.
+nodig — één worker per beurt). Story 050 voegt LangGraph-checkpointing toe (`agent/
+checkpointer.py`: Postgres → SQLite-bestand → `MemorySaver`) plus `nieuwe_beurt_invoer()` voor het
+per-beurt-resetpatroon, zodat `messages` daadwerkelijk over losse `.ainvoke()`-aanroepen heen
+blijft bestaan — live geverifieerd, en onderweg twee zelf gevonden bugs gefixt (Source-
+serialisatie, en een supervisor die de gesprekshistorie niet meelas). Streaming/API-laag
+(~25-35 stories geschat in totaal voor de hele werkstroom) moet nog gebouwd worden.
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -188,7 +192,12 @@ breekt de keten nooit op een mislukte call — ook losstaand. Live geverifieerd:
 echte misclassificatie van de annotator op artikel 1. Story 049 rondt de annotatieketen af:
 `patch_node` (code-only), `herzie_node` (LLM-call), `emit_node` (finale structuur, geen SSE), en
 de graaf-wiring (`state["doel"]` routeert om de supervisor heen). Live geverifieerd: 4 correcties
-daadwerkelijk toegepast op artikel 1 — de annotatieketen zelf is nu inhoudelijk compleet. Geen
-checkpointer/streaming, en geen enkel aangesloten API- of UI-endpoint — dat is de rest van de
+daadwerkelijk toegepast op artikel 1 — de annotatieketen zelf is nu inhoudelijk compleet. Story 050
+voegt gespreksgeheugen toe: een LangGraph-checkpointer (`agent/checkpointer.py`, Postgres → SQLite-
+bestand → `MemorySaver`) plus `nieuwe_beurt_invoer()` die alle ephemere State-velden per beurt
+reset, zodat een vervolgvraag in hetzelfde gesprek de context van eerdere vragen kent — live
+geverifieerd, met twee zelf gevonden en binnen dezelfde PR gefixte bugs (Source-Pydantic-objecten
+i.p.v. plain dicts in de state; de supervisor las de gesprekshistorie niet mee bij het routeren).
+Geen streaming, en geen enkel aangesloten API- of UI-endpoint — dat is de rest van de
 eerstvolgende grote werkstroom (~25-35 stories geschat in totaal), daarna `frontend-chat`
 (`tools/wetsanalyse-admin-mcp/` is klaar).
