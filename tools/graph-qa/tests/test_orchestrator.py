@@ -1,9 +1,9 @@
 """De antwoord-agent-loop: supervisor-routing, gelukkig pad, ongegrond-correctie, onbepaald,
-max-turns-vangnet, afwijzen, decompositie (multi-hop), annotatie (enkele ronde).
+max-turns-vangnet, afwijzen, decompositie (multi-hop), volledige annotatieketen.
 
 Eigen tests (niet geport van de referentie se `tests/test_orchestrator.py`/`test_agent_loop.py` —
 niet gelezen, alleen hun bestandsgrootte gezien via een Explore-agent), tegen `agent/
-orchestrator.py`, dat zelf wél 1:1 op het legacy-QA-pad geport is (stories 044-047).
+orchestrator.py`, dat zelf wél 1:1 op het legacy-QA-pad geport is (stories 044-049).
 """
 
 from __future__ import annotations
@@ -12,10 +12,16 @@ import json
 
 from agent.orchestrator import (
     MAX_TURNS,
+    _heeft_doel,
     annoteer_node,
     build_graph,
     critic_node,
+    emit_node,
+    herzie_node,
     parse_subquestions,
+    patch_node,
+    route_na_critic,
+    route_na_patch,
 )
 from tests.fakes import FakeGraph, FakeLLM, make_settings, response, text_block, tool_block
 
@@ -568,3 +574,242 @@ def test_critic_node_zonder_voorstellen_doet_geen_llm_call() -> None:
     result = critic_node({"voorstellen": []}, settings=settings, llm=llm)
 
     assert result == {}
+
+
+# ---- Annotatieketen afronden: patch/routing/herzie/emit/graaf-wiring (story 049) -------------
+
+_CORPUS = "1. Degene die aangifte doet, is verplicht de gegevens waarheidsgetrouw te verstrekken."
+
+
+def test_heeft_doel() -> None:
+    assert _heeft_doel({"doel": {"bwbId": "x", "artikel": "1"}}) == "annoteer"
+    assert _heeft_doel({"question": "iets"}) == "supervisor"
+
+
+def test_patch_node_voert_rood_vervang_door() -> None:
+    voorstel = {
+        "id": "eid1",
+        "klasse": "Rechtssubject",
+        "tekst": "Degene die aangifte doet",
+        "alternatieven": [],
+        "critic_rondes": [{"ronde": 1}],
+    }
+    feedback = [
+        {
+            "id": "eid1",
+            "aandacht": "rood",
+            "actie": "vervang",
+            "voorstel_klasse": "Rechtsfeit",
+        }
+    ]
+    result = patch_node({"voorstellen": [voorstel], "critic_feedback": feedback, "corpus": _CORPUS})
+
+    assert result["patch_toegepast"] == 1
+    assert result["voorstellen"][0]["klasse"] == "Rechtsfeit"
+    assert result["critic_feedback"] == []  # instructie volledig afgehandeld
+
+
+def test_route_na_critic() -> None:
+    aan = make_settings(critic_max_rondes=1)
+    uit = make_settings(critic_max_rondes=0)
+    assert route_na_critic({}, settings=uit) == "emit"
+    assert route_na_critic({"critic_gefaald": True}, settings=aan) == "emit"
+    assert route_na_critic({"critic_ronde": 2}, settings=aan) == "emit"
+    assert route_na_critic({"critic_ronde": 1}, settings=aan) == "patch"
+
+
+def test_route_na_patch() -> None:
+    assert route_na_patch({"nieuw_ontbrekend": [{"klasse": "x"}]}) == "herzie"
+    assert route_na_patch({"verworpen_fragmenten": [{"klasse": "x"}]}) == "herzie"
+    assert route_na_patch({"patch_toegepast": 1}) == "critic"
+    assert route_na_patch({"patch_toegepast": 0}) == "emit"
+
+
+def test_herzie_node_voegt_gemist_element_toe_en_behoudt_bestaand() -> None:
+    voorstel = {
+        "id": "eid1",
+        "klasse": "Rechtssubject",
+        "tekst": "Degene die aangifte doet",
+        "lid": "",
+        "alternatieven": [],
+        "critic_rondes": [],
+        "aandacht": "",
+        "critic": "",
+    }
+    llm = FakeLLM(
+        [
+            response(
+                [
+                    text_block(
+                        json.dumps(
+                            {
+                                "elementen": [
+                                    {
+                                        "id": "eid1",
+                                        "klasse": "Rechtssubject",
+                                        "tekst": "Degene die aangifte doet",
+                                        "lid": "",
+                                    },
+                                    {
+                                        "id": "",
+                                        "klasse": "Rechtsfeit",
+                                        "tekst": "aangifte doet",
+                                        "lid": "",
+                                    },
+                                ]
+                            }
+                        )
+                    )
+                ],
+                "end_turn",
+            )
+        ]
+    )
+    settings = make_settings()
+
+    result = herzie_node(
+        {
+            "voorstellen": [voorstel],
+            "corpus": _CORPUS,
+            "doel": {"bwbId": "BWBR0004770", "artikel": "10"},
+            "critic_feedback": [],
+            "critic_ontbrekend": [
+                {"klasse": "Rechtsfeit", "reden": "mist", "tekst": "aangifte doet"}
+            ],
+            "verworpen_fragmenten": [],
+        },
+        settings=settings,
+        llm=llm,
+    )
+
+    assert len(result["voorstellen"]) == 2
+    klassen = {v["klasse"] for v in result["voorstellen"]}
+    assert klassen == {"Rechtssubject", "Rechtsfeit"}
+    assert result["critic_feedback"] == []
+    assert result["nieuw_ontbrekend"] == []
+
+
+def test_herzie_node_alleen_jurist_markeringen_niets_te_herzien() -> None:
+    result = herzie_node(
+        {"voorstellen": [{"id": "eid1", "van_jurist": True}]},
+        settings=make_settings(),
+        llm=FakeLLM([]),
+    )
+    assert result == {}
+
+
+def test_herzie_node_faalpad_behoudt_vorige_voorstellen() -> None:
+    voorstel = {"id": "eid1", "klasse": "Rechtssubject", "tekst": "x"}
+    result = herzie_node(
+        {
+            "voorstellen": [voorstel],
+            "corpus": _CORPUS,
+            "doel": {"bwbId": "BWBR0004770", "artikel": "10"},
+        },
+        settings=make_settings(),
+        llm=FakeLLM([response(None, "end_turn")]),
+    )
+    assert result == {"critic_feedback": []}
+
+
+def test_emit_node_levert_openstaande_suggestie() -> None:
+    voorstel = {
+        "id": "eid1",
+        "klasse": "Rechtssubject",
+        "tekst": "Degene die aangifte doet",
+        "aandacht": "rood",
+        "critic_rondes": [
+            {
+                "actie": "vervang",
+                "toegepast": False,
+                "voorstel_klasse": "Rechtsfeit",
+                "voorstel_tekst": "aangifte doet",
+                "motivatie": "beter zo",
+            }
+        ],
+    }
+    result = emit_node({"voorstellen": [voorstel], "corpus": _CORPUS, "critic_ontbrekend": []})
+
+    assert len(result["suggesties"]) == 1
+    assert result["suggesties"][0]["voorstel_klasse"] == "Rechtsfeit"
+    assert "1 JAS-elementen" in result["answer"]
+
+
+def test_emit_node_zonder_voorstellen() -> None:
+    assert emit_node({"voorstellen": []}) == {}
+
+
+def test_build_graph_volledige_annotatieketen_met_doel() -> None:
+    """`doel` in de state routeert om de supervisor heen; een rood+vervang-correctie in de eerste
+    Critic-ronde wordt gepatcht, waarna een tweede (eind-)beoordeling naar `emit` gaat."""
+    llm = FakeLLM(
+        [
+            response(  # annoteer
+                [
+                    text_block(
+                        json.dumps(
+                            {
+                                "elementen": [
+                                    {
+                                        "klasse": "Rechtssubject",
+                                        "tekst": "Degene die aangifte doet",
+                                    }
+                                ]
+                            }
+                        )
+                    )
+                ],
+                "end_turn",
+            ),
+            response(  # critic ronde 1: rood+vervang
+                [
+                    text_block(
+                        json.dumps(
+                            {
+                                "oordelen": [
+                                    {
+                                        "index": 0,
+                                        "aandacht": "rood",
+                                        "actie": "vervang",
+                                        "voorstel_klasse": "Rechtsfeit",
+                                        "motivatie": "beter zo",
+                                    }
+                                ],
+                                "ontbrekend": [],
+                            }
+                        )
+                    )
+                ],
+                "end_turn",
+            ),
+            response(  # critic ronde 2 (eindbeoordeling): groen
+                [
+                    text_block(
+                        json.dumps(
+                            {"oordelen": [{"index": 0, "aandacht": "groen"}], "ontbrekend": []}
+                        )
+                    )
+                ],
+                "end_turn",
+            ),
+        ]
+    )
+    # `artikel.artikel_corpus` parseert dit als SPARQL-TSV (net als
+    # `test_annoteer_node_haalt_corpus_op_en_verwerkt_de_classificatie` hierboven) — geen platte
+    # tekst, anders "vindt" `_verwerk` het fragment niet terug in de (verkeerd geparste) corpus.
+    corpus_tsv = (
+        "?tekst\t?jci\t?lid\t?lidnummer\t?lidtekst\t?onderdeel\t?onderdeeltekst\n"
+        '\t\t\t"1"\t"Degene die aangifte doet, is verplicht de gegevens waarheidsgetrouw te '
+        'verstrekken."@nl\t\t'
+    )
+    graph = FakeGraph(result=corpus_tsv)
+    settings = make_settings()
+
+    result = build_graph(settings, llm, graph).invoke(
+        {"doel": {"bwbId": "BWBR0004770", "artikel": "1"}}
+    )
+
+    assert llm.index == 3  # annoteer + 2 critic-passen, geen supervisor-call
+    assert result["voorstellen"][0]["klasse"] == "Rechtsfeit"  # gepatcht
+    assert result["voorstellen"][0]["aandacht"] == "groen"  # eindoordeel
+    assert result["answer"]

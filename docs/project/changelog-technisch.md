@@ -1,5 +1,10 @@
 # Technische changelog
 
+- graph-qa annotatieketen afronden — patch/herziening/emit/graaf-wiring (PR #87, story 049):
+  slotstory van de annotatieketen-werkstroom. `patch_node` (code-only, rood+vervang), `herzie_node`
+  (LLM-call, herstelt verworpen fragmenten/gemiste elementen), `emit_node` (finale structuur, geen
+  SSE). `state["doel"]` routeert via `_heeft_doel` om de supervisor heen naar de annotatieketen.
+  Live geverifieerd: 4 correcties daadwerkelijk toegepast op artikel 1 IW 1990.
 - graph-qa annotatie-critic — kwaliteitsoordeel over voorstellen (PR #86, story 048): tweede
   story van de annotatieketen-werkstroom. `critic_node` (losstaand, nog niet in `build_graph`
   gewired) beoordeelt `annoteer_node`'s voorstellen met een aandacht-niveau

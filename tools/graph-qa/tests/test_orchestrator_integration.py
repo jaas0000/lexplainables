@@ -1,5 +1,5 @@
 """Live integratietests: de volledige antwoord-agent-loop tegen de echte GraphDB + Foundry
-(werkwijze-stories 044-048).
+(werkwijze-stories 044-049).
 
 Standaard geskipt (`-m "not integration"`) — vereist een draaiende `deploy/graphdb`-stack (gevuld
 met de Invorderingswet-fixture, zie stories 040/041) en een geldige Foundry-key/-resource in de
@@ -172,3 +172,28 @@ def test_live_critic_node_beoordeelt_echte_voorstellen() -> None:
             other["id"] and other["id"] != v["id"] and other["id"] in v["critic"]
             for other in result["voorstellen"]
         )
+
+
+@pytest.mark.integration
+def test_live_build_graph_met_doel_doorloopt_de_volledige_annotatieketen() -> None:
+    """`build_graph(...).invoke({"doel": {...}})` — de graaf-wiring uit story 049: annoteren,
+    beoordelen, eventueel patchen/herzien, en een finale structuur zonder crash."""
+    settings = Settings.from_env(os.environ)
+    if not settings.azure_foundry_api_key or not settings.azure_foundry_resource:
+        pytest.skip("AZURE_FOUNDRY_API_KEY(_FILE)/AZURE_FOUNDRY_RESOURCE niet in de omgeving")
+    if not settings.graphdb_mcp_url or not settings.graphdb_token:
+        pytest.skip("GRAPHDB_MCP_URL/GRAPHDB_TOKEN niet in de omgeving")
+
+    llm = AnthropicLLM(settings)
+    graph = make_graph(settings)
+    try:
+        result = build_graph(settings, llm, graph).invoke(
+            {"doel": {"bwbId": "BWBR0004770", "artikel": "1"}}
+        )
+    finally:
+        graph.close()
+
+    assert result["voorstellen"], "geen enkel voorstel geleverd"
+    assert (result.get("answer") or "").strip() != ""
+    for v in result["voorstellen"]:
+        assert v["klasse"] in GELDIGE_JAS_KLASSEN

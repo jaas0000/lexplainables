@@ -5,11 +5,9 @@ Niet-onderbouwde of ongeldig-geclassificeerde voorstellen worden verworpen (nooi
 doorgelaten). Gebruikt door `annoteer_node` in `orchestrator.py`.
 
 Poort van `wetsanalyse-ai/tools/graph-qa/agent/annotatie.py`, 1:1 voor de hier opgenomen functies
-— de kern van de enkele-annotatieronde (werkwijze-story 047) plus de Critic-verwerking
-(werkwijze-story 048). Bewust **niet** meegenomen: `PatchTelling`, `pas_critic_toe`,
-`openstaand_voorstel`, `_markeer_toegepast` — die horen bij de patch/herzie-keten, een latere
-story. `komt_letterlijk_voor`/de normalisatie komen uit `agent/brongetrouw.py` (gedeeld met
-`grounding.py`, dat dezelfde eis stelt aan het antwoord).
+— de volledige annotatieketen-domeinlogica (stories 047-049: annoteren, Critic, patch,
+openstaande suggesties). `komt_letterlijk_voor`/de normalisatie komen uit `agent/brongetrouw.py`
+(gedeeld met `grounding.py`, dat dezelfde eis stelt aan het antwoord).
 """
 
 from __future__ import annotations
@@ -19,7 +17,7 @@ import logging
 import re
 import uuid
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, NamedTuple
 
 from .brongetrouw import komt_letterlijk_voor  # noqa: F401 — los bruikbaar, zie module-docstring
 from .brongetrouw import normaliseer as _normaliseer
@@ -398,3 +396,151 @@ def vervang_ids_door_citaat(motivatie: str, voorstellen: list[dict[str, Any]]) -
         return kort if omsloten else f"'{kort}'"
 
     return _ELEMENT_ID.sub(_vervang, motivatie).strip()
+
+
+class PatchTelling(NamedTuple):
+    """Wat de patcher deed: hoeveel uitgevoerd, en hoeveel als twijfel doorgegeven."""
+
+    toegepast: int
+    alternatief: int
+
+    def __bool__(self) -> bool:
+        return bool(self.toegepast or self.alternatief)
+
+
+def pas_critic_toe(
+    voorstellen: list[dict[str, Any]],
+    feedback: list[dict[str, Any]],
+    corpus: str,
+) -> tuple[list[dict[str, Any]], PatchTelling, list[dict[str, Any]]]:
+    """Voer de correcties van de Critic uit — in code, niet via een tweede taalmodel.
+
+    Geeft terug: (nieuwe voorstellen, telling, **onafgehandelde instructies**). Dat laatste is wat
+    de herziener nog te doen heeft — zonder die scheiding krijgt hij dezelfde correcties opnieuw
+    voorgelegd die hier net zijn uitgevoerd.
+
+    **Het aandacht-niveau bepaalt hoe hard een `vervang` landt.** Bij ROOD wordt de correctie
+    uitgevoerd. Bij GEEL wordt een voorgestelde klasse een **alternatief** op het element in plaats
+    van de hoofdklasse te wijzigen — de jurist neemt het over met één klik, en dan staat het als
+    zíjn beslissing in het spoor.
+
+    Drie grenzen: een markering van de jurist (`van_jurist`) blijft altijd ongemoeid; een
+    voorgesteld fragment moet letterlijk in het corpus staan (dezelfde eis als bij een vers
+    voorstel); verwijderen mag alleen bij rood.
+    """
+    op_id = {str(f.get("id", "")): f for f in feedback if f.get("id")}
+    uit: list[dict[str, Any]] = []
+    rest: list[dict[str, Any]] = []
+    toegepast = 0
+    alternatief = 0
+
+    for v in voorstellen:
+        f = op_id.get(str(v.get("id", "")))
+        actie = str((f or {}).get("actie", "behoud"))
+        if f is None or actie == "behoud" or v.get("van_jurist"):
+            uit.append(v)
+            continue
+
+        rood = str(f.get("aandacht", "")) == "rood"
+        klasse = str(f.get("voorstel_klasse", "")).strip()
+
+        if actie == "verwijder" and rood:
+            toegepast += 1
+            _markeer_toegepast(v)
+            continue
+
+        nieuw = dict(v)
+
+        # GEEL VERANDERT NOOIT IETS. Een voorgestelde klasse wordt een alternatief; een voorgesteld
+        # fragment blijft alleen in de motivatie staan. In beide gevallen is de instructie hier
+        # AFGEHANDELD en gaat hij niet door naar de herziener.
+        if actie in ("vervang", "verwijder") and not rood:
+            if klasse in GELDIGE_JAS_KLASSEN and klasse != nieuw.get("klasse"):
+                alts = list(nieuw.get("alternatieven") or [])
+                if not any(str(a.get("klasse")) == klasse for a in alts):
+                    alts.append(
+                        {"klasse": klasse, "motivatie": str(f.get("motivatie", "")).strip()}
+                    )
+                    nieuw["alternatieven"] = alts
+                    alternatief += 1
+            uit.append(nieuw)
+            continue
+
+        gewijzigd = False
+        if (
+            actie == "vervang"
+            and rood
+            and klasse in GELDIGE_JAS_KLASSEN
+            and klasse != nieuw.get("klasse")
+        ):
+            nieuw["klasse"] = klasse
+            # Stond die klasse al als alternatief, dan is hij nu de hoofdklasse — laten staan zou
+            # de jurist een chip opleveren die naar de al gekozen klasse wijst.
+            alts = [a for a in (nieuw.get("alternatieven") or []) if str(a.get("klasse")) != klasse]
+            if alts != (nieuw.get("alternatieven") or []):
+                nieuw["alternatieven"] = alts
+            gewijzigd = True
+        tekst = str(f.get("voorstel_tekst", "")).strip()
+        if (
+            actie == "vervang"
+            and rood
+            and tekst
+            and tekst != nieuw.get("tekst")
+            and komt_letterlijk_voor(corpus, tekst)
+        ):
+            nieuw["tekst"] = tekst
+            gewijzigd = True
+
+        if gewijzigd:
+            toegepast += 1
+            _markeer_toegepast(nieuw)
+            # Het oordeel ging over de vórige versie — een tweede Critic-pas beoordeelt het
+            # gecorrigeerde resultaat (zie `route_na_patch`).
+            nieuw["aandacht"] = ""
+            nieuw["critic"] = ""
+        else:
+            # Rood, maar niets uitvoerbaars: het voorgestelde fragment staat niet letterlijk in de
+            # bron, of de klasse was al zo. Dit is wat de herziener nog kan oplossen.
+            rest.append(f)
+        uit.append(nieuw)
+
+    return uit, PatchTelling(toegepast=toegepast, alternatief=alternatief), rest
+
+
+def openstaand_voorstel(voorstel: dict[str, Any], corpus: str) -> tuple[str, str, str]:
+    """Wat de EINDbeoordeling voorstelt maar niemand meer uitvoert: (klasse, fragment, reden).
+
+    De patcher draait vóór de eindbeoordeling; wat de Critic dáár nog voorstelt, komt door geen
+    enkele stap meer heen. Als aanklikbare suggestie naast de kaart leggen kan wel — dezelfde eis
+    als overal: letterlijk in de bron.
+    """
+    leeg = ("", "", "")
+    rondes = voorstel.get("critic_rondes") or []
+    if not rondes:
+        return leeg
+    laatste = rondes[-1]
+    if str(laatste.get("actie", "")) != "vervang" or laatste.get("toegepast"):
+        return leeg
+
+    klasse = str(laatste.get("voorstel_klasse", "")).strip()
+    if klasse not in GELDIGE_JAS_KLASSEN or klasse == str(voorstel.get("klasse", "")):
+        klasse = ""
+
+    tekst = str(laatste.get("voorstel_tekst", "")).strip()
+    if tekst == str(voorstel.get("tekst", "")) or not komt_letterlijk_voor(corpus, tekst):
+        tekst = ""
+
+    if not klasse and not tekst:
+        return leeg
+    return klasse, tekst, str(laatste.get("motivatie", "")).strip()
+
+
+def _markeer_toegepast(voorstel: dict[str, Any]) -> None:
+    """Zet `toegepast` op de laatste Critic-ronde van dit element.
+
+    Zonder dit verschilt "de Critic vroeg erom" niet van "het is ook gebeurd" — en juist dat
+    verschil moet een auditspoor kunnen laten zien.
+    """
+    rondes = voorstel.get("critic_rondes") or []
+    if rondes:
+        rondes[-1]["toegepast"] = True
