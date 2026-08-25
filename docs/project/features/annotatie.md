@@ -21,6 +21,7 @@ werkdocument per (werkgebied, bwb_id, artikel, lid) met JSON-lijst van elementen
 | `lid` | `Text` | NOT NULL, default '' |
 | `status` | `Text` | NOT NULL, default 'voorgesteld' |
 | `elementen` | `JSON` | NOT NULL, default list |
+| `laatste_run` | `JSON` | nullable |
 | `aangemaakt` | `DateTime(timezone=True)` | NOT NULL |
 | `bijgewerkt` | `DateTime(timezone=True)` | NOT NULL |
 
@@ -96,6 +97,11 @@ class AnnotatieStore(Protocol):
 - Wetsartikel andermans document geeft 404.
 - Wetsartikel niet in graaf geeft 404.
 - Wetsartikel graphdb onbereikbaar geeft 502.
+- Zet elementen tweede ronde voegt toe zonder eerste te verliezen.
+- Zet elementen zelfde sleutel vervangt zonder beslissing.
+- Zet elementen bevriest een door jurist beoordeeld element.
+- Zet elementen met run info slaat laatste run op.
+- Beslissing laat laatste run ongemoeid.
 - Artikel iri percent encodeert segmenten.
 - Sorteersleutel numeriek niet lexicaal.
 - Haal wetsartikel op met opschrift en leden.

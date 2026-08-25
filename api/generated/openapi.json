@@ -51,6 +51,29 @@
         "title": "AdminBerichtenPaginaOut",
         "type": "object"
       },
+      "AgentDoel": {
+        "properties": {
+          "artikel": {
+            "title": "Artikel",
+            "type": "string"
+          },
+          "bwbId": {
+            "title": "Bwbid",
+            "type": "string"
+          },
+          "lid": {
+            "default": "",
+            "title": "Lid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bwbId",
+          "artikel"
+        ],
+        "title": "AgentDoel",
+        "type": "object"
+      },
       "Alternatief": {
         "properties": {
           "klasse": {
@@ -234,6 +257,16 @@
             "title": "Elementen",
             "type": "array"
           },
+          "laatste_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "lid": {
             "default": "",
             "title": "Lid",
@@ -300,6 +333,13 @@
               }
             ],
             "title": "Critic"
+          },
+          "critic_rondes": {
+            "items": {
+              "$ref": "#/components/schemas/CriticRonde"
+            },
+            "title": "Critic Rondes",
+            "type": "array"
           },
           "diff": {
             "additionalProperties": true,
@@ -1023,15 +1063,78 @@
             ],
             "title": "Conversation Id"
           },
+          "doel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentDoel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "question": {
+            "default": "",
             "title": "Question",
+            "type": "string"
+          },
+          "werkgebied": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Werkgebied"
+          }
+        },
+        "title": "ChatRequest",
+        "type": "object"
+      },
+      "CriticRonde": {
+        "description": "Wat de Critic (graph-qa) in \u00e9\u00e9n pas van dit element vond \u2014 het geheugen van de Critic\nover meerdere rondes heen, en het spoor voor de jurist. Poort van graph-qa's\n`agent.models.CriticRonde` (zie `tools/graph-qa/agent/models.py`).",
+        "properties": {
+          "aandacht": {
+            "default": "",
+            "title": "Aandacht",
+            "type": "string"
+          },
+          "actie": {
+            "default": "behoud",
+            "title": "Actie",
+            "type": "string"
+          },
+          "motivatie": {
+            "default": "",
+            "title": "Motivatie",
+            "type": "string"
+          },
+          "ronde": {
+            "title": "Ronde",
+            "type": "integer"
+          },
+          "toegepast": {
+            "default": false,
+            "title": "Toegepast",
+            "type": "boolean"
+          },
+          "voorstel_klasse": {
+            "default": "",
+            "title": "Voorstel Klasse",
+            "type": "string"
+          },
+          "voorstel_tekst": {
+            "default": "",
+            "title": "Voorstel Tekst",
             "type": "string"
           }
         },
         "required": [
-          "question"
+          "ronde"
         ],
-        "title": "ChatRequest",
+        "title": "CriticRonde",
         "type": "object"
       },
       "DocumentAanmaken": {
@@ -1173,6 +1276,18 @@
             ],
             "title": "Critic"
           },
+          "critic_rondes": {
+            "items": {
+              "$ref": "#/components/schemas/CriticRonde"
+            },
+            "title": "Critic Rondes",
+            "type": "array"
+          },
+          "id": {
+            "default": "",
+            "title": "Id",
+            "type": "string"
+          },
           "klasse": {
             "title": "Klasse",
             "type": "string"
@@ -1217,6 +1332,7 @@
         "type": "object"
       },
       "ElementenInvoer": {
+        "description": "`PUT .../elementen` is altijd de agent se schrijfpad (zelfde aanname als de referentie \u2014\neen jurist beslist via de losse `beslissing`-endpoint, nooit via een rauwe PUT). Vandaar\nmerge-niet-vervang-semantiek in de router: bestaande, al door een jurist beoordeelde\nelementen blijven ongemoeid (\"bevroren\"), alleen nieuwe/nog-niet-beoordeelde voorstellen\nworden overschreven of toegevoegd.",
         "properties": {
           "elementen": {
             "items": {
@@ -1224,6 +1340,16 @@
             },
             "title": "Elementen",
             "type": "array"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -1873,6 +1999,38 @@
           "naam"
         ],
         "title": "ResolveResultaat",
+        "type": "object"
+      },
+      "RunInfo": {
+        "description": "Herkomst van een agent-run \u2014 welk model/versie deze elementen voorstelde. Poort van\ngraph-qa's `run`-event (`emit_node`, zie `tools/graph-qa/agent/orchestrator.py`).",
+        "properties": {
+          "agent_versie": {
+            "default": "",
+            "title": "Agent Versie",
+            "type": "string"
+          },
+          "critic_rondes": {
+            "default": 0,
+            "title": "Critic Rondes",
+            "type": "integer"
+          },
+          "model": {
+            "default": "",
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "default": "",
+            "title": "Provider",
+            "type": "string"
+          },
+          "stop_reden": {
+            "default": "",
+            "title": "Stop Reden",
+            "type": "string"
+          }
+        },
+        "title": "RunInfo",
         "type": "object"
       },
       "SetupStatus": {
@@ -4578,7 +4736,7 @@
     },
     "/v1/annotatie/documenten/{slug}/elementen": {
       "put": {
-        "description": "Vervangt de elementenlijst volledig.\n\nOngeldige JAS-klasse of lege tekst \u2192 element overgeslagen.",
+        "description": "Merget nieuwe agent-voorstellen met de bestaande elementenlijst (`_merge_elementen`) \u2014\ngeen volledige vervanging. Een reeds door de jurist beoordeeld element blijft bevroren, ook\nals een latere agent-ronde er een nieuw voorstel voor doet (poort van de referentie-api se\nmerge-gedrag, story 056-vervolg \u2014 werkwijze: nieuwe architectuureis van lexplainables t.o.v.\nde vroegere volledige-vervanging-semantiek).\n\nOngeldige JAS-klasse of lege tekst \u2192 element overgeslagen (niet de hele batch afgewezen).",
         "operationId": "zet_elementen_v1_annotatie_documenten__slug__elementen_put",
         "parameters": [
           {
