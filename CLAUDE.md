@@ -43,8 +43,10 @@ Keycloak is **volledig verwijderd** (PR #5, story 006). Geen Keycloak-service in
 **Alembic-migraties:** 0001–0014, draaien tegen Postgres (SQLite volledig verwijderd sinds
 ADR-0003).
 
-**Nog te bouwen:** Service `frontend-chat` nog niet gestart. (2FA/TOTP, story 017, bleek bij
-onderzoek al gebouwd onder de oude fase-indeling — zie de story-doc.)
+**`frontend-chat` is gestart** (story 056: eerste chat-UI voor Lex — login, één chatscherm, een
+streamende BFF-route naar `api`'s chat-proxy, story 055; geen gesprekgeschiedenis, geen TOTP/
+rollen, zie de story-doc voor de volledige scope). (2FA/TOTP, story 017, bleek bij onderzoek al
+gebouwd onder de oude fase-indeling — zie de story-doc.)
 `tools/bwb-import` heeft een werkende kernpijplijn: SRU-discovery + download (024),
 XSD-validatie + kernparser (025), onderdelen + verwijzingen (026), RDF/GraphDB-writer (027),
 CLI + FastAPI-service + Dockerfile + CI-publish (028), WTI-verrijking (030: citeertitels,
@@ -116,9 +118,11 @@ runs.py`): een beurt draait als server-side achtergrondtaak i.p.v. gekoppeld aan
 brengt. Story 055 knoopt `api` en `graph-qa` voor het eerst aan elkaar: `api/app/features/
 chat_proxy/` streamt graph-qa's `POST /v1/chat` ongewijzigd door — de gedocumenteerde route
 `frontend-chat → api → graph-qa` (ADR-0001), niet rechtstreeks. Live geverifieerd door de hele
-keten heen. Nog geen CORS/rate-limiting/`agent/beurt.py`-persistentie (geen vastgestelde
-frontend-chat) — die is de eerstvolgende stap (story 056), daarna de rest van de API-laag
-(~25-35 stories geschat in totaal voor de hele werkstroom).
+keten heen. Story 056 bouwt `frontend-chat` zelf: eerste chat-UI (login, één chatscherm, een
+streamende BFF-route) — live geverifieerd (screenshot), inclusief een zelf gevonden en gefixte
+`\r\n\r\n`-SSE-parseerbug in de client-side stream-reader. Nog geen CORS/rate-limiting/
+`agent/beurt.py`-persistentie/gesprekgeschiedenis — dat is de rest van de API-laag (~25-35
+stories geschat in totaal voor de hele werkstroom).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -132,7 +136,7 @@ asyncio.run(maak_gebruiker_indien_ontbreekt(get_engine(), 'beheerder', 'beheerde
 "
 ```
 
-## Structuur (topologie vastgelegd; gebouwd: `api`, `frontend`, `tools/wetsanalyse-admin-mcp`)
+## Structuur (topologie vastgelegd; alle zes services gestart — zie hieronder per service hoever)
 
 Zes services, zie [`docs/project/architectuur/adr/0001-multi-service-topologie.md`](docs/project/architectuur/adr/0001-multi-service-topologie.md)
 voor de volledige afweging:
@@ -237,7 +241,13 @@ gekoppeld aan de HTTP-verbinding, en `cancel` is de eerste échte aanroeper van 
 knoopt `api` en `graph-qa` voor het eerst daadwerkelijk aan elkaar: nieuwe feature `api/app/
 features/chat_proxy/` — `POST /v1/chat` streamt graph-qa's SSE-contract ongewijzigd door, volgens
 de al vastgelegde architectuur (`frontend-chat → api → graph-qa`, ADR-0001/C4-model). Live
-geverifieerd door de hele keten heen (`curl → api → graph-qa → GraphDB + Foundry`). Nog geen
-CORS/rate-limiting/`agent/beurt.py`-persistentie/`/v1/artikel` en nog geen enkel aangesloten
-UI-endpoint — `frontend-chat` zelf (story 056) is de eerstvolgende stap, daarna de rest van de
-API-laag (~25-35 stories geschat in totaal) (`tools/wetsanalyse-admin-mcp/` is klaar).
+geverifieerd door de hele keten heen (`curl → api → graph-qa → GraphDB + Foundry`). Story 056
+bouwt `frontend-chat` zelf: een nieuwe Next.js/Auth.js-service (poort 3002) met login, één
+chatscherm (`ChatVenster.tsx`) en een streamende BFF-route (`apiProxyStream`, de eerste
+niet-bufferende BFF-proxy in dit project) — de eerste keer dat een jurist met Lex kan chatten via
+een webinterface. Live geverifieerd met een echte, niet-gemockte browsersessie tegen de volledige
+keten (screenshot); onderweg zelf een `\r\n\r\n`-SSE-parseerbug gevonden en gefixt (`sse-starlette`
+scheidt events met CRLF, niet kaal `\n\n` — de client-side parser ging daar stilzwijgend aan
+voorbij zonder ooit een fout te geven). Nog geen CORS/rate-limiting/`agent/beurt.py`-
+persistentie/`/v1/artikel`/gesprekgeschiedenis — dat is de rest van de API-laag (~25-35 stories
+geschat in totaal) (`tools/wetsanalyse-admin-mcp/` is klaar).
