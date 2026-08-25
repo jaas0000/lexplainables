@@ -392,3 +392,114 @@ def test_wetsartikel_graphdb_onbereikbaar_geeft_502(client, monkeypatch):
 
     resp = client.get(f"/v1/annotatie/documenten/{doc['slug']}/wetsartikel", headers=HDRS_A)
     assert resp.status_code == 502
+
+
+# --- merge-en-bevries-semantiek (PUT .../elementen is geen volledige vervanging) ---------------
+
+
+def test_zet_elementen_tweede_ronde_voegt_toe_zonder_eerste_te_verliezen(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+    _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+
+    tweede_element = {"klasse": "Rechtsobject", "tekst": "de aanslag", "toelichting": ""}
+    _zet_elementen(client, slug, [tweede_element])
+
+    doc2 = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()
+    teksten = {e["tekst"] for e in doc2["elementen"]}
+    assert teksten == {"de belastingplichtige", "de aanslag"}
+
+
+def test_zet_elementen_zelfde_sleutel_vervangt_zonder_beslissing(client):
+    """Zonder jurist-beslissing mag een agent-ronde een element gewoon bijwerken (nieuwe
+    toelichting, zelfde tekst+lid → zelfde sleutel), zolang het id maar behouden blijft."""
+    doc = _maak(client)
+    slug = doc["slug"]
+    _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+    origineel_id = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()[
+        "elementen"
+    ][0]["id"]
+
+    bijgewerkt = {**_GELDIG_ELEMENT, "toelichting": "Aangescherpte toelichting."}
+    _zet_elementen(client, slug, [bijgewerkt])
+
+    doc2 = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()
+    assert len(doc2["elementen"]) == 1
+    assert doc2["elementen"][0]["id"] == origineel_id
+    assert doc2["elementen"][0]["toelichting"] == "Aangescherpte toelichting."
+
+
+def test_zet_elementen_bevriest_een_door_jurist_beoordeeld_element(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+    _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+    element_id = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()["elementen"][
+        0
+    ]["id"]
+
+    client.post(
+        f"/v1/annotatie/documenten/{slug}/elementen/{element_id}/beslissing",
+        json={"type": "goedkeuren"},
+        headers=HDRS_A,
+    )
+
+    # Een nieuwe agent-ronde probeert hetzelfde fragment (zelfde sleutel) opnieuw voor te
+    # stellen — dat voorstel mag het al goedgekeurde element niet aanraken.
+    nieuw_voorstel = {**_GELDIG_ELEMENT, "toelichting": "Een heel ander voorstel."}
+    _zet_elementen(client, slug, [nieuw_voorstel])
+
+    doc2 = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()
+    assert len(doc2["elementen"]) == 1
+    assert doc2["elementen"][0]["id"] == element_id
+    assert doc2["elementen"][0]["levenscyclus"] == "human_goedgekeurd"
+    assert doc2["elementen"][0]["toelichting"] == "Subject dat de plicht draagt."
+
+
+def test_zet_elementen_met_run_info_slaat_laatste_run_op(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+
+    resp = client.put(
+        f"/v1/annotatie/documenten/{slug}/elementen",
+        json={
+            "elementen": [_GELDIG_ELEMENT],
+            "run": {
+                "model": "claude-sonnet-4-6",
+                "provider": "azure-foundry",
+                "agent_versie": "0.1.0",
+                "critic_rondes": 1,
+                "stop_reden": "",
+            },
+        },
+        headers=HDRS_A,
+    )
+    assert resp.status_code == 200
+
+    doc2 = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()
+    assert doc2["laatste_run"]["model"] == "claude-sonnet-4-6"
+    assert doc2["laatste_run"]["critic_rondes"] == 1
+
+
+def test_beslissing_laat_laatste_run_ongemoeid(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+    client.put(
+        f"/v1/annotatie/documenten/{slug}/elementen",
+        json={
+            "elementen": [_GELDIG_ELEMENT],
+            "run": {"model": "claude-sonnet-4-6"},
+        },
+        headers=HDRS_A,
+    )
+    element_id = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()["elementen"][
+        0
+    ]["id"]
+
+    client.post(
+        f"/v1/annotatie/documenten/{slug}/elementen/{element_id}/beslissing",
+        json={"type": "goedkeuren"},
+        headers=HDRS_A,
+    )
+
+    doc2 = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()
+    assert doc2["laatste_run"]["model"] == "claude-sonnet-4-6"

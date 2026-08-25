@@ -22,10 +22,12 @@ router = APIRouter(tags=["chat"])
 @router.post("/chat")
 async def chat(
     body: ChatRequest,
-    _gebruiker: GebruikerContext = Depends(huidige_beheerder),
+    gebruiker: GebruikerContext = Depends(huidige_beheerder),
 ) -> EventSourceResponse:
     async def event_generator() -> AsyncIterator[dict]:
-        async for event in stream_chat(body.question, body.conversation_id):
+        async for event in stream_chat(
+            body.model_dump(exclude_none=True), gebruiker.gebruikersnaam
+        ):
             yield {"data": json.dumps(event, ensure_ascii=False)}
 
     return EventSourceResponse(event_generator())

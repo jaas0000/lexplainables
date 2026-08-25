@@ -406,9 +406,13 @@ export interface paths {
         get?: never;
         /**
          * Zet Elementen
-         * @description Vervangt de elementenlijst volledig.
+         * @description Merget nieuwe agent-voorstellen met de bestaande elementenlijst (`_merge_elementen`) —
+         *     geen volledige vervanging. Een reeds door de jurist beoordeeld element blijft bevroren, ook
+         *     als een latere agent-ronde er een nieuw voorstel voor doet (poort van de referentie-api se
+         *     merge-gedrag, story 056-vervolg — werkwijze: nieuwe architectuureis van lexplainables t.o.v.
+         *     de vroegere volledige-vervanging-semantiek).
          *
-         *     Ongeldige JAS-klasse of lege tekst → element overgeslagen.
+         *     Ongeldige JAS-klasse of lege tekst → element overgeslagen (niet de hele batch afgewezen).
          */
         put: operations["zet_elementen_v1_annotatie_documenten__slug__elementen_put"];
         post?: never;
@@ -842,6 +846,18 @@ export interface components {
             /** Totaal */
             totaal: number;
         };
+        /** AgentDoel */
+        AgentDoel: {
+            /** Artikel */
+            artikel: string;
+            /** Bwbid */
+            bwbId: string;
+            /**
+             * Lid
+             * @default
+             */
+            lid: string;
+        };
         /** Alternatief */
         Alternatief: {
             /** Klasse */
@@ -923,6 +939,7 @@ export interface components {
             client_id: string;
             /** Elementen */
             elementen?: components["schemas"]["AnnotatieElement"][];
+            laatste_run?: components["schemas"]["RunInfo"] | null;
             /**
              * Lid
              * @default
@@ -944,6 +961,8 @@ export interface components {
             beslissingen?: components["schemas"]["Beslissing"][];
             /** Critic */
             critic?: string | null;
+            /** Critic Rondes */
+            critic_rondes?: components["schemas"]["CriticRonde"][];
             /** Diff */
             diff?: {
                 [key: string]: unknown;
@@ -1250,8 +1269,54 @@ export interface components {
         ChatRequest: {
             /** Conversation Id */
             conversation_id?: string | null;
-            /** Question */
+            doel?: components["schemas"]["AgentDoel"] | null;
+            /**
+             * Question
+             * @default
+             */
             question: string;
+            /** Werkgebied */
+            werkgebied?: string | null;
+        };
+        /**
+         * CriticRonde
+         * @description Wat de Critic (graph-qa) in één pas van dit element vond — het geheugen van de Critic
+         *     over meerdere rondes heen, en het spoor voor de jurist. Poort van graph-qa's
+         *     `agent.models.CriticRonde` (zie `tools/graph-qa/agent/models.py`).
+         */
+        CriticRonde: {
+            /**
+             * Aandacht
+             * @default
+             */
+            aandacht: string;
+            /**
+             * Actie
+             * @default behoud
+             */
+            actie: string;
+            /**
+             * Motivatie
+             * @default
+             */
+            motivatie: string;
+            /** Ronde */
+            ronde: number;
+            /**
+             * Toegepast
+             * @default false
+             */
+            toegepast: boolean;
+            /**
+             * Voorstel Klasse
+             * @default
+             */
+            voorstel_klasse: string;
+            /**
+             * Voorstel Tekst
+             * @default
+             */
+            voorstel_tekst: string;
         };
         /** DocumentAanmaken */
         DocumentAanmaken: {
@@ -1299,6 +1364,13 @@ export interface components {
             alternatieven?: components["schemas"]["Alternatief"][];
             /** Critic */
             critic?: string | null;
+            /** Critic Rondes */
+            critic_rondes?: components["schemas"]["CriticRonde"][];
+            /**
+             * Id
+             * @default
+             */
+            id: string;
             /** Klasse */
             klasse: string;
             /**
@@ -1323,10 +1395,18 @@ export interface components {
              */
             vindplaats: string;
         };
-        /** ElementenInvoer */
+        /**
+         * ElementenInvoer
+         * @description `PUT .../elementen` is altijd de agent se schrijfpad (zelfde aanname als de referentie —
+         *     een jurist beslist via de losse `beslissing`-endpoint, nooit via een rauwe PUT). Vandaar
+         *     merge-niet-vervang-semantiek in de router: bestaande, al door een jurist beoordeelde
+         *     elementen blijven ongemoeid ("bevroren"), alleen nieuwe/nog-niet-beoordeelde voorstellen
+         *     worden overschreven of toegevoegd.
+         */
         ElementenInvoer: {
             /** Elementen */
             elementen: components["schemas"]["ElementInvoer"][];
+            run?: components["schemas"]["RunInfo"] | null;
         };
         /** ElementenZettenOut */
         ElementenZettenOut: {
@@ -1600,6 +1680,38 @@ export interface components {
         ResolveResultaat: {
             /** Naam */
             naam: string;
+        };
+        /**
+         * RunInfo
+         * @description Herkomst van een agent-run — welk model/versie deze elementen voorstelde. Poort van
+         *     graph-qa's `run`-event (`emit_node`, zie `tools/graph-qa/agent/orchestrator.py`).
+         */
+        RunInfo: {
+            /**
+             * Agent Versie
+             * @default
+             */
+            agent_versie: string;
+            /**
+             * Critic Rondes
+             * @default 0
+             */
+            critic_rondes: number;
+            /**
+             * Model
+             * @default
+             */
+            model: string;
+            /**
+             * Provider
+             * @default
+             */
+            provider: string;
+            /**
+             * Stop Reden
+             * @default
+             */
+            stop_reden: string;
         };
         /** SetupStatus */
         SetupStatus: {

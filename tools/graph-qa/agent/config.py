@@ -70,6 +70,13 @@ class Settings(BaseModel):
     # (lokale dev) — timing-safe vergeleken in `api/main.py`.
     qa_api_token: str | None = None
 
+    # Uitgaand: lexplainables' eigen `api`-service, voor het wegschrijven van annotatieresultaten
+    # (agent/wetsanalyse_api.py + agent/beurt.py). Leeg = geen persistentie — de driver wordt dan
+    # een doorgeefluik (matcht de referentie se `Settings.legt_zelf_vast`).
+    wetsanalyse_api_url: str | None = None
+    wetsanalyse_api_token: str | None = None
+    agent_versie: str = ""
+
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
         e = env if env is not None else os.environ
@@ -90,6 +97,9 @@ class Settings(BaseModel):
             "checkpoint_db_url": e.get("CHECKPOINT_DB_URL"),
             "checkpoint_db_path": e.get("CHECKPOINT_DB_PATH"),
             "qa_api_token": _read_secret(e, "QA_API_TOKEN"),
+            "wetsanalyse_api_url": e.get("WETSANALYSE_API_URL"),
+            "wetsanalyse_api_token": _read_secret(e, "WETSANALYSE_API_TOKEN"),
+            "agent_versie": e.get("AGENT_VERSION"),
         }
         # None én lege string weglaten zodat de veld-defaults van kracht blijven.
         return cls(**{k: v for k, v in raw.items() if v is not None and v != ""})
@@ -99,6 +109,12 @@ class Settings(BaseModel):
             raise ValueError("Graaf niet geconfigureerd: zet GRAPHDB_MCP_URL.")
         if not self.graphdb_token:
             raise ValueError("Graaf niet geconfigureerd: zet GRAPHDB_TOKEN.")
+
+    @property
+    def legt_zelf_vast(self) -> bool:
+        """True als deze instantie annotatieresultaten zelf naar `api` wegschrijft. Zonder een
+        geconfigureerde `WETSANALYSE_API_URL` blijft `agent/beurt.py` een doorgeefluik."""
+        return bool(self.wetsanalyse_api_url)
 
     def require_llm(self) -> None:
         if not self.azure_foundry_api_key or not self.azure_foundry_resource:

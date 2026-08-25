@@ -751,7 +751,11 @@ def herzie_node(state: State, *, settings: Settings, llm: LLMPort) -> dict[str, 
     van_jurist = [v for v in alle if v.get("van_jurist")]
     voorstellen = [v for v in alle if not v.get("van_jurist")]
     if not voorstellen:
-        return {}
+        # Niets om te herzien (bv. alle voorstellen werden al bij annoteren verworpen) — dan is
+        # er ook niets waar een gemeld ontbrekend element of verworpen fragment aan kan hechten.
+        # Zelf gevonden bug: zonder deze reset bleef `_open_werk` voor altijd True (niemand
+        # anders wist het), en liep de keten oneindig door critic → patch → herzie.
+        return {"verworpen_fragmenten": [], "nieuw_ontbrekend": []}
 
     doel = state["doel"]
     corpus = state.get("corpus", "")

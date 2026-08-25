@@ -5,6 +5,10 @@ Businessregels die niet uit de modellen volgen:
   andermans document geeft een 404 (niet 403) om het bestaan niet te lekken.
 - Elementenvalidatie bij PUT: ongeldige JAS-klasse of lege tekst → element overgeslagen (niet
   de hele batch afgewezen). De response meldt hoeveel elementen verworpen zijn.
+- PUT is een merge, geen vervanging: `_merge_elementen` matcht op (tekst, lid) — een reeds door
+  de jurist beoordeeld element blijft bevroren, ook als een latere agent-ronde er een nieuw
+  voorstel voor doet (poort van graph-qa's eigen ontdubbel-/bevries-regels, zie
+  `agent.annotatie.sleutel_van` in `tools/graph-qa`).
 - Beslissingsvalidatie: `bewerken` vereist `reden` én `wijziging`; `afwijzen` vereist `reden`
   (afgedwongen door `BeslissingInvoer.model_validator` in models.py → automatisch 422).
 - Levenscyclus na beslissing: `goedkeuren` → `human_goedgekeurd`; `bewerken` → `bewerkt`;
@@ -21,6 +25,7 @@ terugverwijzing: annotatie gebruikt `shared/validation.py`, zie daar).
 
 from __future__ import annotations
 
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -99,6 +104,49 @@ def _bereken_status(elementen: list[AnnotatieElement]) -> DocumentStatus:
     if aantal_beslist > 0:
         return DocumentStatus.gedeeltelijk_gereviewd
     return DocumentStatus.voorgesteld
+
+
+_WS = re.compile(r"\s+")
+
+# Levenscycli waarin een jurist al een oordeel heeft geveld — een agent-run mag deze elementen
+# niet overschrijven (zie `_merge_elementen`).
+_BESLIST = {Levenscyclus.human_goedgekeurd, Levenscyclus.bewerkt, Levenscyclus.afgewezen}
+
+
+def _sleutel_van(tekst: str, lid: str) -> tuple[str, str]:
+    """Identiteit van een markering los van zijn id: fragment + lid, bewust zonder klasse — een
+    herziening mag herclassificeren en moet dan hetzelfde element treffen.
+
+    Dezelfde regel als graph-qa's `agent.annotatie.sleutel_van` (`tools/graph-qa/agent/
+    annotatie.py`) — drie implementaties (graph-qa, hier, de werkplek-UI zodra die 'm nodig
+    heeft) horen op precies deze normalisatie uit te komen, anders ziet de jurist dezelfde
+    markering dubbel."""
+    return (_WS.sub(" ", tekst or "").strip().lower(), (lid or "").strip())
+
+
+def _merge_elementen(
+    bestaand: list[AnnotatieElement], voorstellen: list[AnnotatieElement]
+) -> list[AnnotatieElement]:
+    """Merge nieuwe agent-voorstellen met de bestaande elementenlijst.
+
+    Een reeds door een jurist beoordeeld element (`_BESLIST`) is bevroren: een nieuw voorstel
+    met dezelfde sleutel wordt genegeerd, het bestaande element blijft ongewijzigd staan. Een
+    nog-niet-beoordeeld element met dezelfde sleutel wordt vervangen (het oudste id wint, zodat
+    een eerder toegekend id — en de beslissingen die daaraan hangen — niet verweest raakt). Een
+    element waarvoor geen nieuw voorstel meer binnenkomt blijft gewoon staan (de agent-run is
+    geen volledige vervanging, alleen een aanvulling/correctie)."""
+    per_sleutel: dict[tuple[str, str], AnnotatieElement] = {
+        _sleutel_van(e.tekst, e.lid): e for e in bestaand
+    }
+    for voorstel in voorstellen:
+        sleutel = _sleutel_van(voorstel.tekst, voorstel.lid)
+        oud = per_sleutel.get(sleutel)
+        if oud is not None and oud.levenscyclus in _BESLIST:
+            continue  # bevroren — de jurist had hier al een oordeel over
+        if oud is not None:
+            voorstel = voorstel.model_copy(update={"id": oud.id})
+        per_sleutel[sleutel] = voorstel
+    return list(per_sleutel.values())
 
 
 _LEVENSCYCLUS_NA_BESLISSING: dict[BeslissingType, Levenscyclus | None] = {
@@ -182,13 +230,17 @@ async def zet_elementen(
     client_id: str = Depends(huidige_gebruiker),
     store: AnnotatieStore = Depends(get_store),
 ) -> ElementenZettenOut:
-    """Vervangt de elementenlijst volledig.
+    """Merget nieuwe agent-voorstellen met de bestaande elementenlijst (`_merge_elementen`) —
+    geen volledige vervanging. Een reeds door de jurist beoordeeld element blijft bevroren, ook
+    als een latere agent-ronde er een nieuw voorstel voor doet (poort van de referentie-api se
+    merge-gedrag, story 056-vervolg — werkwijze: nieuwe architectuureis van lexplainables t.o.v.
+    de vroegere volledige-vervanging-semantiek).
 
-    Ongeldige JAS-klasse of lege tekst → element overgeslagen.
+    Ongeldige JAS-klasse of lege tekst → element overgeslagen (niet de hele batch afgewezen).
     """
-    await _laad_eigen_document(slug, client_id, store)
+    doc = await _laad_eigen_document(slug, client_id, store)
 
-    aanvaard: list[AnnotatieElement] = []
+    voorstellen: list[AnnotatieElement] = []
     verworpen = 0
     for invoer in body.elementen:
         if not invoer.tekst.strip():
@@ -197,10 +249,9 @@ async def zet_elementen(
         if invoer.klasse not in GELDIGE_JAS_KLASSEN:
             verworpen += 1
             continue
-        element_id = uuid.uuid4().hex[:12]
-        aanvaard.append(
+        voorstellen.append(
             AnnotatieElement(
-                id=element_id,
+                id=uuid.uuid4().hex[:12],
                 klasse=invoer.klasse,
                 tekst=invoer.tekst,
                 lid=invoer.lid,
@@ -211,18 +262,25 @@ async def zet_elementen(
                 alternatieven=invoer.alternatieven,
                 aandacht=invoer.aandacht,
                 critic=invoer.critic,
+                critic_rondes=invoer.critic_rondes,
             )
         )
 
-    await store.vervang_elementen(slug, aanvaard, DocumentStatus.voorgesteld)
+    gemerged = _merge_elementen(doc.elementen, voorstellen)
+    nieuwe_status = _bereken_status(gemerged)
+    await store.vervang_elementen(slug, gemerged, nieuwe_status, laatste_run=body.run)
     await store.schrijf_audit(
         slug,
         client_id,
         actor=client_id,
         actie="elementen-voorgesteld",
-        detail={"aanvaard": len(aanvaard), "verworpen": verworpen},
+        detail={
+            "voorgesteld": len(voorstellen),
+            "verworpen": verworpen,
+            "totaal_na_merge": len(gemerged),
+        },
     )
-    return ElementenZettenOut(aanvaard=len(aanvaard), verworpen=verworpen)
+    return ElementenZettenOut(aanvaard=len(voorstellen), verworpen=verworpen)
 
 
 @router.post(

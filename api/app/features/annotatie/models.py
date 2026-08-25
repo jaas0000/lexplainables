@@ -76,6 +76,31 @@ class Alternatief(BaseModel):
     toelichting: str
 
 
+class CriticRonde(BaseModel):
+    """Wat de Critic (graph-qa) in één pas van dit element vond — het geheugen van de Critic
+    over meerdere rondes heen, en het spoor voor de jurist. Poort van graph-qa's
+    `agent.models.CriticRonde` (zie `tools/graph-qa/agent/models.py`)."""
+
+    ronde: int
+    aandacht: str = ""
+    motivatie: str = ""
+    actie: str = "behoud"
+    toegepast: bool = False
+    voorstel_klasse: str = ""
+    voorstel_tekst: str = ""
+
+
+class RunInfo(BaseModel):
+    """Herkomst van een agent-run — welk model/versie deze elementen voorstelde. Poort van
+    graph-qa's `run`-event (`emit_node`, zie `tools/graph-qa/agent/orchestrator.py`)."""
+
+    model: str = ""
+    provider: str = ""
+    agent_versie: str = ""
+    critic_rondes: int = 0
+    stop_reden: str = ""
+
+
 class Beslissing(BaseModel):
     type: BeslissingType
     actor: str
@@ -98,6 +123,7 @@ class AnnotatieElement(BaseModel):
     alternatieven: list[Alternatief] = Field(default_factory=list)
     aandacht: Aandacht | None = None
     critic: str | None = None
+    critic_rondes: list[CriticRonde] = Field(default_factory=list)
     beslissingen: list[Beslissing] = Field(default_factory=list)
     diff: dict = Field(default_factory=dict)
 
@@ -111,6 +137,7 @@ class AnnotatieDocument(BaseModel):
     lid: str = ""
     status: DocumentStatus = DocumentStatus.voorgesteld
     elementen: list[AnnotatieElement] = Field(default_factory=list)
+    laatste_run: RunInfo | None = None
     aangemaakt: str
     bijgewerkt: str
 
@@ -137,6 +164,7 @@ class DocumentAanmaken(BaseModel):
 
 
 class ElementInvoer(BaseModel):
+    id: str = ""
     klasse: str
     tekst: str
     lid: str = ""
@@ -146,10 +174,18 @@ class ElementInvoer(BaseModel):
     alternatieven: list[Alternatief] = Field(default_factory=list)
     aandacht: Aandacht | None = None
     critic: str | None = None
+    critic_rondes: list[CriticRonde] = Field(default_factory=list)
 
 
 class ElementenInvoer(BaseModel):
+    """`PUT .../elementen` is altijd de agent se schrijfpad (zelfde aanname als de referentie —
+    een jurist beslist via de losse `beslissing`-endpoint, nooit via een rauwe PUT). Vandaar
+    merge-niet-vervang-semantiek in de router: bestaande, al door een jurist beoordeelde
+    elementen blijven ongemoeid ("bevroren"), alleen nieuwe/nog-niet-beoordeelde voorstellen
+    worden overschreven of toegevoegd."""
+
     elementen: list[ElementInvoer]
+    run: RunInfo | None = None
 
 
 class WijzigingInvoer(BaseModel):
@@ -219,6 +255,7 @@ annotatie_documenten = Table(
     Column("lid", Text, nullable=False, default=""),
     Column("status", Text, nullable=False, default="voorgesteld"),
     Column("elementen", JSON, nullable=False, default=list),
+    Column("laatste_run", JSON, nullable=True),
     Column("aangemaakt", DateTime(timezone=True), nullable=False),
     Column("bijgewerkt", DateTime(timezone=True), nullable=False),
     Index("ix_annotatie_documenten_client_id", "client_id"),
@@ -254,6 +291,7 @@ def document_uit_rij(rij) -> AnnotatieDocument:
         lid=rij.lid or "",
         status=DocumentStatus(rij.status),
         elementen=[AnnotatieElement.model_validate(e) for e in elementen_raw],
+        laatste_run=RunInfo.model_validate(rij.laatste_run) if rij.laatste_run else None,
         aangemaakt=rij.aangemaakt.isoformat(),
         bijgewerkt=rij.bijgewerkt.isoformat(),
     )
