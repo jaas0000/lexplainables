@@ -4,6 +4,18 @@ Niet-blocking bevindingen uit code-reviews die een follow-up verdienen.
 
 ---
 
+## PR #94 — frontend-chat eerste chat-UI (story 056)
+
+- **Geen geautomatiseerde test voor "onbevoegd `POST /api/chat` → 401".** De bescherming bestaat
+  aantoonbaar (`proxy.ts`'s `authorized`-callback + `requireSession()` in de route zelf), maar is
+  niet apart getest. Toevoegen zodra er een tweede BFF-route bijkomt die hetzelfde patroon moet
+  bewijzen.
+- **Lex' antwoorden tonen markdown-opmaak (`**vet**`, kopjes) als platte tekst**, niet gerenderd.
+  Cosmetisch — oppakken zodra er behoefte aan is (bv. een lichte markdown-renderer in
+  `ChatVenster.tsx`).
+
+---
+
 ## PR #91 — graph-qa HTTP-laag (story 053)
 
 - **Geen `uvicorn`-launcher of Dockerfile voor `tools/graph-qa/api/main.py`.** Er is nog geen

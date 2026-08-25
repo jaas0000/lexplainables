@@ -2,6 +2,8 @@
 
 ## Niet uitgebracht
 
+- Nieuwe chatapp (`frontend-chat`) waarmee je met Lex kunt chatten over wet- en regelgeving:
+  inloggen, een vraag stellen, en het antwoord live zien verschijnen. (PR #94)
 - "Beheer" en "Feedback geven" zijn verhuisd naar het gebruikersmenu onderin de sidebar; feedback
   geven opent nu als venster in plaats van als zwevende knop rechtsonder. (PR #80)
 - Account en Beheer zijn nu te bereiken via één instellingenvenster met tabs in plaats van acht

@@ -1,0 +1,33 @@
+# dependencies
+/node_modules
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+
+# door `next dev` zelf auto-gegenereerd (generate-agent-files.js) — hoort niet bij dit
+# project zijn eigen CLAUDE.md-conventie (root-CLAUDE.md is de ene bron, geen doc per service)
+/AGENTS.md
+/CLAUDE.md

@@ -30,12 +30,11 @@ C4Context
 
 ## L2 — Container
 
-Zes services (ADR-0001). Gebouwd: `api`, `frontend`, `wetsanalyse-admin-mcp`, `bwb-import` en
-`graph-qa` (dit vak was een tijd stale — bijgewerkt bij story 055). Alleen `frontend-chat` is nog
-vastgelegd in de topologie maar niet geïmplementeerd — staat hier al om het volledige plaatje te
-tonen; markeer 'm als gebouwd zodra de eerste code er is. GraphDB staat er ook bij (voor de
-leesbaarheid van het plaatje) maar telt niet mee als "service" in ADR-0001 — het is een
-third-party image, gedeployd via `deploy/graphdb/`, geen applicatiecode die wij bouwen/publiceren.
+Zes services (ADR-0001), allemaal gebouwd: `api`, `frontend`, `wetsanalyse-admin-mcp`,
+`bwb-import`, `graph-qa` (dit vak was een tijd stale — bijgewerkt bij story 055) en
+`frontend-chat` (story 056, eerste chat-UI). GraphDB staat er ook bij (voor de leesbaarheid van
+het plaatje) maar telt niet mee als "service" in ADR-0001 — het is een third-party image,
+gedeployd via `deploy/graphdb/`, geen applicatiecode die wij bouwen/publiceren.
 
 ```mermaid
 C4Container
@@ -46,7 +45,7 @@ C4Container
 
   System_Boundary(wetsanalyse, "Lexplainables") {
     Container(frontend, "frontend", "Next.js / Auth.js v5", "Hoofdwebapp (BFF). Login via eigen credentials-formulier (httpOnly cookie). Alle schermen voor beheer, berichten, projecten, werkplek en wetcatalogus zijn gebouwd.")
-    Container(frontend_chat, "frontend-chat", "nog niet gebouwd", "Losse chatapp.")
+    Container(frontend_chat, "frontend-chat", "Next.js / Auth.js v5", "Losse chatapp voor Lex (story 056). Eén chatscherm, geen gesprekgeschiedenis; streamt via een BFF-route naar api's chat-proxy.")
     Container(api, "api", "FastAPI / Python", "Kernbackend: alle geplande features gebouwd (feedback, berichten, identiteit/toegang, wetcatalogus, llm_profielen, projecten, annotatie, api_tokens, runtime_config, llm_calls). Analyse-engine draait via `engine/`-module met LLM-orkestratie.")
     ContainerDb(db, "database", "SQLite (dev) / PostgreSQL", "Tabel per feature binnen api.")
     ContainerDb(graphdb, "GraphDB", "third-party, deploy/graphdb/", "BWB-kennisgraaf, ingebouwde MCP op /mcp. Geen door ons gebouwde service.")
