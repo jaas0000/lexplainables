@@ -34,11 +34,17 @@ def _get_client() -> httpx.AsyncClient:
     return _client
 
 
-async def stream_chat(question: str, conversation_id: str | None) -> AsyncIterator[dict[str, Any]]:
-    """Stream de SSE-events van graph-qa's `/v1/chat` door, ongewijzigd."""
-    body = {"question": question, "conversation_id": conversation_id}
+async def stream_chat(body: dict[str, Any], gebruiker: str) -> AsyncIterator[dict[str, Any]]:
+    """Stream de SSE-events van graph-qa's `/v1/chat` door, ongewijzigd.
+
+    `gebruiker` gaat mee als `X-User-Id` — bij een `doel`-gedreven annotatiebeurt is dat de
+    identiteit waarmee graph-qa straks zelf bij `api`'s annotatie-domein aanklopt
+    (`agent/wetsanalyse_api.py`), dus deze laag mag die niet laten vallen."""
+    headers = {"X-User-Id": gebruiker}
     try:
-        async with _get_client().stream("POST", f"{GRAPH_QA_URL}/v1/chat", json=body) as response:
+        async with _get_client().stream(
+            "POST", f"{GRAPH_QA_URL}/v1/chat", json=body, headers=headers
+        ) as response:
             async for regel in response.aiter_lines():
                 if not regel.startswith("data:"):
                     continue

@@ -23,12 +23,14 @@ import json
 import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sse_starlette.sse import EventSourceResponse
 
 from agent.agent import answer_stream
+from agent.beurt import voer_annotatie_beurt_uit
 from agent.config import Settings
 from agent.models import ChatRequest, RunStart
 from agent.ports import GraphPort, LLMPort
@@ -91,19 +93,48 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _stroom(
+    body: ChatRequest,
+    llm: LLMPort,
+    graph: GraphPort,
+    gebruiker: str,
+    *,
+    stop_check: Any = None,
+) -> AsyncIterator[dict]:
+    """Kiest de QA- of de annotatieroute — een `doel` slaat de supervisor over, net als
+    `_heeft_doel` dat in `orchestrator.build_graph` al deed vóórdat er een HTTP-laag was."""
+    if body.doel is not None:
+        return voer_annotatie_beurt_uit(
+            settings=settings,
+            llm=llm,
+            graph=graph,
+            doel=body.doel.model_dump(),
+            werkgebied=body.werkgebied or "",
+            gebruiker=gebruiker,
+            stop_check=stop_check,
+        )
+    return answer_stream(
+        body.question,
+        body.conversation_id,
+        settings=settings,
+        llm=llm,
+        graph=graph,
+        stop_check=stop_check,
+    )
+
+
 @app.post("/v1/chat")
 async def chat(
     body: ChatRequest,
     llm: LLMPort = Depends(_llm_dependency),
     graph: GraphPort = Depends(_graph_dependency),
+    gebruiker: str = Depends(_aanroeper),
     _auth: None = Depends(_check_auth),
 ) -> EventSourceResponse:
     """Eén beurt, gekoppeld aan déze verbinding — geen runs-model (zie module-docstring)."""
 
     async def event_generator() -> AsyncIterator[dict]:
-        async for event in answer_stream(
-            body.question, body.conversation_id, settings=settings, llm=llm, graph=graph
-        ):
+        async for event in _stroom(body, llm, graph, gebruiker):
             yield {"data": json.dumps(event, ensure_ascii=False)}
 
     return EventSourceResponse(event_generator())
@@ -112,19 +143,12 @@ async def chat(
 # --- Runs: de beurt is van de server, niet van de verbinding (story 054) ----------------------
 
 
-def _stroom_voor(body: ChatRequest, llm: LLMPort, graph: GraphPort):
-    """De eventstroom van één run — `answer_stream()` met `stop_check` gekoppeld aan de run's
-    stopvlag, zodat `POST /v1/runs/{id}/cancel` 'm daadwerkelijk kan laten stoppen."""
+def _stroom_voor(body: ChatRequest, llm: LLMPort, graph: GraphPort, gebruiker: str):
+    """De eventstroom van één run — `stop_check` gekoppeld aan de run's stopvlag, zodat
+    `POST /v1/runs/{id}/cancel` 'm daadwerkelijk kan laten stoppen."""
 
     def maak(run: Run) -> AsyncIterator[dict]:
-        return answer_stream(
-            body.question,
-            body.conversation_id,
-            settings=settings,
-            llm=llm,
-            graph=graph,
-            stop_check=lambda: run.stop_gevraagd,
-        )
+        return _stroom(body, llm, graph, gebruiker, stop_check=lambda: run.stop_gevraagd)
 
     return maak
 
@@ -147,7 +171,7 @@ async def start_run(
         run = runs.start(
             conversation_id=body.conversation_id or "",
             vraag=body.question or "",
-            maak_stroom=_stroom_voor(body, llm, graph),
+            maak_stroom=_stroom_voor(body, llm, graph, gebruiker),
             user_id=gebruiker,
         )
     except RunBestaatAl as al:

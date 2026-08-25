@@ -231,3 +231,79 @@ def test_conversations_run_geeft_null_zonder_run_en_de_samenvatting_mét(
 
     assert gevuld.status_code == 200
     assert gevuld.json()["conversation_id"] == "gesprek-42"
+
+
+# ---- `doel`-gedreven annotatiebeurten via HTTP (werkwijze-vervolg op stories 053-054) ---------
+
+
+def _annotatie_llm() -> FakeLLM:
+    import json as _json
+
+    return FakeLLM(
+        [
+            response(
+                [
+                    text_block(
+                        _json.dumps(
+                            {"elementen": [{"klasse": "Rechtssubject", "tekst": "De aanslag"}]}
+                        )
+                    )
+                ],
+                "end_turn",
+            ),
+            response(
+                [
+                    text_block(
+                        _json.dumps(
+                            {"oordelen": [{"index": 0, "aandacht": "groen"}], "ontbrekend": []}
+                        )
+                    )
+                ],
+                "end_turn",
+            ),
+        ]
+    )
+
+
+_CORPUS_TSV = (
+    "?tekst\t?jci\t?lid\t?lidnummer\t?lidtekst\t?onderdeel\t?onderdeeltekst\n"
+    '\t\t\t"1"\t"De aanslag wordt vastgesteld."@nl\t\t'
+)
+
+
+def test_chat_met_doel_routeert_naar_de_annotatieketen() -> None:
+    main.app.dependency_overrides[main._llm_dependency] = lambda: _annotatie_llm()
+    main.app.dependency_overrides[main._graph_dependency] = lambda: FakeGraph(result=_CORPUS_TSV)
+
+    client = TestClient(main.app)
+    resp = client.post(
+        "/v1/chat",
+        json={"doel": {"bwbId": "BWBR0004770", "artikel": "1"}, "werkgebied": "sociaal"},
+        headers={"X-User-Id": "jurist-1"},
+    )
+
+    assert resp.status_code == 200
+    events = _parse_sse(resp.text)
+    types = [e["type"] for e in events]
+    assert types[0] == "doel"
+    assert "element" in types
+    assert types[-1] == "done"
+
+
+def test_runs_met_doel_routeert_ook_naar_de_annotatieketen() -> None:
+    main.app.dependency_overrides[main._llm_dependency] = lambda: _annotatie_llm()
+    main.app.dependency_overrides[main._graph_dependency] = lambda: FakeGraph(result=_CORPUS_TSV)
+
+    with TestClient(main.app) as client:
+        start = client.post(
+            "/v1/runs",
+            json={"doel": {"bwbId": "BWBR0004770", "artikel": "1"}, "werkgebied": "sociaal"},
+        )
+        assert start.status_code == 201
+        run_id = start.json()["run_id"]
+
+        events_resp = client.get(f"/v1/runs/{run_id}/events")
+
+    types = [e["type"] for e in _parse_sse(events_resp.text)]
+    assert types[0] == "doel"
+    assert types[-1] == "done"

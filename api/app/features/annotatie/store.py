@@ -26,6 +26,7 @@ from .models import (
     AuditRegel,
     DocumentSamenvatting,
     DocumentStatus,
+    RunInfo,
     annotatie_audit,
     annotatie_documenten,
     audit_uit_rij,
@@ -58,6 +59,8 @@ class AnnotatieStore(Protocol):
         slug: str,
         elementen: list[AnnotatieElement],
         status: DocumentStatus,
+        *,
+        laatste_run: RunInfo | None = None,
     ) -> None: ...
 
     async def schrijf_audit(
@@ -147,18 +150,28 @@ class SqlAlchemyAnnotatieStore:
         slug: str,
         elementen: list[AnnotatieElement],
         status: DocumentStatus,
+        *,
+        laatste_run: RunInfo | None = None,
     ) -> None:
-        """Vervangt de volledige `elementen`-JSON en werkt `status` en `bijgewerkt` bij."""
+        """Vervangt de volledige `elementen`-JSON en werkt `status` en `bijgewerkt` bij.
+
+        `laatste_run` wordt alleen bijgewerkt als 'ie meegegeven is — een jurist-beslissing
+        (`registreer_beslissing`) roept dit ook aan, maar zonder een nieuwe agent-run; die mag
+        de vorige run-provenance niet wissen.
+        """
         elementen_json = [e.model_dump() for e in elementen]
+        waarden: dict[str, object] = {
+            "elementen": elementen_json,
+            "status": status.value,
+            "bijgewerkt": nu(),
+        }
+        if laatste_run is not None:
+            waarden["laatste_run"] = laatste_run.model_dump()
         async with self._engine.begin() as conn:
             await conn.execute(
                 update(annotatie_documenten)
                 .where(annotatie_documenten.c.slug == slug)
-                .values(
-                    elementen=elementen_json,
-                    status=status.value,
-                    bijgewerkt=nu(),
-                )
+                .values(**waarden)
             )
 
     async def schrijf_audit(

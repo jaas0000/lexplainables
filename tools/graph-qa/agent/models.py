@@ -64,12 +64,24 @@ class ErrorEvent(BaseModel):
     message: str
 
 
-class ChatRequest(BaseModel):
-    """Body van `POST /v1/chat` en `POST /v1/runs` (stories 053-054). Geen `modus`/`context`/
-    `doel` — die bestaan nog niet in `answer_stream()`."""
+class AgentDoel(BaseModel):
+    """Een specifieke bepaling om te annoteren — slaat de supervisor over (`_heeft_doel`)."""
 
-    question: str
+    bwbId: str
+    artikel: str
+    lid: str = ""
+
+
+class ChatRequest(BaseModel):
+    """Body van `POST /v1/chat` en `POST /v1/runs` (stories 053-054). `question` blijft voor de
+    QA-route; een `doel` (nieuw) routeert i.p.v. daarvan naar de annotatieketen
+    (`agent/beurt.py`) — `werkgebied` is dan verplicht (`api`'s `POST /v1/annotatie/documenten`
+    vereist het). Geen `modus`/`context` — die bestaan nog niet in `answer_stream()`."""
+
+    question: str = ""
     conversation_id: str | None = None
+    doel: AgentDoel | None = None
+    werkgebied: str | None = None
 
 
 class RunStart(BaseModel):

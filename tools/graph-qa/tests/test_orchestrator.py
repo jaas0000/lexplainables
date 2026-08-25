@@ -701,7 +701,10 @@ def test_herzie_node_alleen_jurist_markeringen_niets_te_herzien() -> None:
         settings=make_settings(),
         llm=FakeLLM([]),
     )
-    assert result == {}
+    # Niets te herzien → ook niets om open te laten staan (zelf gevonden bug, zie
+    # test_build_graph_alle_voorstellen_verworpen_loopt_niet_oneindig): zonder deze reset bleef
+    # `_open_werk` voor altijd True en liep de keten oneindig door.
+    assert result == {"verworpen_fragmenten": [], "nieuw_ontbrekend": []}
 
 
 def test_herzie_node_faalpad_behoudt_vorige_voorstellen() -> None:
@@ -819,6 +822,49 @@ def test_build_graph_volledige_annotatieketen_met_doel() -> None:
     assert result["voorstellen"][0]["klasse"] == "Rechtsfeit"  # gepatcht
     assert result["voorstellen"][0]["aandacht"] == "groen"  # eindoordeel
     assert result["answer"]
+
+
+def test_build_graph_alle_voorstellen_verworpen_loopt_niet_oneindig() -> None:
+    """Zelf gevonden bug: als `annoteer_node` élk voorgesteld fragment afwijst (hier: niet
+    letterlijk in het corpus), bleef `herzie_node`'s vroege `if not voorstellen: return {}` de
+    `verworpen_fragmenten` onaangeroerd — `_open_werk` bleef daardoor voor altijd True en de
+    keten liep oneindig door critic → patch → herzie. `herzie_node` moet die velden dan zelf
+    resetten, zodat de keten netjes naar `emit` doorstroomt met een lege voorstellenlijst."""
+    llm = FakeLLM(
+        [
+            response(
+                [
+                    text_block(
+                        json.dumps(
+                            {
+                                "elementen": [
+                                    {
+                                        "klasse": "Rechtssubject",
+                                        "tekst": "dit staat niet in de tekst",
+                                    }
+                                ]
+                            }
+                        )
+                    )
+                ],
+                "end_turn",
+            ),
+        ]
+    )
+    corpus_tsv = (
+        "?tekst\t?jci\t?lid\t?lidnummer\t?lidtekst\t?onderdeel\t?onderdeeltekst\n"
+        '\t\t\t"1"\t"Een compleet andere zin."@nl\t\t'
+    )
+    graph = FakeGraph(result=corpus_tsv)
+    settings = make_settings()
+
+    result = build_graph(settings, llm, graph).invoke(
+        {"doel": {"bwbId": "BWBR0004770", "artikel": "1"}},
+        config={"recursion_limit": 25},
+    )
+
+    assert result["voorstellen"] == []
+    assert result["verworpen_fragmenten"] == []
 
 
 # ---- Gespreksgeheugen: checkpointer + nieuwe_beurt_invoer (story 050) -------------------------
