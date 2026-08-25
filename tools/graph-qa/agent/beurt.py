@@ -24,7 +24,7 @@ from .agent_common import BeurtGestopt
 from .config import Settings
 from .orchestrator import State, build_graph, nieuwe_beurt_invoer
 from .ports import GraphPort, LLMPort
-from .wetsanalyse_api import WetsanalyseApiFout, maak_document, zet_elementen
+from .wetsanalyse_api import WetsanalyseApiFout, maak_document, voeg_bericht_toe, zet_elementen
 
 logger = logging.getLogger("graph_qa.beurt")
 
@@ -107,4 +107,77 @@ async def voer_annotatie_beurt_uit(
         return
 
     yield {"type": "opgeslagen", "slug": slug, "aanvaard": aanvaard, "verworpen": verworpen}
+    yield {"type": "done"}
+
+
+def _titel(doel: dict[str, Any]) -> str:
+    """Het leesbare label van een annotatiebeurt, zoals het in de chatgeschiedenis verschijnt.
+
+    Reist mee met het bericht (niet een foreign key naar het document) zodat de kaart in het
+    gesprek zichzelf kan benoemen als het annotatiedocument later verwijderd wordt."""
+    lid = doel.get("lid") or ""
+    titel = f"{doel.get('bwbId', '')} — art. {doel.get('artikel', '')}"
+    return f"{titel} lid {lid}" if lid else titel
+
+
+async def voer_beurt_uit(
+    stroom: AsyncIterator[dict[str, Any]],
+    *,
+    settings: Settings,
+    gesprek_id: str,
+    gebruiker: str,
+    run_id: str = "",
+) -> AsyncIterator[dict[str, Any]]:
+    """Spiegelbeeld van `voer_annotatie_beurt_uit`, maar voor de chatgeschiedenis: verzamelt wat
+    er in één beurt (QA of annotatie, van `answer_stream` resp. `voer_annotatie_beurt_uit`)
+    binnenkomt, en legt aan het eind één `Bericht` vast in `api`'s `/v1/gesprekken`-domein.
+
+    Poort van wetsanalyse-ai's `agent/beurt.py::voer_beurt_uit` — versmald tot wat lexplainables'
+    huidige eventvocabulaire kent (geen `status`/`reason`-narratie, geen `GesprekVerdwenen`-
+    onderscheid: elke schrijffout wordt hier een `waarschuwing`, nooit een crash).
+
+    `done` gaat er pas uit als het bericht is vastgelegd (of het vastleggen bewust is
+    overgeslagen) — anders ziet een client die precies dan herlaadt geen lopende beurt én geen
+    bericht. Zonder `gesprek_id` of zonder `settings.legt_zelf_vast` is dit een puur
+    doorgeefluik (geen gedragsverandering t.o.v. vóór dit schrijfpad bestond).
+    """
+    tekst = ""
+    bronnen: list[dict[str, Any]] = []
+    doel: dict[str, Any] = {}
+    annotatie_slug = ""
+
+    async for event in stroom:
+        soort = event.get("type")
+        if soort == "done":
+            break
+        if soort == "token":
+            tekst += event.get("content", "")
+        elif soort == "sources":
+            bronnen = event.get("sources") or []
+        elif soort == "doel":
+            doel = event.get("doel") or {}
+        elif soort == "opgeslagen":
+            annotatie_slug = event.get("slug", "")
+        yield event
+
+    if not (settings.legt_zelf_vast and gesprek_id):
+        yield {"type": "done"}
+        return
+
+    bericht: dict[str, Any] = {"rol": "assistant", "run_id": run_id}
+    if annotatie_slug:
+        bericht |= {"annotatie_slug": annotatie_slug, "annotatie_titel": _titel(doel)}
+    else:
+        bericht |= {"tekst": tekst or "(geen antwoord)", "bronnen": bronnen}
+
+    try:
+        await voeg_bericht_toe(
+            settings, gesprek_id=gesprek_id, bericht=bericht, gebruiker=gebruiker
+        )
+    except WetsanalyseApiFout:
+        logger.warning("bericht niet vastgelegd in gesprek", exc_info=True)
+        yield {
+            "type": "waarschuwing",
+            "message": "Dit antwoord kon niet worden bewaard in de gespreksgeschiedenis.",
+        }
     yield {"type": "done"}

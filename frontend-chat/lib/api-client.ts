@@ -12,10 +12,30 @@ function buildBackendHeaders(gebruikersnaam: string): Record<string, string> {
 }
 
 /**
+ * Bufferende BFF-proxy voor niet-streamende `api`-routes (`/v1/gesprekken/*`) — tweede
+ * verbruiker naast `apiProxyStream`, vandaar nu een losse, gedeelde helper (feature-bouwen
+ * regel 8).
+ */
+export async function apiProxy(
+  pad: string,
+  gebruikersnaam: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const upstream = await fetch(`${API_BASE_URL}${pad}`, {
+    ...init,
+    headers: buildBackendHeaders(gebruikersnaam),
+    cache: "no-store",
+  });
+  const tekst = await upstream.text();
+  return new Response(tekst, {
+    status: upstream.status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+/**
  * Streaming BFF-proxy: geeft de upstream-responsebody rechtstreeks door (geen buffering) —
- * nodig voor SSE-endpoints zoals `/v1/chat`. Losse variant naast een toekomstige bufferende
- * `apiProxy()` (die dit project nog niet heeft — frontend-chat heeft tot nu toe alleen deze
- * ene, streamende route nodig, zie story 056 §Wijzigingen).
+ * nodig voor SSE-endpoints zoals `/v1/chat`.
  */
 export async function apiProxyStream(
   pad: string,

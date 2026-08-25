@@ -22,6 +22,7 @@
 - Zonder auth geeft 401.
 - Events worden ongewijzigd doorgegeven.
 - Onbereikbare graph qa geeft error event geen 500.
+- Te veel chatverzoeken geeft 429.
 
 ## Beslissingen
 

@@ -16,9 +16,11 @@ from __future__ import annotations
 import json
 import time
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+import agent.wetsanalyse_api as wetsanalyse_api
 from agent.config import Settings
 from api import main
 from tests.fakes import FakeGraph, FakeLLM, make_settings, response, text_block
@@ -307,3 +309,47 @@ def test_runs_met_doel_routeert_ook_naar_de_annotatieketen() -> None:
     types = [e["type"] for e in _parse_sse(events_resp.text)]
     assert types[0] == "doel"
     assert types[-1] == "done"
+
+
+# ---- Gespreksgeschiedenis-persistentie via `voer_beurt_uit` (werkwijze-vervolg) ---------------
+
+
+def test_chat_met_conversation_id_legt_antwoord_vast_in_gesprek(monkeypatch) -> None:
+    ontvangen = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        ontvangen["body"] = json.loads(request.content)
+        return httpx.Response(201, json={"id": 1, "rol": "assistant"})
+
+    monkeypatch.setattr(
+        wetsanalyse_api, "_client", httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    origineel = main.settings
+    main.settings = make_settings(
+        graphdb_mcp_url="http://fake",
+        graphdb_token="fake",
+        azure_foundry_api_key="fake",
+        azure_foundry_resource="fake",
+        wetsanalyse_api_url="http://api.local",
+    )
+    main.app.dependency_overrides[main._llm_dependency] = lambda: FakeLLM(
+        [_supervisor_ok(), response([text_block("Een antwoord zonder tools.")], "end_turn")]
+    )
+    main.app.dependency_overrides[main._graph_dependency] = lambda: FakeGraph(result="")
+
+    try:
+        client = TestClient(main.app)
+        resp = client.post(
+            "/v1/chat",
+            json={"question": "Een algemene vraag", "conversation_id": "gesprek-1"},
+            headers={"X-User-Id": "jurist-1"},
+        )
+    finally:
+        main.settings = origineel
+        main.app.dependency_overrides.clear()
+
+    assert resp.status_code == 200
+    types = [e["type"] for e in _parse_sse(resp.text)]
+    assert types[-1] == "done"
+    assert ontvangen["body"]["rol"] == "assistant"
+    assert "Een antwoord zonder tools." in ontvangen["body"]["tekst"]
