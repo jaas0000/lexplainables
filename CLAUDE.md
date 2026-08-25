@@ -120,9 +120,20 @@ chat_proxy/` streamt graph-qa's `POST /v1/chat` ongewijzigd door — de gedocume
 `frontend-chat → api → graph-qa` (ADR-0001), niet rechtstreeks. Live geverifieerd door de hele
 keten heen. Story 056 bouwt `frontend-chat` zelf: eerste chat-UI (login, één chatscherm, een
 streamende BFF-route) — live geverifieerd (screenshot), inclusief een zelf gevonden en gefixte
-`\r\n\r\n`-SSE-parseerbug in de client-side stream-reader. Nog geen CORS/rate-limiting/
-`agent/beurt.py`-persistentie/gesprekgeschiedenis — dat is de rest van de API-laag (~25-35
-stories geschat in totaal voor de hele werkstroom).
+`\r\n\r\n`-SSE-parseerbug in de client-side stream-reader. Ná story 056 (op verzoek van de
+gebruiker in een lager-ceremonie-tempo, geen aparte story-nummers/PR-per-stap): `agent/
+wetsanalyse_api.py` + `agent/beurt.py` (poort van de referentie) laten een `doel`-gedreven
+annotatiebeurt het resultaat daadwerkelijk wegschrijven naar `api`'s annotatiedomein
+(`AnnotatieElement` kreeg `critic_rondes`/`laatste_run`; `PUT .../elementen` merget nu i.p.v. te
+vervangen, met bevriezing van al door de jurist beoordeelde elementen). `ChatRequest` accepteert
+nu `doel`/`werkgebied`; `POST /v1/chat`/`POST /v1/runs` routeren zo'n verzoek naar de
+annotatieketen. Onderweg een echte, live bevestigde bug gevonden en gefixt: alle voorstellen
+verworpen bij annoteren liet de keten oneindig doorlopen (`herzie_node` liet
+`verworpen_fragmenten` onaangeroerd) — regressietest toegevoegd. Live geverifieerd: een echte
+beurt leverde 7 aanvaarde JAS-elementen op, correct weggeschreven naar Postgres. Nog geen
+CORS/rate-limiting/gesprekgeschiedenis, en nog geen frontend-trigger voor een annotatiebeurt
+(frontend-chat stuurt alleen `question`, nog geen `doel`-knop) — dat is de rest van de API-laag
+(~25-35 stories geschat in totaal voor de hele werkstroom).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
