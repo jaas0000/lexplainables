@@ -17,6 +17,7 @@ from .features.annotatie.router import router as annotatie_router
 from .features.api_tokens.router import admin_router as api_tokens_admin_router
 from .features.berichten.router import admin_router as berichten_admin_router
 from .features.berichten.router import router as berichten_router
+from .features.chat_proxy.router import router as chat_proxy_router
 from .features.feedback.router import admin_router as feedback_admin_router
 from .features.feedback.router import router as feedback_router
 from .features.identiteit_toegang.router import admin_router as gebruikers_admin_router
@@ -110,3 +111,4 @@ app.include_router(runtime_config_admin_router, prefix="/v1")
 app.include_router(projecten_router, prefix="/v1")
 app.include_router(api_tokens_admin_router, prefix="/v1")
 app.include_router(annotatie_router, prefix="/v1")
+app.include_router(chat_proxy_router, prefix="/v1")
