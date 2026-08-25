@@ -667,6 +667,76 @@
         "title": "BeoordelingsReden",
         "type": "string"
       },
+      "Bericht": {
+        "description": "E\u00e9n beurt in het gesprek. `annotatie_titel` is het leesbare label van het\nannotatiedocument op het moment van de beurt \u2014 het bericht beschrijft zichzelf, zodat het\ngesprek leesbaar blijft als het document later verwijderd wordt (geen foreign key).",
+        "properties": {
+          "aangemaakt": {
+            "default": "",
+            "title": "Aangemaakt",
+            "type": "string"
+          },
+          "annotatie_slug": {
+            "default": "",
+            "title": "Annotatie Slug",
+            "type": "string"
+          },
+          "annotatie_titel": {
+            "default": "",
+            "title": "Annotatie Titel",
+            "type": "string"
+          },
+          "bronnen": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Bronnen",
+            "type": "array"
+          },
+          "denk": {
+            "default": "",
+            "title": "Denk",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "ontbrekend": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ontbrekend",
+            "type": "array"
+          },
+          "rol": {
+            "$ref": "#/components/schemas/Rol"
+          },
+          "run_id": {
+            "default": "",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "tekst": {
+            "default": "",
+            "title": "Tekst",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rol"
+        ],
+        "title": "Bericht",
+        "type": "object"
+      },
       "BerichtAdminRead": {
         "description": "Wat een beheerder terugkrijgt: ook concepten, met wie het bericht aanmaakte \u2014 maar geen\nper-gebruiker `gelezen`-vlag (de admin-lijst is niet gebonden aan \u00e9\u00e9n gebruiker).",
         "properties": {
@@ -797,6 +867,59 @@
           "inhoud"
         ],
         "title": "BerichtCreate",
+        "type": "object"
+      },
+      "BerichtInvoer": {
+        "properties": {
+          "annotatie_slug": {
+            "default": "",
+            "title": "Annotatie Slug",
+            "type": "string"
+          },
+          "annotatie_titel": {
+            "default": "",
+            "title": "Annotatie Titel",
+            "type": "string"
+          },
+          "bronnen": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Bronnen",
+            "type": "array"
+          },
+          "denk": {
+            "default": "",
+            "title": "Denk",
+            "type": "string"
+          },
+          "ontbrekend": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ontbrekend",
+            "type": "array"
+          },
+          "rol": {
+            "$ref": "#/components/schemas/Rol"
+          },
+          "run_id": {
+            "default": "",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "tekst": {
+            "default": "",
+            "title": "Tekst",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rol"
+        ],
+        "title": "BerichtInvoer",
         "type": "object"
       },
       "BerichtPublicatieIn": {
@@ -1622,6 +1745,99 @@
         "title": "GebruikerRead",
         "type": "object"
       },
+      "Gesprek": {
+        "properties": {
+          "aangemaakt": {
+            "default": "",
+            "title": "Aangemaakt",
+            "type": "string"
+          },
+          "berichten": {
+            "items": {
+              "$ref": "#/components/schemas/Bericht"
+            },
+            "title": "Berichten",
+            "type": "array"
+          },
+          "bijgewerkt": {
+            "default": "",
+            "title": "Bijgewerkt",
+            "type": "string"
+          },
+          "gebruiker": {
+            "title": "Gebruiker",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "titel": {
+            "default": "",
+            "title": "Titel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "gebruiker"
+        ],
+        "title": "Gesprek",
+        "type": "object"
+      },
+      "GesprekAanmaken": {
+        "properties": {
+          "titel": {
+            "default": "",
+            "title": "Titel",
+            "type": "string"
+          }
+        },
+        "title": "GesprekAanmaken",
+        "type": "object"
+      },
+      "GesprekHernoemen": {
+        "properties": {
+          "titel": {
+            "title": "Titel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "titel"
+        ],
+        "title": "GesprekHernoemen",
+        "type": "object"
+      },
+      "GesprekSamenvatting": {
+        "description": "Lichte lijst-weergave voor een gesprekgeschiedenis-overzicht.",
+        "properties": {
+          "aantal_berichten": {
+            "default": 0,
+            "title": "Aantal Berichten",
+            "type": "integer"
+          },
+          "bijgewerkt": {
+            "default": "",
+            "title": "Bijgewerkt",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "titel": {
+            "default": "",
+            "title": "Titel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "GesprekSamenvatting",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2000,6 +2216,14 @@
         ],
         "title": "ResolveResultaat",
         "type": "object"
+      },
+      "Rol": {
+        "enum": [
+          "user",
+          "assistant"
+        ],
+        "title": "Rol",
+        "type": "string"
       },
       "RunInfo": {
         "description": "Herkomst van een agent-run \u2014 welk model/versie deze elementen voorstelde. Poort van\ngraph-qa's `run`-event (`emit_node`, zie `tools/graph-qa/agent/orchestrator.py`).",
@@ -5701,6 +5925,476 @@
         "summary": "Dien Feedback In",
         "tags": [
           "feedback"
+        ]
+      }
+    },
+    "/v1/gesprekken": {
+      "get": {
+        "operationId": "lijst_gesprekken_v1_gesprekken_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GesprekSamenvatting"
+                  },
+                  "title": "Response Lijst Gesprekken V1 Gesprekken Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lijst Gesprekken",
+        "tags": [
+          "gesprekken"
+        ]
+      },
+      "post": {
+        "operationId": "maak_gesprek_v1_gesprekken_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GesprekAanmaken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gesprek"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Maak Gesprek",
+        "tags": [
+          "gesprekken"
+        ]
+      }
+    },
+    "/v1/gesprekken/{gesprek_id}": {
+      "delete": {
+        "operationId": "verwijder_gesprek_v1_gesprekken__gesprek_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gesprek_id",
+            "required": true,
+            "schema": {
+              "title": "Gesprek Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verwijder Gesprek",
+        "tags": [
+          "gesprekken"
+        ]
+      },
+      "get": {
+        "operationId": "haal_gesprek_v1_gesprekken__gesprek_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gesprek_id",
+            "required": true,
+            "schema": {
+              "title": "Gesprek Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gesprek"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Haal Gesprek",
+        "tags": [
+          "gesprekken"
+        ]
+      },
+      "patch": {
+        "operationId": "hernoem_gesprek_v1_gesprekken__gesprek_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gesprek_id",
+            "required": true,
+            "schema": {
+              "title": "Gesprek Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GesprekHernoemen"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gesprek"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hernoem Gesprek",
+        "tags": [
+          "gesprekken"
+        ]
+      }
+    },
+    "/v1/gesprekken/{gesprek_id}/berichten": {
+      "post": {
+        "operationId": "voeg_bericht_toe_v1_gesprekken__gesprek_id__berichten_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gesprek_id",
+            "required": true,
+            "schema": {
+              "title": "Gesprek Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BerichtInvoer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bericht"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Voeg Bericht Toe",
+        "tags": [
+          "gesprekken"
         ]
       }
     },

@@ -30,7 +30,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sse_starlette.sse import EventSourceResponse
 
 from agent.agent import answer_stream
-from agent.beurt import voer_annotatie_beurt_uit
+from agent.beurt import voer_annotatie_beurt_uit, voer_beurt_uit
 from agent.config import Settings
 from agent.models import ChatRequest, RunStart
 from agent.ports import GraphPort, LLMPort
@@ -100,11 +100,16 @@ def _stroom(
     gebruiker: str,
     *,
     stop_check: Any = None,
+    run_id: str = "",
 ) -> AsyncIterator[dict]:
     """Kiest de QA- of de annotatieroute — een `doel` slaat de supervisor over, net als
-    `_heeft_doel` dat in `orchestrator.build_graph` al deed vóórdat er een HTTP-laag was."""
+    `_heeft_doel` dat in `orchestrator.build_graph` al deed vóórdat er een HTTP-laag was.
+
+    Wikkelt de gekozen route in `voer_beurt_uit`, dat de uitkomst vastlegt in de
+    chatgeschiedenis (`api`'s `/v1/gesprekken`) zodra `body.conversation_id` en
+    `settings.legt_zelf_vast` dat toelaten — anders puur een doorgeefluik."""
     if body.doel is not None:
-        return voer_annotatie_beurt_uit(
+        binnenkant = voer_annotatie_beurt_uit(
             settings=settings,
             llm=llm,
             graph=graph,
@@ -113,13 +118,21 @@ def _stroom(
             gebruiker=gebruiker,
             stop_check=stop_check,
         )
-    return answer_stream(
-        body.question,
-        body.conversation_id,
+    else:
+        binnenkant = answer_stream(
+            body.question,
+            body.conversation_id,
+            settings=settings,
+            llm=llm,
+            graph=graph,
+            stop_check=stop_check,
+        )
+    return voer_beurt_uit(
+        binnenkant,
         settings=settings,
-        llm=llm,
-        graph=graph,
-        stop_check=stop_check,
+        gesprek_id=body.conversation_id or "",
+        gebruiker=gebruiker,
+        run_id=run_id,
     )
 
 
@@ -148,7 +161,9 @@ def _stroom_voor(body: ChatRequest, llm: LLMPort, graph: GraphPort, gebruiker: s
     `POST /v1/runs/{id}/cancel` 'm daadwerkelijk kan laten stoppen."""
 
     def maak(run: Run) -> AsyncIterator[dict]:
-        return _stroom(body, llm, graph, gebruiker, stop_check=lambda: run.stop_gevraagd)
+        return _stroom(
+            body, llm, graph, gebruiker, stop_check=lambda: run.stop_gevraagd, run_id=run.run_id
+        )
 
     return maak
 

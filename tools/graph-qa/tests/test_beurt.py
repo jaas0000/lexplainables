@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import AsyncIterator
 
 import httpx
 import pytest
 
 import agent.wetsanalyse_api as wetsanalyse_api
-from agent.beurt import voer_annotatie_beurt_uit
+from agent.beurt import voer_annotatie_beurt_uit, voer_beurt_uit
 from tests.fakes import FakeGraph, FakeLLM, make_settings, response, text_block
 
 
@@ -184,4 +185,125 @@ def test_wegschrijffout_geeft_waarschuwing_geen_error(monkeypatch) -> None:
     types = [e["type"] for e in events]
     assert "waarschuwing" in types
     assert "error" not in types
+    assert types[-1] == "done"
+
+
+# ---- `voer_beurt_uit`: gespreksgeschiedenis-persistentie (spiegelbeeld van hierboven) ---------
+
+
+async def _qa_stroom() -> AsyncIterator[dict]:
+    yield {"type": "token", "content": "Een "}
+    yield {"type": "token", "content": "antwoord."}
+    yield {"type": "sources", "sources": [{"id": "bron-1"}]}
+    yield {"type": "grounding", "grounded": True, "niveau": "gegrond"}
+    yield {"type": "done"}
+
+
+async def _annotatie_stroom() -> AsyncIterator[dict]:
+    yield {"type": "doel", "doel": {"bwbId": "BWBR0004770", "artikel": "1", "lid": ""}}
+    yield {"type": "element", "klasse": "Rechtssubject", "tekst": "de belastingplichtige"}
+    yield {"type": "opgeslagen", "slug": "doc-9", "aanvaard": 1, "verworpen": 0}
+    yield {"type": "done"}
+
+
+def test_voer_beurt_uit_zonder_gesprek_id_is_doorgeefluik() -> None:
+    """Geen `gesprek_id` — geen enkele aanroep naar `api`, events komen ongewijzigd door."""
+    settings = make_settings(wetsanalyse_api_url="http://api.local")
+
+    async def _run() -> list[dict]:
+        return [
+            e
+            async for e in voer_beurt_uit(
+                _qa_stroom(), settings=settings, gesprek_id="", gebruiker="jurist-1"
+            )
+        ]
+
+    events = asyncio.run(_run())
+    types = [e["type"] for e in events]
+    assert types == ["token", "token", "sources", "grounding", "done"]
+
+
+def test_voer_beurt_uit_legt_qa_antwoord_vast(monkeypatch) -> None:
+    ontvangen = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        import json
+
+        ontvangen["body"] = json.loads(request.content)
+        return httpx.Response(201, json={"id": 1, "rol": "assistant"})
+
+    monkeypatch.setattr(
+        wetsanalyse_api, "_client", httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    settings = make_settings(wetsanalyse_api_url="http://api.local")
+
+    async def _run() -> list[dict]:
+        return [
+            e
+            async for e in voer_beurt_uit(
+                _qa_stroom(),
+                settings=settings,
+                gesprek_id="gesprek-1",
+                gebruiker="jurist-1",
+                run_id="run-1",
+            )
+        ]
+
+    events = asyncio.run(_run())
+    assert events[-1]["type"] == "done"
+    assert ontvangen["body"]["rol"] == "assistant"
+    assert ontvangen["body"]["tekst"] == "Een antwoord."
+    assert ontvangen["body"]["bronnen"] == [{"id": "bron-1"}]
+    assert ontvangen["body"]["run_id"] == "run-1"
+
+
+def test_voer_beurt_uit_legt_annotatiebeurt_vast_met_titel(monkeypatch) -> None:
+    ontvangen = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        import json
+
+        ontvangen["body"] = json.loads(request.content)
+        return httpx.Response(201, json={"id": 1, "rol": "assistant"})
+
+    monkeypatch.setattr(
+        wetsanalyse_api, "_client", httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    settings = make_settings(wetsanalyse_api_url="http://api.local")
+
+    async def _run() -> list[dict]:
+        return [
+            e
+            async for e in voer_beurt_uit(
+                _annotatie_stroom(), settings=settings, gesprek_id="gesprek-1", gebruiker="j"
+            )
+        ]
+
+    events = asyncio.run(_run())
+    assert events[-1]["type"] == "done"
+    assert ontvangen["body"]["annotatie_slug"] == "doc-9"
+    assert ontvangen["body"]["annotatie_titel"] == "BWBR0004770 — art. 1"
+    assert "tekst" not in ontvangen["body"]
+
+
+def test_voer_beurt_uit_schrijffout_geeft_waarschuwing_geen_crash(monkeypatch) -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    monkeypatch.setattr(
+        wetsanalyse_api, "_client", httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    settings = make_settings(wetsanalyse_api_url="http://api.local")
+
+    async def _run() -> list[dict]:
+        return [
+            e
+            async for e in voer_beurt_uit(
+                _qa_stroom(), settings=settings, gesprek_id="gesprek-1", gebruiker="jurist-1"
+            )
+        ]
+
+    events = asyncio.run(_run())
+    types = [e["type"] for e in events]
+    assert "waarschuwing" in types
     assert types[-1] == "done"

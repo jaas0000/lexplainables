@@ -28,6 +28,15 @@ def _reset_client(monkeypatch):
     monkeypatch.setattr(chat_proxy_client, "_client", None)
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limit():
+    from app.shared.rate_limit import wis
+
+    wis()
+    yield
+    wis()
+
+
 def _monkeypatch_transport(monkeypatch, handler) -> None:
     monkeypatch.setattr(
         chat_proxy_client,
@@ -86,3 +95,23 @@ def test_onbereikbare_graph_qa_geeft_error_event_geen_500(client, monkeypatch) -
     assert resp.status_code == 200  # de SSE-verbinding zelf opent gewoon
     events = _parse_sse(resp.text)
     assert events == [{"type": "error", "message": "Kon Lex niet bereiken. Probeer het opnieuw."}]
+
+
+def test_te_veel_chatverzoeken_geeft_429(client, monkeypatch) -> None:
+    """Zelfde `probeer_toestaan`-rem als de login-brute-force-test in
+    `identiteit_toegang/tests/test_auth.py` — module-constante patchen i.p.v. env-var (die wordt
+    alleen bij import gelezen)."""
+    monkeypatch.setattr("app.features.chat_proxy.router._CHAT_MAX", 2)
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return _sse_response([{"type": "done"}])
+
+    _monkeypatch_transport(monkeypatch, handler)
+
+    for _ in range(2):
+        resp = client.post("/v1/chat", json={"question": "Vraag"})
+        assert resp.status_code == 200
+
+    resp = client.post("/v1/chat", json={"question": "Vraag"})
+    assert resp.status_code == 429
+    assert "retry-after" in {k.lower() for k in resp.headers}

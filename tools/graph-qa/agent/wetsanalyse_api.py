@@ -119,3 +119,25 @@ async def zet_elementen(
         raise WetsanalyseApiFout(f"api HTTP {resp.status_code} voor zet_elementen: {resp.text}")
     data = resp.json()
     return data["aanvaard"], data["verworpen"]
+
+
+async def voeg_bericht_toe(
+    settings: Settings,
+    *,
+    gesprek_id: str,
+    bericht: dict[str, Any],
+    gebruiker: str,
+) -> None:
+    """Leg één beurt vast in de chatgeschiedenis (`api/app/features/gesprekken`).
+
+    Faalt stil richting de aanroeper (`WetsanalyseApiFout`) — het gesprek bestaat mogelijk niet
+    (meegegeven `gesprek_id` was leeg of verwijderd terwijl de beurt liep), en dat mag de beurt
+    zelf niet laten crashen: de client kreeg het antwoord al via de stream, alleen de
+    geschiedenis mist dan een regel."""
+    url = f"{settings.wetsanalyse_api_url}/v1/gesprekken/{gesprek_id}/berichten"
+    try:
+        resp = await _get_client().post(url, json=bericht, headers=_headers(settings, gebruiker))
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as exc:
+        raise WetsanalyseApiFout(f"api niet bereikbaar voor voeg_bericht_toe: {exc}") from exc
+    if not resp.is_success:
+        raise WetsanalyseApiFout(f"api HTTP {resp.status_code} voor voeg_bericht_toe: {resp.text}")

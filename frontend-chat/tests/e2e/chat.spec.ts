@@ -47,6 +47,81 @@ test.describe("chat", () => {
     await expect(page.getByText("gegrond in de kennisgraaf")).toBeVisible();
   });
 
+  test("annoteren: doel-gedreven annotatiebeurt toont voorgestelde elementen", async ({
+    page,
+  }) => {
+    await login(page);
+
+    const MOCK_ANNOTATIE_SSE = [
+      { type: "doel", doel: { bwbId: "BWBR0004770", artikel: "1", lid: "" } },
+      {
+        type: "element",
+        klasse: "Rechtssubject",
+        tekst: "de belastingplichtige",
+      },
+      { type: "opgeslagen", slug: "doc-1", aanvaard: 1, verworpen: 0 },
+      { type: "done" },
+    ]
+      .map((e) => `data: ${JSON.stringify(e)}\n\n`)
+      .join("");
+
+    await page.route("**/api/chat", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: MOCK_ANNOTATIE_SSE,
+      }),
+    );
+
+    await page.getByRole("button", { name: "Annoteren" }).click();
+    await page.getByPlaceholder("BWB-id (bv. BWBR0004770)").fill("BWBR0004770");
+    await page.getByPlaceholder("Artikel").fill("1");
+    await page.getByPlaceholder("Werkgebied").fill("sociaal");
+    await page.getByRole("button", { name: "Start annotatie" }).click();
+
+    await expect(page.getByText("de belastingplichtige")).toBeVisible();
+    await expect(page.getByText("Rechtssubject")).toBeVisible();
+    await expect(page.getByText(/1 aanvaard, 0 verworpen/)).toBeVisible();
+  });
+
+  test("gespreksgeschiedenis: een eerder gesprek verschijnt in de sidebar en is te heropenen", async ({
+    page,
+  }) => {
+    await login(page);
+
+    await page.route("**/api/chat", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: MOCK_SSE,
+      }),
+    );
+
+    // Bewust een andere vraagtekst dan de placeholder se eigen voorbeeldzin (die noemt
+    // "belastingschuldige" letterlijk, anders matcht `getByText` straks de lege-staat-tekst) én
+    // uniek per testrun (een lokale herhaling van deze spec tegen dezelfde, niet-opgeruimde
+    // dev-Postgres zou anders een sidebar-knop met exact dezelfde titel van een vorige run
+    // treffen — `strict mode violation`, geen echte bug).
+    const vraag = `Wat is een aansprakelijkstelling? (${Date.now()})`;
+    await page.getByPlaceholder("Stel een vraag…").fill(vraag);
+    await page.getByRole("button", { name: "Versturen" }).click();
+    await expect(page.getByText("Een testantwoord over de wet.")).toBeVisible();
+
+    // De vraag van de gebruiker persisteert de component zelf en geeft het gesprek meteen een
+    // titel op basis van die vraag; het antwoord persisteert normaliter graph-qa ná afloop van
+    // de stream (hier gemockt, dus dat deel gebeurt niet — alleen de sidebar-titel is hier het
+    // controleerbare bewijs van persistentie).
+    const sidebarTitel = page.getByRole("button", { name: vraag });
+    await expect(sidebarTitel).toBeVisible();
+
+    const berichtenpaneel = page.getByTestId("berichten");
+    await page.getByRole("button", { name: "+ Nieuw gesprek" }).click();
+    await expect(berichtenpaneel.getByText(vraag)).not.toBeVisible();
+
+    await sidebarTitel.click();
+    await expect(berichtenpaneel.getByText(vraag)).toBeVisible();
+  });
+
   test("foutpad: onjuiste credentials tonen foutmelding, geen sessie", async ({
     page,
     context,

@@ -707,6 +707,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/gesprekken": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lijst Gesprekken */
+        get: operations["lijst_gesprekken_v1_gesprekken_get"];
+        put?: never;
+        /** Maak Gesprek */
+        post: operations["maak_gesprek_v1_gesprekken_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/gesprekken/{gesprek_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Haal Gesprek */
+        get: operations["haal_gesprek_v1_gesprekken__gesprek_id__get"];
+        put?: never;
+        post?: never;
+        /** Verwijder Gesprek */
+        delete: operations["verwijder_gesprek_v1_gesprekken__gesprek_id__delete"];
+        options?: never;
+        head?: never;
+        /** Hernoem Gesprek */
+        patch: operations["hernoem_gesprek_v1_gesprekken__gesprek_id__patch"];
+        trace?: never;
+    };
+    "/v1/gesprekken/{gesprek_id}/berichten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Voeg Bericht Toe */
+        post: operations["voeg_bericht_toe_v1_gesprekken__gesprek_id__berichten_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projecten": {
         parameters: {
             query?: never;
@@ -1118,6 +1172,55 @@ export interface components {
          */
         BeoordelingsReden: "onduidelijk" | "fout_klasse" | "fout_tekst" | "dubbeling" | "overig";
         /**
+         * Bericht
+         * @description Eén beurt in het gesprek. `annotatie_titel` is het leesbare label van het
+         *     annotatiedocument op het moment van de beurt — het bericht beschrijft zichzelf, zodat het
+         *     gesprek leesbaar blijft als het document later verwijderd wordt (geen foreign key).
+         */
+        Bericht: {
+            /**
+             * Aangemaakt
+             * @default
+             */
+            aangemaakt: string;
+            /**
+             * Annotatie Slug
+             * @default
+             */
+            annotatie_slug: string;
+            /**
+             * Annotatie Titel
+             * @default
+             */
+            annotatie_titel: string;
+            /** Bronnen */
+            bronnen?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Denk
+             * @default
+             */
+            denk: string;
+            /** Id */
+            id?: number | null;
+            /** Ontbrekend */
+            ontbrekend?: {
+                [key: string]: unknown;
+            }[];
+            rol: components["schemas"]["Rol"];
+            /**
+             * Run Id
+             * @default
+             */
+            run_id: string;
+            /**
+             * Tekst
+             * @default
+             */
+            tekst: string;
+        };
+        /**
          * BerichtAdminRead
          * @description Wat een beheerder terugkrijgt: ook concepten, met wie het bericht aanmaakte — maar geen
          *     per-gebruiker `gelezen`-vlag (de admin-lijst is niet gebonden aan één gebruiker).
@@ -1175,6 +1278,43 @@ export interface components {
             type: "info" | "update" | "waarschuwing" | "kritiek";
             /** Versie */
             versie?: string | null;
+        };
+        /** BerichtInvoer */
+        BerichtInvoer: {
+            /**
+             * Annotatie Slug
+             * @default
+             */
+            annotatie_slug: string;
+            /**
+             * Annotatie Titel
+             * @default
+             */
+            annotatie_titel: string;
+            /** Bronnen */
+            bronnen?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Denk
+             * @default
+             */
+            denk: string;
+            /** Ontbrekend */
+            ontbrekend?: {
+                [key: string]: unknown;
+            }[];
+            rol: components["schemas"]["Rol"];
+            /**
+             * Run Id
+             * @default
+             */
+            run_id: string;
+            /**
+             * Tekst
+             * @default
+             */
+            tekst: string;
         };
         /** BerichtPublicatieIn */
         BerichtPublicatieIn: {
@@ -1512,6 +1652,66 @@ export interface components {
             /** Rol */
             rol: string;
         };
+        /** Gesprek */
+        Gesprek: {
+            /**
+             * Aangemaakt
+             * @default
+             */
+            aangemaakt: string;
+            /** Berichten */
+            berichten?: components["schemas"]["Bericht"][];
+            /**
+             * Bijgewerkt
+             * @default
+             */
+            bijgewerkt: string;
+            /** Gebruiker */
+            gebruiker: string;
+            /** Id */
+            id: string;
+            /**
+             * Titel
+             * @default
+             */
+            titel: string;
+        };
+        /** GesprekAanmaken */
+        GesprekAanmaken: {
+            /**
+             * Titel
+             * @default
+             */
+            titel: string;
+        };
+        /** GesprekHernoemen */
+        GesprekHernoemen: {
+            /** Titel */
+            titel: string;
+        };
+        /**
+         * GesprekSamenvatting
+         * @description Lichte lijst-weergave voor een gesprekgeschiedenis-overzicht.
+         */
+        GesprekSamenvatting: {
+            /**
+             * Aantal Berichten
+             * @default 0
+             */
+            aantal_berichten: number;
+            /**
+             * Bijgewerkt
+             * @default
+             */
+            bijgewerkt: string;
+            /** Id */
+            id: string;
+            /**
+             * Titel
+             * @default
+             */
+            titel: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1681,6 +1881,11 @@ export interface components {
             /** Naam */
             naam: string;
         };
+        /**
+         * Rol
+         * @enum {string}
+         */
+        Rol: "user" | "assistant";
         /**
          * RunInfo
          * @description Herkomst van een agent-run — welk model/versie deze elementen voorstelde. Poort van
@@ -3518,6 +3723,219 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FeedbackBevestigd"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lijst_gesprekken_v1_gesprekken_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GesprekSamenvatting"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    maak_gesprek_v1_gesprekken_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GesprekAanmaken"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Gesprek"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    haal_gesprek_v1_gesprekken__gesprek_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                gesprek_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Gesprek"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verwijder_gesprek_v1_gesprekken__gesprek_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                gesprek_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hernoem_gesprek_v1_gesprekken__gesprek_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                gesprek_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GesprekHernoemen"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Gesprek"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voeg_bericht_toe_v1_gesprekken__gesprek_id__berichten_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-User-Id"?: string | null;
+            };
+            path: {
+                gesprek_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BerichtInvoer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bericht"];
                 };
             };
             /** @description Validation Error */
