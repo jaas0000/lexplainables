@@ -108,9 +108,14 @@ een nodegrens stoppen (`BeurtGestopt`, `agent/agent_common.py`) — infrastructu
 dat wacht op het latere runs-model (`POST /v1/runs/{id}/cancel`). Story 053 opent `tools/graph-qa/
 api/` (was een leeg skelet): `GET /health` + `POST /v1/chat` (SSE, providers via FastAPI
 `Depends()`, optioneel bearer-token) — de eerste echte HTTP-aanroeper van de agent, live
-geverifieerd tegen de Invorderingswet-fixture. Nog geen CORS/rate-limiting/runs-model (geen
-vastgestelde aanroeper-architectuur) — dat is de rest van de API-laag (~25-35 stories geschat in
-totaal voor de hele werkstroom).
+geverifieerd tegen de Invorderingswet-fixture. Story 054 voegt het run-model toe (`agent/
+runs.py`): een beurt draait als server-side achtergrondtaak i.p.v. gekoppeld aan de verbinding —
+`POST /v1/runs`/`GET /v1/runs/{id}/events`/`POST /v1/runs/{id}/cancel`/`GET
+/v1/conversations/{id}/run`, met eigenaarschap via `X-User-Id`. Eerste échte aanroeper van
+`stop_check` (052) — live geverifieerd dat `cancel` een lopende beurt naar `status: "gestopt"`
+brengt. Nog geen CORS/rate-limiting/`agent/beurt.py`-persistentie (geen vastgestelde
+aanroeper-architectuur) — dat is de rest van de API-laag (~25-35 stories geschat in totaal voor
+de hele werkstroom).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -219,7 +224,14 @@ i.p.v. de node te draaien, en `answer_stream()` vangt die als een normale afrond
 `tools/graph-qa/api/main.py` (was een leeg skelet) krijgt `GET /health` + `POST /v1/chat`
 (SSE via `sse-starlette`, providers via FastAPI `Depends()` voor testbaarheid, optioneel
 `QA_API_TOKEN`-bearer-token, fail-fast lifespan) — live geverifieerd met een echte vraag over de
-HTTP-server. Nog geen CORS/rate-limiting/runs-model/`/v1/artikel` (geen vastgestelde
+HTTP-server. Story 054 voegt het run-model toe: `agent/runs.py` (`RunRegister`, een
+`Condition`-gebaseerd event-log met selectief cappen en een bewaartermijn) plus vier endpoints
+(`POST /v1/runs`, `GET /v1/runs/{id}/events`, `POST /v1/runs/{id}/cancel`, `GET
+/v1/conversations/{id}/run`) — een beurt draait nu als server-side achtergrondtaak i.p.v.
+gekoppeld aan de HTTP-verbinding, en `cancel` is de eerste échte aanroeper van `stop_check`
+(story 052). Live geverifieerd: zowel het gewone verloop tot `status: "klaar"` als een
+`cancel`-vóór-de-eerste-node die `status: "gestopt"` opleverde zonder `error`-event. Nog geen
+CORS/rate-limiting/`agent/beurt.py`-persistentie/`/v1/artikel` (geen vastgestelde
 aanroeper-architectuur, geen `frontend-chat` om tegen te bouwen) en geen enkel aangesloten
 UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom (~25-35 stories geschat in
 totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
