@@ -130,10 +130,27 @@ nu `doel`/`werkgebied`; `POST /v1/chat`/`POST /v1/runs` routeren zo'n verzoek na
 annotatieketen. Onderweg een echte, live bevestigde bug gevonden en gefixt: alle voorstellen
 verworpen bij annoteren liet de keten oneindig doorlopen (`herzie_node` liet
 `verworpen_fragmenten` onaangeroerd) — regressietest toegevoegd. Live geverifieerd: een echte
-beurt leverde 7 aanvaarde JAS-elementen op, correct weggeschreven naar Postgres. Nog geen
-CORS/rate-limiting/gesprekgeschiedenis, en nog geen frontend-trigger voor een annotatiebeurt
-(frontend-chat stuurt alleen `question`, nog geen `doel`-knop) — dat is de rest van de API-laag
-(~25-35 stories geschat in totaal voor de hele werkstroom).
+beurt leverde 7 aanvaarde JAS-elementen op, correct weggeschreven naar Postgres.
+
+Nog steeds in hetzelfde lager-ceremonie-tempo (PR #97): `chat_proxy` kreeg een per-gebruiker
+rate-limit (`probeer_toestaan`, zelfde patroon als de login-rem, 429 + `Retry-After`) — CORS was
+al service-breed geregeld via `CORSMiddleware`, dus geen aparte actie nodig. `frontend-chat`
+kreeg een modus-toggle "Vraag stellen"/"Annoteren": een klein formulier (bwbId/artikel/lid/
+werkgebied) stuurt nu een `doel`-verzoek, met eigen rendering voor `doel`/`element`/`opgeslagen`/
+`waarschuwing`. Nieuw domein `api/app/features/gesprekken/` (poort van de referentie se
+gesprekken-domein): persistente chatgeschiedenis per gebruiker, `POST .../berichten` idempotent
+op `run_id`. graph-qa's nieuwe `agent/beurt.py::voer_beurt_uit` wikkelt elke beurt (QA of
+annotatie, via `POST /v1/chat` én `POST /v1/runs`) en legt het resultaat pas vast ná `done` — een
+gesloten tabblad kost geen werk meer. `frontend-chat` persisteert de eigen vraag zelf (en geeft
+het gesprek meteen een titel op basis daarvan) en toont een geschiedenis-sidebar om een eerder
+gesprek te heropenen. Live geverifieerd door de volledige keten heen, zowel het QA- als het
+annotatie-pad, met een screenshot van de werkende sidebar. Onderweg zelf een dev-mode-only bug
+gevonden (React Strict Mode dubbel-invoceert het mount-effect, wat een tweede gesprek aanmaakte
+en de net verstuurde eerste beurt weer leegveegde) — gefixt met een init-ref-guard.
+
+Nog niet gebouwd: rename/verwijderen van een gesprek in de UI (de API-endpoints bestaan al),
+en de rest van de API-laag voorbij deze drie punten (~25-35 stories geschat in totaal voor de
+hele werkstroom).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -259,6 +276,11 @@ niet-bufferende BFF-proxy in dit project) — de eerste keer dat een jurist met 
 een webinterface. Live geverifieerd met een echte, niet-gemockte browsersessie tegen de volledige
 keten (screenshot); onderweg zelf een `\r\n\r\n`-SSE-parseerbug gevonden en gefixt (`sse-starlette`
 scheidt events met CRLF, niet kaal `\n\n` — de client-side parser ging daar stilzwijgend aan
-voorbij zonder ooit een fout te geven). Nog geen CORS/rate-limiting/`agent/beurt.py`-
-persistentie/`/v1/artikel`/gesprekgeschiedenis — dat is de rest van de API-laag (~25-35 stories
-geschat in totaal) (`tools/wetsanalyse-admin-mcp/` is klaar).
+voorbij zonder ooit een fout te geven). Ná story 056, in een lager-ceremonie-tempo (PR #96/#97,
+zie de bondigere recap hierboven voor het volledige verhaal): `agent/wetsanalyse_api.py` +
+`agent/beurt.py` schrijven een annotatiebeurt weg naar `api`'s annotatiedomein, `chat_proxy`
+kreeg een rate-limit, `frontend-chat` kreeg een `doel`-annotatietrigger, en het nieuwe
+`api/app/features/gesprekken/`-domein geeft de chatgeschiedenis persistentie (`voer_beurt_uit`
+legt elke beurt vast). Nog niet gebouwd: `/v1/artikel` en rename/verwijderen van een gesprek in
+de UI — dat is de rest van de API-laag (~25-35 stories geschat in totaal) (`tools/
+wetsanalyse-admin-mcp/` is klaar).
