@@ -113,9 +113,12 @@ runs.py`): een beurt draait als server-side achtergrondtaak i.p.v. gekoppeld aan
 `POST /v1/runs`/`GET /v1/runs/{id}/events`/`POST /v1/runs/{id}/cancel`/`GET
 /v1/conversations/{id}/run`, met eigenaarschap via `X-User-Id`. Eerste échte aanroeper van
 `stop_check` (052) — live geverifieerd dat `cancel` een lopende beurt naar `status: "gestopt"`
-brengt. Nog geen CORS/rate-limiting/`agent/beurt.py`-persistentie (geen vastgestelde
-aanroeper-architectuur) — dat is de rest van de API-laag (~25-35 stories geschat in totaal voor
-de hele werkstroom).
+brengt. Story 055 knoopt `api` en `graph-qa` voor het eerst aan elkaar: `api/app/features/
+chat_proxy/` streamt graph-qa's `POST /v1/chat` ongewijzigd door — de gedocumenteerde route
+`frontend-chat → api → graph-qa` (ADR-0001), niet rechtstreeks. Live geverifieerd door de hele
+keten heen. Nog geen CORS/rate-limiting/`agent/beurt.py`-persistentie (geen vastgestelde
+frontend-chat) — die is de eerstvolgende stap (story 056), daarna de rest van de API-laag
+(~25-35 stories geschat in totaal voor de hele werkstroom).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -230,8 +233,11 @@ HTTP-server. Story 054 voegt het run-model toe: `agent/runs.py` (`RunRegister`, 
 /v1/conversations/{id}/run`) — een beurt draait nu als server-side achtergrondtaak i.p.v.
 gekoppeld aan de HTTP-verbinding, en `cancel` is de eerste échte aanroeper van `stop_check`
 (story 052). Live geverifieerd: zowel het gewone verloop tot `status: "klaar"` als een
-`cancel`-vóór-de-eerste-node die `status: "gestopt"` opleverde zonder `error`-event. Nog geen
-CORS/rate-limiting/`agent/beurt.py`-persistentie/`/v1/artikel` (geen vastgestelde
-aanroeper-architectuur, geen `frontend-chat` om tegen te bouwen) en geen enkel aangesloten
-UI-endpoint — dat is de rest van de eerstvolgende grote werkstroom (~25-35 stories geschat in
-totaal), daarna `frontend-chat` (`tools/wetsanalyse-admin-mcp/` is klaar).
+`cancel`-vóór-de-eerste-node die `status: "gestopt"` opleverde zonder `error`-event. Story 055
+knoopt `api` en `graph-qa` voor het eerst daadwerkelijk aan elkaar: nieuwe feature `api/app/
+features/chat_proxy/` — `POST /v1/chat` streamt graph-qa's SSE-contract ongewijzigd door, volgens
+de al vastgelegde architectuur (`frontend-chat → api → graph-qa`, ADR-0001/C4-model). Live
+geverifieerd door de hele keten heen (`curl → api → graph-qa → GraphDB + Foundry`). Nog geen
+CORS/rate-limiting/`agent/beurt.py`-persistentie/`/v1/artikel` en nog geen enkel aangesloten
+UI-endpoint — `frontend-chat` zelf (story 056) is de eerstvolgende stap, daarna de rest van de
+API-laag (~25-35 stories geschat in totaal) (`tools/wetsanalyse-admin-mcp/` is klaar).

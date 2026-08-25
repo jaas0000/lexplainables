@@ -30,12 +30,12 @@ C4Context
 
 ## L2 — Container
 
-Zes services (ADR-0001). Gebouwd: `api`, `frontend` en `wetsanalyse-admin-mcp`. De overige
-drie (`frontend-chat`, `bwb-import`, `graph-qa`) zijn vastgelegd in de topologie maar nog niet
-geïmplementeerd — ze staan hier al om het volledige plaatje te tonen; markeer ze als gebouwd
-zodra de eerste code er is. GraphDB staat er ook bij (voor de leesbaarheid van het plaatje) maar
-telt niet mee als "service" in ADR-0001 — het is een third-party image, gedeployd via
-`deploy/graphdb/`, geen applicatiecode die wij bouwen/publiceren.
+Zes services (ADR-0001). Gebouwd: `api`, `frontend`, `wetsanalyse-admin-mcp`, `bwb-import` en
+`graph-qa` (dit vak was een tijd stale — bijgewerkt bij story 055). Alleen `frontend-chat` is nog
+vastgelegd in de topologie maar niet geïmplementeerd — staat hier al om het volledige plaatje te
+tonen; markeer 'm als gebouwd zodra de eerste code er is. GraphDB staat er ook bij (voor de
+leesbaarheid van het plaatje) maar telt niet mee als "service" in ADR-0001 — het is een
+third-party image, gedeployd via `deploy/graphdb/`, geen applicatiecode die wij bouwen/publiceren.
 
 ```mermaid
 C4Container
@@ -50,8 +50,8 @@ C4Container
     Container(api, "api", "FastAPI / Python", "Kernbackend: alle geplande features gebouwd (feedback, berichten, identiteit/toegang, wetcatalogus, llm_profielen, projecten, annotatie, api_tokens, runtime_config, llm_calls). Analyse-engine draait via `engine/`-module met LLM-orkestratie.")
     ContainerDb(db, "database", "SQLite (dev) / PostgreSQL", "Tabel per feature binnen api.")
     ContainerDb(graphdb, "GraphDB", "third-party, deploy/graphdb/", "BWB-kennisgraaf, ingebouwde MCP op /mcp. Geen door ons gebouwde service.")
-    Container(bwb_import, "bwb-import", "nog niet gebouwd", "ETL-pipeline: BWB → GraphDB.")
-    Container(graph_qa, "graph-qa", "nog niet gebouwd", "QA-/annotatie-agent. Bevraagt GraphDB direct (SPARQL/similarity-search).")
+    Container(bwb_import, "bwb-import", "Python", "ETL-pipeline: BWB → GraphDB (stories 024-036, volledig gebouwd).")
+    Container(graph_qa, "graph-qa", "FastAPI / Python / LangGraph", "QA-/annotatie-agent (stories 044-055, geen deploy-eenheid/Dockerfile). Bevraagt GraphDB direct (SPARQL/similarity-search). Eigen HTTP-laag (`POST /v1/chat`, run-model) — nog geen frontend-consument, alleen `api`'s chat-proxy.")
     Container(admin_mcp, "wetsanalyse-admin-mcp", "TypeScript / Node.js (stdio)", "Admin-MCP: berichten aanmaken, bewerken, publiceren via Claude Code.")
   }
 
