@@ -1,9 +1,10 @@
 """Pydantic-modellen voor de agent-loop.
 
 Getrimd tot wat de antwoord-agent-loop (stories 044-046), de annotatieketen (stories 047-048) en
-de HTTP-laag (story 053, `ChatRequest`) gebruiken — geen `AgentDoel`/`ChatContext`/
-`ArtikelResult` (bestaan nog niet in `answer_stream()`, zie story 050 §Afwijkingen punt 3), en
-van de annotatie-modellen bewust geen `AgentRun`; die hoort bij de story die `emit_node` bouwt.
+de HTTP-laag (stories 053-054, `ChatRequest`/`RunStart`) gebruiken — geen `AgentDoel`/
+`ChatContext`/`ArtikelResult` (bestaan nog niet in `answer_stream()`, zie story 050 §Afwijkingen
+punt 3), en van de annotatie-modellen bewust geen `AgentRun`; die hoort bij de story die
+`emit_node` bouwt.
 
 Poort van `wetsanalyse-ai/tools/graph-qa/agent/models.py`, 1:1 voor de hier opgenomen klassen.
 """
@@ -64,11 +65,23 @@ class ErrorEvent(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    """Body van `POST /v1/chat` (story 053). Geen `modus`/`context`/`doel` — die bestaan nog niet
-    in `answer_stream()`."""
+    """Body van `POST /v1/chat` en `POST /v1/runs` (stories 053-054). Geen `modus`/`context`/
+    `doel` — die bestaan nog niet in `answer_stream()`."""
 
     question: str
     conversation_id: str | None = None
+
+
+class RunStart(BaseModel):
+    """Wat een client van het run-model te zien krijgt — matcht `agent.runs.Run.samenvatting()`
+    (story 054)."""
+
+    run_id: str
+    conversation_id: str
+    vraag: str
+    status: Literal["loopt", "klaar", "gestopt", "mislukt"]
+    volgende_seq: int
+    weggevallen: int
 
 
 # --- Annotatie (stories 047-048: enkele ronde + critic) ------------------------------------
