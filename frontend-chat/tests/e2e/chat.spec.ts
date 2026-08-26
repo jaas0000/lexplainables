@@ -47,7 +47,7 @@ test.describe("chat", () => {
     await expect(page.getByText("gegrond in de kennisgraaf")).toBeVisible();
   });
 
-  test("annoteren: doel-gedreven annotatiebeurt toont voorgestelde elementen", async ({
+  test("annoteren: doel-gedreven annotatiebeurt collapset tot een openbare artefact-chip", async ({
     page,
   }) => {
     await login(page);
@@ -79,8 +79,9 @@ test.describe("chat", () => {
     await page.getByPlaceholder("Werkgebied").fill("sociaal");
     await page.getByRole("button", { name: "Start annotatie" }).click();
 
-    await expect(page.getByText("de belastingplichtige")).toBeVisible();
-    await expect(page.getByText("Rechtssubject")).toBeVisible();
+    // De live elementenlijst collapset zodra `opgeslagen` binnenkomt tot een chip die het
+    // artefact-paneel opent (`ArtefactPaneel`, eigen dekking in `annotaties.spec.ts`) — hier
+    // alleen toetsen dát de chip verschijnt met de juiste telling, niet de paneel-inhoud zelf.
     await expect(page.getByText(/1 aanvaard, 0 verworpen/)).toBeVisible();
   });
 
