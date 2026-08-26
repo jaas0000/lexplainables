@@ -34,6 +34,30 @@ export async function apiProxy(
 }
 
 /**
+ * Downloadende BFF-proxy: geeft de upstream-responsebody + Content-Type/-Disposition
+ * ongewijzigd door — nodig voor binaire bestanden (`.../export`), waar `apiProxy` se
+ * hardgecodeerde `application/json` en `.text()`-buffering een PDF zou corrumperen.
+ */
+export async function apiProxyDownload(
+  pad: string,
+  gebruikersnaam: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const upstream = await fetch(`${API_BASE_URL}${pad}`, {
+    ...init,
+    headers: buildBackendHeaders(gebruikersnaam),
+    cache: "no-store",
+  });
+  const headers: Record<string, string> = {
+    "Content-Type":
+      upstream.headers.get("Content-Type") ?? "application/octet-stream",
+  };
+  const disposition = upstream.headers.get("Content-Disposition");
+  if (disposition) headers["Content-Disposition"] = disposition;
+  return new Response(upstream.body, { status: upstream.status, headers });
+}
+
+/**
  * Streaming BFF-proxy: geeft de upstream-responsebody rechtstreeks door (geen buffering) —
  * nodig voor SSE-endpoints zoals `/v1/chat`.
  */

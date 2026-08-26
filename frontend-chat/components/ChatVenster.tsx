@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
+import { ArtefactPaneel } from "@/components/annotatie/ArtefactPaneel";
 
 type AnnotatieElement = { klasse: string; tekst: string };
+
+type Artefact = {
+  slug: string;
+  titel?: string;
+  aanvaard?: number;
+  verworpen?: number;
+};
 
 type Bericht = {
   rol: "gebruiker" | "lex";
@@ -11,7 +20,7 @@ type Bericht = {
   niveau?: "gegrond" | "onbepaald" | "ongegrond";
   fout?: boolean;
   elementen?: AnnotatieElement[];
-  opgeslagen?: { slug: string; aanvaard: number; verworpen: number };
+  artefact?: Artefact;
   waarschuwing?: string;
 };
 
@@ -50,6 +59,7 @@ export function ChatVenster({ gebruikersnaam }: { gebruikersnaam: string }) {
   const [werkgebied, setWerkgebied] = useState("");
   const [gesprekId, setGesprekId] = useState<string | null>(null);
   const [gesprekken, setGesprekken] = useState<GesprekSamenvatting[]>([]);
+  const [artefactSlug, setArtefactSlug] = useState<string | null>(null);
 
   // React Strict Mode draait een mount-effect twee keer in dev — zonder deze guard maakt de
   // tweede invocatie een tweede gesprek aan en veegt die de net verstuurde eerste beurt weer
@@ -89,9 +99,10 @@ export function ChatVenster({ gebruikersnaam }: { gebruikersnaam: string }) {
     setBerichten(
       gesprek.berichten.map((b) => ({
         rol: b.rol === "user" ? "gebruiker" : "lex",
-        tekst: b.annotatie_slug
-          ? `Annotatie opgeslagen: ${b.annotatie_titel} (${b.annotatie_slug})`
-          : b.tekst,
+        tekst: b.annotatie_slug ? "" : b.tekst,
+        artefact: b.annotatie_slug
+          ? { slug: b.annotatie_slug, titel: b.annotatie_titel }
+          : undefined,
       })),
     );
   }
@@ -270,9 +281,14 @@ export function ChatVenster({ gebruikersnaam }: { gebruikersnaam: string }) {
         }));
         break;
       case "opgeslagen":
+        // De annotatie is af — collapse de live elementenlijst tot een compacte chip die het
+        // artefact-paneel opent (zelfde principe als wetsanalyse-ai: de review-UI is geen
+        // chattekst, maar een los venster naast/over het gesprek).
         update((laatste) => ({
           ...laatste,
-          opgeslagen: {
+          tekst: "",
+          elementen: undefined,
+          artefact: {
             slug: String(event.slug ?? ""),
             aanvaard: Number(event.aanvaard ?? 0),
             verworpen: Number(event.verworpen ?? 0),
@@ -299,6 +315,12 @@ export function ChatVenster({ gebruikersnaam }: { gebruikersnaam: string }) {
         >
           + Nieuw gesprek
         </button>
+        <Link
+          href="/annotaties"
+          className="btn btn-secondary mb-4 w-full text-xs"
+        >
+          Annotaties
+        </Link>
         <div className="flex-1 space-y-1 overflow-y-auto">
           {gesprekken.length === 0 && (
             <p className="px-1 text-xs text-faint">Nog geen gesprekken.</p>
@@ -370,7 +392,7 @@ export function ChatVenster({ gebruikersnaam }: { gebruikersnaam: string }) {
               key={i}
               className={`card ${b.rol === "gebruiker" ? "bg-surface" : ""} ${b.fout ? "border-fout" : ""}`}
             >
-              {(b.tekst || b.elementen === undefined) && (
+              {(b.tekst || (b.elementen === undefined && !b.artefact)) && (
                 <p className="whitespace-pre-wrap text-sm">{b.tekst || "…"}</p>
               )}
               {b.niveau && (
@@ -394,11 +416,19 @@ export function ChatVenster({ gebruikersnaam }: { gebruikersnaam: string }) {
                   ))}
                 </ul>
               )}
-              {b.opgeslagen && (
-                <p className="mt-2 text-xs text-faint">
-                  Opgeslagen ({b.opgeslagen.slug}): {b.opgeslagen.aanvaard}{" "}
-                  aanvaard, {b.opgeslagen.verworpen} verworpen.
-                </p>
+              {b.artefact && (
+                <button
+                  type="button"
+                  className="mt-1 flex w-full items-center justify-between rounded border border-line bg-surface px-3 py-2 text-left text-sm hover:bg-line/30"
+                  onClick={() => setArtefactSlug(b.artefact!.slug)}
+                >
+                  <span>{b.artefact.titel || "Annotatie"}</span>
+                  <span className="text-xs text-faint">
+                    {b.artefact.aanvaard !== undefined
+                      ? `${b.artefact.aanvaard} aanvaard, ${b.artefact.verworpen} verworpen`
+                      : "Openen"}
+                  </span>
+                </button>
               )}
               {b.waarschuwing && (
                 <p className="mt-2 text-xs text-fout">⚠ {b.waarschuwing}</p>
@@ -471,6 +501,13 @@ export function ChatVenster({ gebruikersnaam }: { gebruikersnaam: string }) {
           </form>
         )}
       </div>
+
+      {artefactSlug && (
+        <ArtefactPaneel
+          slug={artefactSlug}
+          onSluiten={() => setArtefactSlug(null)}
+        />
+      )}
     </div>
   );
 }
