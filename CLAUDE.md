@@ -167,10 +167,27 @@ niet-vergrendeld document. Onderweg een pre-existing TS-exhaustiveness-fout in `
 blootgelegd (`werkplek/page.tsx`'s statusLabel/statusKleur dekten de nieuwe status niet) —
 gefixt in dezelfde PR.
 
-Nog niet gebouwd: `frontend/`'s werkplek daadwerkelijk tegen deze nieuwe endpoints laten praten
-(nu leunt de UI nog op het oude gedrag), en de rest van de wetsanalyse-migratie voorbij het
-annotatie-domein (zie `docs/project/migratie-wetsanalyse.md` §Ontbrekende delta voor de actuele
-stand — grotendeels afgerond op infra na Docker-compose/Azure-CI en de frontend-uitbreidingen).
+PR #99 bouwt daarna de annotatie-werkbank in `frontend-chat` (op expliciet verzoek "build it like
+wetsanalyse-ai is now" — UX gelijk aan de referentie se `/workbench`, architectuur blijft
+gesplitst): een afgeronde annotatiebeurt collapset tot een artefact-chip die
+`components/annotatie/ArtefactPaneel.tsx` opent — een eigen kolom vanaf `xl:` (1280px), daaronder
+een van-rechts-inschuivend paneel. Bevat `DocumentPaneel` (wetsartikel per lid, actieve reviewkaart
+als enige highlight, tekstselectie → eigen markering via een popover) en `ReviewQueue`
+(Akkoord/Bewerken/Verwerpen/Opmerking, JAS- en aandacht-badges, Critic-motivatie; vergrendelt
+zichzelf bij `geaccordeerd`). Afronden/heropenen en PDF/CSV/JSON-export zitten in de paneelkop.
+Nieuw, eersteklas overzicht `/annotaties` (los van het gesprek waarin een document ontstond,
+zelfde principe als de referentie). `lib/jas.ts` — JAS-klassekleuren, 1:1 uit wetsanalyse-ai's
+`frontend/lib/jas.ts`. Acht nieuwe BFF-routes + een `apiProxyDownload()`-helper voor de binaire
+export. Geen backend-wijzigingen (bouwt op PR #98's endpoints). Live geverifieerd: de volledige
+lus chip → paneel → goedkeuren → afronden (slot zichtbaar) → heropenen → PDF-export (echte
+download) → eigen markering via tekstselectie → verwijderen → `/annotaties`-overzicht.
+
+Nog niet gebouwd: `frontend/`'s eigen werkplek daadwerkelijk tegen deze endpoints laten praten
+(nu leunt die UI nog op het oude gedrag — `frontend-chat` heeft de nieuwe werkbank, `frontend`
+nog niet), keyboard-shortcuts/WCAG-AAA-detailwerk uit de referentie, en de rest van de
+wetsanalyse-migratie voorbij het annotatie-domein (zie `docs/project/migratie-wetsanalyse.md`
+§Ontbrekende delta voor de actuele stand — grotendeels afgerond op infra na
+Docker-compose/Azure-CI en de resterende frontend-uitbreidingen).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
