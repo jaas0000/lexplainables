@@ -19,6 +19,7 @@ dependencies = [
     "litellm>=1.40",
     "pyotp>=2.9",  # TOTP-verificatie voor 2FA (story 017)
     "sse-starlette>=2.1",  # SSE-doorgeefluik naar graph-qa (story 055)
+    "reportlab>=4.2",  # PDF-annotatie-export (annotatie/export.py)
 ]
 
 [project.optional-dependencies]

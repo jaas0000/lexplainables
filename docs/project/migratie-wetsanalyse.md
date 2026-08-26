@@ -42,34 +42,48 @@ lexplainables volgt. Lex is de basis, wetsanalyse-ai levert de missing pieces.
 
 ## Ontbrekende delta (uit wetsanalyse-ai)
 
+**Bijgewerkt 2026-08-26** — de status hieronder liep sinds fase 0 niet meer synchroon met wat
+er daadwerkelijk gebouwd is; onderstaande vinkjes zijn geverifieerd tegen de huidige codebase
+(niet aangenomen).
+
 **Infrastructuur (plumbing):**
-1. PostgreSQL + Alembic-migraties op beide DBs
-2. OpenTelemetry-observability
-3. Rate limiting
-4. Secrets crypto uitbreiding
-5. Litellm-adapter met capture + throttle + retry
-6. Auth.js in frontend (custom-store aan de api-kant blijft)
-7. Async jobstore met lease-reaper op Postgres
-8. Docker-compose voor lokaal draaien (Postgres + services)
-9. CI/CD-workflows naar Azure Container Apps
+1. ✅ PostgreSQL + Alembic-migraties (SQLite blijft voor tests, ADR-0003)
+2. ✅ OpenTelemetry-observability (`api/app/shared/observability.py`)
+3. ✅ Rate limiting (`api/app/shared/rate_limit/` — login én `chat_proxy`, PR #97)
+4. ✅ Secrets crypto (`api/app/shared/crypto.py`)
+5. ✅ Litellm-adapter met capture + throttle + retry (`api/app/shared/llm/`)
+6. ✅ Auth.js in `frontend/` én `frontend-chat/` (custom-store aan de api-kant, ADR-0003)
+7. ✅ Async jobstore met lease-reaper op Postgres (`api/app/shared/jobs/`, reaper-loop in
+   `api/app/main.py`)
+8. Docker-compose voor lokaal draaien — nog niet geverifieerd, mogelijk nog open
+9. CI/CD-workflows naar Azure Container Apps — nog niet geverifieerd, mogelijk nog open
 
 **Domein:**
-10. 2FA/TOTP (story 017 in lex — nog niet gebouwd)
-11. Rijkshuisstijl volledig (Belastingdienst-stijlvak, JAS-klassekleuren, Fira-fonts)
+10. ✅ 2FA/TOTP (`api/app/features/identiteit_toegang/` — `/2fa/begin`/`/activate`/`/disable`)
+11. Rijkshuisstijl volledig (Belastingdienst-stijlvak, JAS-klassekleuren, Fira-fonts) — de
+    JAS-klassekleuren zelf zijn overgenomen (`shared/validation.py`, PR #98, voor de
+    annotatie-PDF-export), de rest (stijlvak, Fira-fonts, logo) nog niet
+12. ✅ Annotatie-domein op api-parity met de referentie (PR #98): jurist kan zelf elementen
+    aanmaken/verwijderen, een annotatie expliciet afronden/heropenen (schrijf-slot), en
+    exporteren (PDF/CSV/JSON)
 
 **Aparte services (herzien 2026-08-22 — zie ai-notes/fase-4-aparte-services-plan.md voor de
 volledige toelichting: `tools/wettenbank-mcp` bestaat niet meer in wetsanalyse-ai, vóór dit
 migratieplan al verwijderd; wettekst komt daar via een GraphDB-kennisgraaf):**
-12. `deploy/graphdb` (infra, geen story-cyclus) + `tools/bwb-import` — ETL-pipeline die het
-    Basiswettenbestand in een GraphDB-kennisgraaf zet (~3.284r)
-13. `tools/graph-qa` — LangGraph-agent, supervisor + antwoord-worker (specialisten
-    definitie/duiding/algemeen) + annotatie-worker + provenance + grounding (~5.598r, niet ~3286r
-    zoals eerder hier stond)
-14. `frontend-chat` — losse Next.js chat-app met SSE-streaming tegen graph-qa
+13. ✅ `deploy/graphdb` (infra) + `tools/bwb-import` — ETL-pipeline die het Basiswettenbestand
+    in een GraphDB-kennisgraaf zet — inhoudelijk afgerond (stories 024-036)
+14. ✅ `tools/graph-qa` grotendeels — LangGraph-agent: supervisor, antwoord-worker
+    (specialisten definitie/duiding/algemeen), annotatie-worker (annoteren → critic →
+    patch/herzie → emit), HTTP-laag + run-model, en een schrijfpad terug naar `api` (annotatie
+    + gespreksgeschiedenis, PR #96/#97) — `/v1/artikel`-achtige losse lookup-endpoints e.d. nog
+    niet geïnventariseerd
+15. ✅ `frontend-chat` — losse Next.js chat-app met SSE-streaming tegen graph-qa, incl.
+    doel-annotatietrigger en een gespreksgeschiedenis-sidebar (PR #97)
 
 **Frontend-uitbreidingen:**
-15. Werkplek volledig maken tegen echte graph-qa (nu leunt lex op eigen backend)
-16. Analyse-webapp UI: nieuwe project-creatie, review-visualisaties
+16. Werkplek (`frontend/`) volledig maken tegen echte graph-qa (nu leunt lex op eigen backend
+    voor annotatie) — nog niet gestart, de api-laag (item 12) is er nu wel klaar voor
+17. Analyse-webapp UI: nieuwe project-creatie, review-visualisaties — nog niet gestart
 
 ## Aanpak — 6 fases
 

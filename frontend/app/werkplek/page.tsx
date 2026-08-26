@@ -18,12 +18,15 @@ function statusLabel(s: DocumentStatus): string {
       return "Gedeeltelijk gereviewd";
     case "klaar":
       return "Klaar";
+    case "geaccordeerd":
+      return "Geaccordeerd";
   }
 }
 
 function statusKleur(s: DocumentStatus): string {
   switch (s) {
     case "klaar":
+    case "geaccordeerd":
       return "rgb(var(--succes))";
     case "gedeeltelijk_gereviewd":
       return "rgb(var(--info))";

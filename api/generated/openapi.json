@@ -1348,7 +1348,8 @@
         "enum": [
           "voorgesteld",
           "gedeeltelijk_gereviewd",
-          "klaar"
+          "klaar",
+          "geaccordeerd"
         ],
         "title": "DocumentStatus",
         "type": "string"
@@ -1498,6 +1499,15 @@
         ],
         "title": "ElementenZettenOut",
         "type": "object"
+      },
+      "Exportformaat": {
+        "enum": [
+          "pdf",
+          "csv",
+          "json"
+        ],
+        "title": "Exportformaat",
+        "type": "string"
       },
       "FeedbackBevestigd": {
         "properties": {
@@ -2143,6 +2153,54 @@
         "title": "MarkeerGezienIn",
         "type": "object"
       },
+      "MensElementInvoer": {
+        "description": "E\u00e9n element dat de jurist zelf aanmaakt (een tekstselectie in het documentpaneel) \u2014 apart\nvan `ElementenInvoer`/`PUT`, want dat is de uitkomst van een agent-ronde en dit komt er los\nbij zonder de rest te raken. De router zet `herkomst=\"mens\"`, niet de client (zie\n`AnnotatieElement.herkomst`).",
+        "properties": {
+          "klasse": {
+            "minLength": 1,
+            "title": "Klasse",
+            "type": "string"
+          },
+          "lid": {
+            "default": "",
+            "title": "Lid",
+            "type": "string"
+          },
+          "span": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span"
+          },
+          "tekst": {
+            "minLength": 1,
+            "title": "Tekst",
+            "type": "string"
+          },
+          "toelichting": {
+            "default": "",
+            "title": "Toelichting",
+            "type": "string"
+          },
+          "vindplaats": {
+            "default": "",
+            "title": "Vindplaats",
+            "type": "string"
+          }
+        },
+        "required": [
+          "klasse",
+          "tekst"
+        ],
+        "title": "MensElementInvoer",
+        "type": "object"
+      },
       "MijnProfiel": {
         "description": "Eigen accountgegevens \u2014 teruggegeven door GET /v1/auth/me.\n\n`actief` is er expliciet zodat een consument (bijv. de frontend Auth.js live-rol-check,\nfase 2b.3) na een periodieke fetch direct kan zien of het account nog geldig is. De\nendpoint retourneert 401 op een inactieve gebruiker, dus in de praktijk komt hier alleen\n`actief=true` binnen \u2014 het veld is de expliciete tegenpool van die 401.",
         "properties": {
@@ -2295,6 +2353,20 @@
           "wachtwoord"
         ],
         "title": "SetupVerzoek",
+        "type": "object"
+      },
+      "StatusInvoer": {
+        "description": "`POST .../status`: de annotatie expliciet afronden (`geaccordeerd=True`) of heropenen\n(`False`). Een boolean i.p.v. de referentie se rauwe `DocumentStatus`-veld: de drie\nautomatisch-berekende statussen (voorgesteld/gedeeltelijk/klaar) zijn geen geldige expliciete\nkeuzes voor een client \u2014 heropenen valt terug op wat `_bereken_status` op dat moment zegt.",
+        "properties": {
+          "geaccordeerd": {
+            "title": "Geaccordeerd",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "geaccordeerd"
+        ],
+        "title": "StatusInvoer",
         "type": "object"
       },
       "TijdelijkWachtwoord": {
@@ -4959,6 +5031,66 @@
       }
     },
     "/v1/annotatie/documenten/{slug}/elementen": {
+      "post": {
+        "description": "E\u00e9n element dat de jurist zelf aanmaakt (een tekstselectie in het documentpaneel) \u2014 apart\nvan `PUT`, want dat is de uitkomst van een agent-ronde en dit komt er los bij zonder de rest\nte raken. Meteen `human_goedgekeurd`: de jurist hoeft zijn eigen markering niet nog eens goed\nte keuren.",
+        "operationId": "voeg_element_toe_v1_annotatie_documenten__slug__elementen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MensElementInvoer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotatieDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Voeg Element Toe",
+        "tags": [
+          "annotatie"
+        ]
+      },
       "put": {
         "description": "Merget nieuwe agent-voorstellen met de bestaande elementenlijst (`_merge_elementen`) \u2014\ngeen volledige vervanging. Een reeds door de jurist beoordeeld element blijft bevroren, ook\nals een latere agent-ronde er een nieuw voorstel voor doet (poort van de referentie-api se\nmerge-gedrag, story 056-vervolg \u2014 werkwijze: nieuwe architectuureis van lexplainables t.o.v.\nde vroegere volledige-vervanging-semantiek).\n\nOngeldige JAS-klasse of lege tekst \u2192 element overgeslagen (niet de hele batch afgewezen).",
         "operationId": "zet_elementen_v1_annotatie_documenten__slug__elementen_put",
@@ -5015,6 +5147,60 @@
           }
         },
         "summary": "Zet Elementen",
+        "tags": [
+          "annotatie"
+        ]
+      }
+    },
+    "/v1/annotatie/documenten/{slug}/elementen/{element_id}": {
+      "delete": {
+        "description": "Verwijder een EIGEN markering (`herkomst == \"mens\"`). Een agent-voorstel (`herkomst ==\n\"agent\"`, gezet door `PUT .../elementen`) verdwijnt niet via deze route: die verwerp je via\nde beslissing-endpoint (`afwijzen`), zodat het auditspoor laat zien d\u00e1t er een voorstel was\nen wat ermee gebeurde. Documenteigenaarschap is al door `_laad_eigen_document` afgedwongen \u2014\ndit is dus geen tweede identiteitscheck, maar een origin-type-check binnen je eigen\ndocument.",
+        "operationId": "verwijder_element_v1_annotatie_documenten__slug__elementen__element_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "element_id",
+            "required": true,
+            "schema": {
+              "title": "Element Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verwijder Element",
         "tags": [
           "annotatie"
         ]
@@ -5086,6 +5272,127 @@
           }
         },
         "summary": "Registreer Beslissing",
+        "tags": [
+          "annotatie"
+        ]
+      }
+    },
+    "/v1/annotatie/documenten/{slug}/export": {
+      "post": {
+        "description": "Het hele document als bestand: de markeringen als tabel plus het volledige spoor. Werkt\nin elke fase \u2014 een document dat nog in review is exporteert gewoon, met de telling \"te\nbeoordelen\" in de kop, zodat een concept nooit als eindproduct kan worden gelezen.\n\nAnders dan de referentie: die kreeg de wettekst per lid van de client meegestuurd (haar `api`\nhad geen graafverbinding). Lexplainables' `annotatie`-domein heeft dat w\u00e9l (`graphdb.py`,\nstory 037) en haalt de wettekst dus zelf op \u2014 ontbreekt hij (artikel niet in de graaf, of de\ngraaf onbereikbaar), dan exporteert het document gewoon zonder wettekst-blok in plaats van\nde hele export te laten falen.",
+        "operationId": "exporteer_document_v1_annotatie_documenten__slug__export_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "formaat",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Exportformaat",
+              "default": "pdf"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exporteer Document",
+        "tags": [
+          "annotatie"
+        ]
+      }
+    },
+    "/v1/annotatie/documenten/{slug}/status": {
+      "post": {
+        "description": "De annotatie afronden of weer heropenen \u2014 een expliciete handeling van de jurist, geen\nafgeleide van \"alle elementen beslist\" (dat is niet hetzelfde als tevreden zijn: er kan nog\neen agent-ronde komen). Heropenen kan altijd; een knop die niet terug kan is een knop die\nniemand durft te gebruiken. Zie `_vereis_niet_afgerond` voor het schrijf-slot dat hierdoor\nontstaat.",
+        "operationId": "zet_status_v1_annotatie_documenten__slug__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusInvoer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotatieDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zet Status",
         "tags": [
           "annotatie"
         ]

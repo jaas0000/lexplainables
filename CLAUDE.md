@@ -148,9 +148,29 @@ annotatie-pad, met een screenshot van de werkende sidebar. Onderweg zelf een dev
 gevonden (React Strict Mode dubbel-invoceert het mount-effect, wat een tweede gesprek aanmaakte
 en de net verstuurde eerste beurt weer leegveegde) — gefixt met een init-ref-guard.
 
-Nog niet gebouwd: rename/verwijderen van een gesprek in de UI (de API-endpoints bestaan al),
-en de rest van de API-laag voorbij deze drie punten (~25-35 stories geschat in totaal voor de
-hele werkstroom).
+Nog niet gebouwd: rename/verwijderen van een gesprek in de UI (de API-endpoints bestaan al).
+
+Op verzoek "voeg de rest van de api-laag toe" (PR #98, zelfde lager-ceremonie-tempo): het
+annotatie-domein op api-parity met de referentie gebracht. Jurist kan nu zelf een element
+aanmaken/verwijderen (`POST`/`DELETE .../elementen[/{id}]`, `herkomst` onderscheidt "mens" van
+"agent" — een agent-voorstel verwerp je via de bestaande beslissing-endpoint, niet delete).
+`DocumentStatus` kreeg een vierde, uitsluitend-expliciete waarde `geaccordeerd`
+(`POST .../status`) — bevriest het document, elk ander schrijfpad (incl. graph-qa's eigen
+`PUT`-write-back) weigert dan met 409 tot heropend. `POST .../export?formaat=pdf|csv|json`
+levert het hele document als bestand; de PDF (reportlab) gebruikt de canonieke JAS-klassekleuren
+(nu in `shared/validation.py`, 1:1 overgenomen uit wetsanalyse-ai's `validate_analyse.py`-
+skill-script) en haalt de wettekst zelf op via `graphdb.py` — een architectuurverschil met de
+referentie, die geen graafverbinding had en de wettekst van de client kreeg. 12 nieuwe tests
+(289 totaal), live geverifieerd: jurist-element/status-lock/heropenen/PDF-export met echte
+GraphDB-wettekst, en een volledige doel-annotatiebeurt door graph-qa bleef werken tegen een
+niet-vergrendeld document. Onderweg een pre-existing TS-exhaustiveness-fout in `frontend/`
+blootgelegd (`werkplek/page.tsx`'s statusLabel/statusKleur dekten de nieuwe status niet) —
+gefixt in dezelfde PR.
+
+Nog niet gebouwd: `frontend/`'s werkplek daadwerkelijk tegen deze nieuwe endpoints laten praten
+(nu leunt de UI nog op het oude gedrag), en de rest van de wetsanalyse-migratie voorbij het
+annotatie-domein (zie `docs/project/migratie-wetsanalyse.md` §Ontbrekende delta voor de actuele
+stand — grotendeels afgerond op infra na Docker-compose/Azure-CI en de frontend-uitbreidingen).
 
 Draai het lokaal: `cd api && uv sync && uv run pytest -q` (tests groen), `uv run ruff check . &&
 uv run ruff format --check .` (codestandaard schoon), `alembic upgrade head` tegen een schone
@@ -281,6 +301,11 @@ zie de bondigere recap hierboven voor het volledige verhaal): `agent/wetsanalyse
 `agent/beurt.py` schrijven een annotatiebeurt weg naar `api`'s annotatiedomein, `chat_proxy`
 kreeg een rate-limit, `frontend-chat` kreeg een `doel`-annotatietrigger, en het nieuwe
 `api/app/features/gesprekken/`-domein geeft de chatgeschiedenis persistentie (`voer_beurt_uit`
-legt elke beurt vast). Nog niet gebouwd: `/v1/artikel` en rename/verwijderen van een gesprek in
-de UI — dat is de rest van de API-laag (~25-35 stories geschat in totaal) (`tools/
-wetsanalyse-admin-mcp/` is klaar).
+legt elke beurt vast). PR #98 rondt het annotatie-domein af: jurist-elementen (`POST`/
+`DELETE .../elementen[/{id}]`, `herkomst` "mens" vs "agent"), een afronden/heropenen-slot
+(`DocumentStatus.geaccordeerd`, 409 op elk ander schrijfpad zolang bevroren), en export
+(PDF/CSV/JSON, PDF via reportlab met de canonieke JAS-klassekleuren nu in
+`shared/validation.py`). Nog niet gebouwd: `/v1/artikel`, rename/verwijderen van een gesprek in
+de UI, en `frontend/`'s werkplek daadwerkelijk tegen deze nieuwe annotatie-endpoints laten praten
+— zie `docs/project/migratie-wetsanalyse.md` §Ontbrekende delta voor de volledige, bijgewerkte
+stand (`tools/wetsanalyse-admin-mcp/` is klaar).

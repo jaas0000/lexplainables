@@ -49,6 +49,10 @@ append-only auditlog; tijdlijn = ORDER BY id (BIGINT autoincrement).
 | `DELETE` | `/annotatie/documenten/{slug}` | gebruiker | — |
 | `PUT` | `/annotatie/documenten/{slug}/elementen` | gebruiker | `ElementenZettenOut` |
 | `POST` | `/annotatie/documenten/{slug}/elementen/{element_id}/beslissing` | gebruiker | `AnnotatieDocument` |
+| `POST` | `/annotatie/documenten/{slug}/elementen` | gebruiker | `AnnotatieDocument` |
+| `DELETE` | `/annotatie/documenten/{slug}/elementen/{element_id}` | gebruiker | — |
+| `POST` | `/annotatie/documenten/{slug}/status` | gebruiker | `AnnotatieDocument` |
+| `POST` | `/annotatie/documenten/{slug}/export` | gebruiker | — |
 | `GET` | `/annotatie/documenten/{slug}/audit` | gebruiker | `AuditlogOut` |
 | `GET` | `/annotatie/documenten/{slug}/wetsartikel` | gebruiker | `Wetsartikel` |
 
@@ -69,8 +73,9 @@ class AnnotatieStore(Protocol):
 
 - shared/auth.py: `huidige_gebruiker` (client_id-scoping in de router).
 - shared/tijd.py: `nu()` als vervangbare klok voor `aangemaakt`/`bijgewerkt`/beslissing-tijdstippen.
-- shared/validation.py: `GELDIGE_JAS_KLASSEN` voor element-validatie bij PUT (ongeldige klasse → overgeslagen, niet 422).
+- shared/validation.py: `GELDIGE_JAS_KLASSEN` voor element-validatie bij PUT/POST (ongeldige klasse → overgeslagen resp. 422), `JAS_KLASSE_KLEUREN`/`jas_sorteersleutel` voor de export.
 - db.py: `AsyncEngine` via `get_engine()` naar de store.
+- graphdb.py: `haal_wetsartikel_op` voor zowel `GET .../wetsartikel` als `POST .../export`.
 
 ## Getest gedrag
 
@@ -102,6 +107,18 @@ class AnnotatieStore(Protocol):
 - Zet elementen bevriest een door jurist beoordeeld element.
 - Zet elementen met run info slaat laatste run op.
 - Beslissing laat laatste run ongemoeid.
+- Element zelf toevoegen door jurist.
+- Element toevoegen ongeldige klasse geeft 422.
+- Eigen element verwijderen.
+- Verwijderen van agent element geeft 409.
+- Element verwijderen onbekend element geeft 404.
+- Status accorderen bevriest document.
+- Status heropenen herstelt bewerkbaarheid.
+- Export json.
+- Export csv.
+- Export pdf.
+- Export zonder wetsartikel werkt toch.
+- Export andermans document geeft 404.
 - Artikel iri percent encodeert segmenten.
 - Sorteersleutel numeriek niet lexicaal.
 - Haal wetsartikel op met opschrift en leden.
@@ -118,5 +135,6 @@ class AnnotatieStore(Protocol):
 
 - ADR-0007 (store-abstractie): router leunt op `AnnotatieStore` Protocol, tests draaien tegen de echte SQL-store.
 - ADR-0011 (schema-eenheid): SQLAlchemy Core + Pydantic + expliciete `document_uit_rij` / `samenvatting_uit_rij` / `audit_uit_rij`.
-- Feature-bouwen regel 8: `GELDIGE_JAS_KLASSEN` staat in `shared/validation.py` als gedeelde constante.
+- Feature-bouwen regel 8: `GELDIGE_JAS_KLASSEN` (en de export-kleuren) staan in `shared/validation.py` als gedeelde constante.
 - Story 022 §Levenscyclus: `bewerken` vereist `reden`+`wijziging`; `afwijzen` vereist `reden` — afgedwongen door `BeslissingInvoer.model_validator` → 422.
+- Wetsanalyse-migratie-vervolg (werkwijze-lager-ceremonie-tempo): `DocumentStatus` kreeg een vierde, uitsluitend-expliciete waarde `geaccordeerd` (`POST .../status`) naast de drie automatisch-berekende — bevriest het document, alle andere schrijfpaden (incl. agent-write-back) weigeren dan met 409 (`router.py::_vereis_niet_afgerond`). Jurist kan eigen elementen aanmaken/verwijderen (`POST`/`DELETE .../elementen[/{id}]`, `herkomst` onderscheidt "mens" van "agent" — origin-type, geen attributie) los van de agent-PUT. `POST .../export` (PDF/CSV/JSON, `export.py`) haalt de wettekst zelf op via `graphdb.py` i.p.v. dat de client 'm meestuurt (architectuurverschil met de referentie: dit domein heeft al een graafverbinding, story 037).

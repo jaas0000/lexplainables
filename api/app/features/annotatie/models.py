@@ -36,6 +36,14 @@ class DocumentStatus(StrEnum):
     voorgesteld = "voorgesteld"
     gedeeltelijk_gereviewd = "gedeeltelijk_gereviewd"
     klaar = "klaar"
+    # Expliciet door de jurist gezet via `POST .../status` — nooit een uitkomst van
+    # `_bereken_status`. Bevriest het document: elk ander schrijfpad weigert met 409 zolang deze
+    # status staat (zie `router.py::_vereis_niet_afgerond`). Poort van de referentie se
+    # `geaccordeerd`, hier toegevoegd als vierde waarde naast lexplainables' eigen
+    # automatisch-berekende drie i.p.v. die te vervangen — zo blijft de bestaande
+    # voortgangsindicator (voorgesteld/gedeeltelijk/klaar) intact als informatief signaal, en is
+    # "geaccordeerd" een orthogonale, expliciete jurist-handeling erbovenop.
+    geaccordeerd = "geaccordeerd"
 
 
 class Levenscyclus(StrEnum):
@@ -118,6 +126,11 @@ class AnnotatieElement(BaseModel):
     toelichting: str = ""
     vindplaats: str = ""
     span: dict | None = None
+    # Origin-type, niet attributie: "agent" (PUT .../elementen, de agent-write-back-route) of
+    # "mens" (POST .../elementen, de jurist se eigen tekstselectie). Documenteigenaarschap loopt
+    # al via `AnnotatieDocument.client_id`; dit veld bepaalt alleen wélk schrijfpad het element
+    # maakte, en dus of DELETE 'm mag raken (alleen "mens" — een agent-voorstel verwerp je via
+    # de beslissing-endpoint, zodat het auditspoor blijft staan).
     herkomst: str = ""
     levenscyclus: Levenscyclus = Levenscyclus.voorgesteld
     alternatieven: list[Alternatief] = Field(default_factory=list)
@@ -186,6 +199,29 @@ class ElementenInvoer(BaseModel):
 
     elementen: list[ElementInvoer]
     run: RunInfo | None = None
+
+
+class MensElementInvoer(BaseModel):
+    """Eén element dat de jurist zelf aanmaakt (een tekstselectie in het documentpaneel) — apart
+    van `ElementenInvoer`/`PUT`, want dat is de uitkomst van een agent-ronde en dit komt er los
+    bij zonder de rest te raken. De router zet `herkomst="mens"`, niet de client (zie
+    `AnnotatieElement.herkomst`)."""
+
+    klasse: str = Field(..., min_length=1)
+    tekst: str = Field(..., min_length=1)
+    lid: str = ""
+    toelichting: str = ""
+    vindplaats: str = ""
+    span: dict | None = None
+
+
+class StatusInvoer(BaseModel):
+    """`POST .../status`: de annotatie expliciet afronden (`geaccordeerd=True`) of heropenen
+    (`False`). Een boolean i.p.v. de referentie se rauwe `DocumentStatus`-veld: de drie
+    automatisch-berekende statussen (voorgesteld/gedeeltelijk/klaar) zijn geen geldige expliciete
+    keuzes voor een client — heropenen valt terug op wat `_bereken_status` op dat moment zegt."""
+
+    geaccordeerd: bool
 
 
 class WijzigingInvoer(BaseModel):

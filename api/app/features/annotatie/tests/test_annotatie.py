@@ -503,3 +503,210 @@ def test_beslissing_laat_laatste_run_ongemoeid(client):
 
     doc2 = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()
     assert doc2["laatste_run"]["model"] == "claude-sonnet-4-6"
+
+
+# --- jurist voegt eigen elementen toe / verwijdert ze (wetsanalyse-migratie-vervolg) -----------
+
+
+def test_element_zelf_toevoegen_door_jurist(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+
+    resp = client.post(
+        f"/v1/annotatie/documenten/{slug}/elementen",
+        json=_GELDIG_ELEMENT,
+        headers=HDRS_A,
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert len(body["elementen"]) == 1
+    element = body["elementen"][0]
+    assert element["herkomst"] == "mens"
+    assert element["levenscyclus"] == "human_goedgekeurd"
+
+
+def test_element_toevoegen_ongeldige_klasse_geeft_422(client):
+    doc = _maak(client)
+    resp = client.post(
+        f"/v1/annotatie/documenten/{doc['slug']}/elementen",
+        json=_ONGELDIG_ELEMENT_KLASSE,
+        headers=HDRS_A,
+    )
+    assert resp.status_code == 422
+
+
+def test_eigen_element_verwijderen(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+    aangemaakt = client.post(
+        f"/v1/annotatie/documenten/{slug}/elementen", json=_GELDIG_ELEMENT, headers=HDRS_A
+    ).json()
+    element_id = aangemaakt["elementen"][0]["id"]
+
+    resp = client.delete(f"/v1/annotatie/documenten/{slug}/elementen/{element_id}", headers=HDRS_A)
+    assert resp.status_code == 204
+
+    doc2 = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()
+    assert doc2["elementen"] == []
+
+
+def test_verwijderen_van_agent_element_geeft_409(client):
+    """Alleen je eigen (`herkomst == "mens"`) markeringen kun je verwijderen; een agent-voorstel
+    (`PUT .../elementen`, `herkomst == "agent"`) verwerp je via de beslissing-endpoint
+    (`afwijzen`) — ook als het in je eigen document staat."""
+    doc = _maak(client)
+    slug = doc["slug"]
+    _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+    element_id = client.get(f"/v1/annotatie/documenten/{slug}", headers=HDRS_A).json()["elementen"][
+        0
+    ]["id"]
+
+    resp = client.delete(f"/v1/annotatie/documenten/{slug}/elementen/{element_id}", headers=HDRS_A)
+    assert resp.status_code == 409
+
+
+def test_element_verwijderen_onbekend_element_geeft_404(client):
+    doc = _maak(client)
+    resp = client.delete(
+        f"/v1/annotatie/documenten/{doc['slug']}/elementen/onbekend", headers=HDRS_A
+    )
+    assert resp.status_code == 404
+
+
+# --- afronden/heropenen bevriest het document (wetsanalyse-migratie-vervolg) -------------------
+
+
+def test_status_accorderen_bevriest_document(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+    _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+
+    resp = client.post(
+        f"/v1/annotatie/documenten/{slug}/status",
+        json={"geaccordeerd": True},
+        headers=HDRS_A,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "geaccordeerd"
+
+    # Elk ander schrijfpad weigert nu met 409.
+    assert (
+        client.put(
+            f"/v1/annotatie/documenten/{slug}/elementen",
+            json={"elementen": [_GELDIG_ELEMENT]},
+            headers=HDRS_A,
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            f"/v1/annotatie/documenten/{slug}/elementen",
+            json=_GELDIG_ELEMENT,
+            headers=HDRS_A,
+        ).status_code
+        == 409
+    )
+
+
+def test_status_heropenen_herstelt_bewerkbaarheid(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+    client.post(
+        f"/v1/annotatie/documenten/{slug}/status", json={"geaccordeerd": True}, headers=HDRS_A
+    )
+
+    resp = client.post(
+        f"/v1/annotatie/documenten/{slug}/status",
+        json={"geaccordeerd": False},
+        headers=HDRS_A,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "voorgesteld"  # geen elementen → terug naar de basisstatus
+
+    # Weer bewerkbaar.
+    resultaat = _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+    assert resultaat["aanvaard"] == 1
+
+
+# --- export (wetsanalyse-migratie-vervolg) ------------------------------------------------------
+
+
+def test_export_json(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+    _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+
+    resp = client.post(
+        f"/v1/annotatie/documenten/{slug}/export", params={"formaat": "json"}, headers=HDRS_A
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/json")
+    body = resp.json()
+    assert body["document"]["slug"] == slug
+    assert len(body["document"]["elementen"]) == 1
+    assert "audit" in body
+
+
+def test_export_csv(client):
+    doc = _maak(client)
+    slug = doc["slug"]
+    _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+
+    resp = client.post(
+        f"/v1/annotatie/documenten/{slug}/export", params={"formaat": "csv"}, headers=HDRS_A
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    regels = resp.text.splitlines()
+    assert regels[0] == "klasse,tekst,lid,levenscyclus,toelichting,vindplaats"
+    assert "de belastingplichtige" in regels[1]
+
+
+def test_export_pdf(client, monkeypatch):
+    doc = _maak(client)
+    slug = doc["slug"]
+    _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+
+    async def fake_haal_op(bwb_id: str, artikel: str) -> Wetsartikel:
+        return Wetsartikel(bwb_id=bwb_id, artikel=artikel, opschrift=None, tekst="Wettekst.")
+
+    monkeypatch.setattr(annotatie_router, "haal_wetsartikel_op", fake_haal_op)
+
+    resp = client.post(
+        f"/v1/annotatie/documenten/{slug}/export", params={"formaat": "pdf"}, headers=HDRS_A
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert resp.content.startswith(b"%PDF")
+
+
+def test_export_zonder_wetsartikel_werkt_toch(client, monkeypatch):
+    """De graaf is onbereikbaar of het artikel staat er niet in — de export faalt niet, hij
+    laat gewoon het wettekst-blok weg."""
+    doc = _maak(client)
+    slug = doc["slug"]
+    _zet_elementen(client, slug, [_GELDIG_ELEMENT])
+
+    async def fake_haal_op(bwb_id: str, artikel: str) -> Wetsartikel:
+        raise GraphDbNietBereikbaar("graaf onbereikbaar")
+
+    monkeypatch.setattr(annotatie_router, "haal_wetsartikel_op", fake_haal_op)
+
+    resp = client.post(
+        f"/v1/annotatie/documenten/{slug}/export", params={"formaat": "pdf"}, headers=HDRS_A
+    )
+    assert resp.status_code == 200
+    assert resp.content.startswith(b"%PDF")
+
+
+def test_export_andermans_document_geeft_404(client):
+    doc = _maak(client)
+
+    app.dependency_overrides[huidige_gebruiker] = lambda: "analist-B"
+    resp = client.post(
+        f"/v1/annotatie/documenten/{doc['slug']}/export",
+        params={"formaat": "json"},
+    )
+    app.dependency_overrides[huidige_gebruiker] = lambda: "analist-A"
+
+    assert resp.status_code == 404
