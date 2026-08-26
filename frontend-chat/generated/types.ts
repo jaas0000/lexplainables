@@ -415,8 +415,40 @@ export interface paths {
          *     Ongeldige JAS-klasse of lege tekst → element overgeslagen (niet de hele batch afgewezen).
          */
         put: operations["zet_elementen_v1_annotatie_documenten__slug__elementen_put"];
-        post?: never;
+        /**
+         * Voeg Element Toe
+         * @description Eén element dat de jurist zelf aanmaakt (een tekstselectie in het documentpaneel) — apart
+         *     van `PUT`, want dat is de uitkomst van een agent-ronde en dit komt er los bij zonder de rest
+         *     te raken. Meteen `human_goedgekeurd`: de jurist hoeft zijn eigen markering niet nog eens goed
+         *     te keuren.
+         */
+        post: operations["voeg_element_toe_v1_annotatie_documenten__slug__elementen_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/annotatie/documenten/{slug}/elementen/{element_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Verwijder Element
+         * @description Verwijder een EIGEN markering (`herkomst == "mens"`). Een agent-voorstel (`herkomst ==
+         *     "agent"`, gezet door `PUT .../elementen`) verdwijnt niet via deze route: die verwerp je via
+         *     de beslissing-endpoint (`afwijzen`), zodat het auditspoor laat zien dát er een voorstel was
+         *     en wat ermee gebeurde. Documenteigenaarschap is al door `_laad_eigen_document` afgedwongen —
+         *     dit is dus geen tweede identiteitscheck, maar een origin-type-check binnen je eigen
+         *     document.
+         */
+        delete: operations["verwijder_element_v1_annotatie_documenten__slug__elementen__element_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -437,6 +469,58 @@ export interface paths {
          *     (afgedwongen door `BeslissingInvoer` validator → 422 bij ontbrekende velden).
          */
         post: operations["registreer_beslissing_v1_annotatie_documenten__slug__elementen__element_id__beslissing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/annotatie/documenten/{slug}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exporteer Document
+         * @description Het hele document als bestand: de markeringen als tabel plus het volledige spoor. Werkt
+         *     in elke fase — een document dat nog in review is exporteert gewoon, met de telling "te
+         *     beoordelen" in de kop, zodat een concept nooit als eindproduct kan worden gelezen.
+         *
+         *     Anders dan de referentie: die kreeg de wettekst per lid van de client meegestuurd (haar `api`
+         *     had geen graafverbinding). Lexplainables' `annotatie`-domein heeft dat wél (`graphdb.py`,
+         *     story 037) en haalt de wettekst dus zelf op — ontbreekt hij (artikel niet in de graaf, of de
+         *     graaf onbereikbaar), dan exporteert het document gewoon zonder wettekst-blok in plaats van
+         *     de hele export te laten falen.
+         */
+        post: operations["exporteer_document_v1_annotatie_documenten__slug__export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/annotatie/documenten/{slug}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Zet Status
+         * @description De annotatie afronden of weer heropenen — een expliciete handeling van de jurist, geen
+         *     afgeleide van "alle elementen beslist" (dat is niet hetzelfde als tevreden zijn: er kan nog
+         *     een agent-ronde komen). Heropenen kan altijd; een knop die niet terug kan is een knop die
+         *     niemand durft te gebruiken. Zie `_vereis_niet_afgerond` voor het schrijf-slot dat hierdoor
+         *     ontstaat.
+         */
+        post: operations["zet_status_v1_annotatie_documenten__slug__status_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1491,7 +1575,7 @@ export interface components {
          * DocumentStatus
          * @enum {string}
          */
-        DocumentStatus: "voorgesteld" | "gedeeltelijk_gereviewd" | "klaar";
+        DocumentStatus: "voorgesteld" | "gedeeltelijk_gereviewd" | "klaar" | "geaccordeerd";
         /** DocumentenLijstOut */
         DocumentenLijstOut: {
             /** Items */
@@ -1555,6 +1639,11 @@ export interface components {
             /** Verworpen */
             verworpen: number;
         };
+        /**
+         * Exportformaat
+         * @enum {string}
+         */
+        Exportformaat: "pdf" | "csv" | "json";
         /** FeedbackBevestigd */
         FeedbackBevestigd: {
             /** Id */
@@ -1843,6 +1932,38 @@ export interface components {
             tot?: string | null;
         };
         /**
+         * MensElementInvoer
+         * @description Eén element dat de jurist zelf aanmaakt (een tekstselectie in het documentpaneel) — apart
+         *     van `ElementenInvoer`/`PUT`, want dat is de uitkomst van een agent-ronde en dit komt er los
+         *     bij zonder de rest te raken. De router zet `herkomst="mens"`, niet de client (zie
+         *     `AnnotatieElement.herkomst`).
+         */
+        MensElementInvoer: {
+            /** Klasse */
+            klasse: string;
+            /**
+             * Lid
+             * @default
+             */
+            lid: string;
+            /** Span */
+            span?: {
+                [key: string]: unknown;
+            } | null;
+            /** Tekst */
+            tekst: string;
+            /**
+             * Toelichting
+             * @default
+             */
+            toelichting: string;
+            /**
+             * Vindplaats
+             * @default
+             */
+            vindplaats: string;
+        };
+        /**
          * MijnProfiel
          * @description Eigen accountgegevens — teruggegeven door GET /v1/auth/me.
          *
@@ -1931,6 +2052,17 @@ export interface components {
             gebruikersnaam: string;
             /** Wachtwoord */
             wachtwoord: string;
+        };
+        /**
+         * StatusInvoer
+         * @description `POST .../status`: de annotatie expliciet afronden (`geaccordeerd=True`) of heropenen
+         *     (`False`). Een boolean i.p.v. de referentie se rauwe `DocumentStatus`-veld: de drie
+         *     automatisch-berekende statussen (voorgesteld/gedeeltelijk/klaar) zijn geen geldige expliciete
+         *     keuzes voor een client — heropenen valt terug op wat `_bereken_status` op dat moment zegt.
+         */
+        StatusInvoer: {
+            /** Geaccordeerd */
+            geaccordeerd: boolean;
         };
         /** TijdelijkWachtwoord */
         TijdelijkWachtwoord: {
@@ -3232,6 +3364,75 @@ export interface operations {
             };
         };
     };
+    voeg_element_toe_v1_annotatie_documenten__slug__elementen_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MensElementInvoer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotatieDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verwijder_element_v1_annotatie_documenten__slug__elementen__element_id__delete: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+                element_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     registreer_beslissing_v1_annotatie_documenten__slug__elementen__element_id__beslissing_post: {
         parameters: {
             query?: never;
@@ -3247,6 +3448,78 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["BeslissingInvoer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotatieDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exporteer_document_v1_annotatie_documenten__slug__export_post: {
+        parameters: {
+            query?: {
+                formaat?: components["schemas"]["Exportformaat"];
+            };
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    zet_status_v1_annotatie_documenten__slug__status_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-User-Id": string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusInvoer"];
             };
         };
         responses: {

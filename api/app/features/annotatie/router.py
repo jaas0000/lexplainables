@@ -35,6 +35,7 @@ from ...db import get_engine
 from ...shared.auth import huidige_gebruiker
 from ...shared.tijd import nu
 from ...shared.validation import GELDIGE_JAS_KLASSEN
+from .export import Exportformaat, bouw_export
 from .graphdb import GraphDbNietBereikbaar, WetsartikelNietGevonden, haal_wetsartikel_op
 from .models import (
     AnnotatieDocument,
@@ -48,6 +49,8 @@ from .models import (
     DocumentStatus,
     ElementenInvoer,
     Levenscyclus,
+    MensElementInvoer,
+    StatusInvoer,
     Wetsartikel,
 )
 from .store import (
@@ -91,6 +94,17 @@ async def _laad_eigen_document(
     if doc is None or doc.client_id != client_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Document niet gevonden.")
     return doc
+
+
+def _vereis_niet_afgerond(doc: AnnotatieDocument) -> None:
+    """Zolang de jurist het document expliciet heeft geaccordeerd (`POST .../status`) weigert
+    elk ander schrijfpad — agent-write-back (PUT elementen) incluis — met een 409. Dit endpoint
+    (en heropenen via dezelfde route) is de enige uitweg én de enige ingang."""
+    if doc.status == DocumentStatus.geaccordeerd:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Deze annotatie is afgerond. Heropen hem om te wijzigen.",
+        )
 
 
 def _bereken_status(elementen: list[AnnotatieElement]) -> DocumentStatus:
@@ -239,6 +253,7 @@ async def zet_elementen(
     Ongeldige JAS-klasse of lege tekst → element overgeslagen (niet de hele batch afgewezen).
     """
     doc = await _laad_eigen_document(slug, client_id, store)
+    _vereis_niet_afgerond(doc)
 
     voorstellen: list[AnnotatieElement] = []
     verworpen = 0
@@ -258,7 +273,7 @@ async def zet_elementen(
                 toelichting=invoer.toelichting,
                 vindplaats=invoer.vindplaats,
                 span=invoer.span,
-                herkomst=client_id,
+                herkomst="agent",
                 alternatieven=invoer.alternatieven,
                 aandacht=invoer.aandacht,
                 critic=invoer.critic,
@@ -297,6 +312,7 @@ async def registreer_beslissing(
     """Registreert een human-beslissing op één element. Valideert type-specifieke vereisten
     (afgedwongen door `BeslissingInvoer` validator → 422 bij ontbrekende velden)."""
     doc = await _laad_eigen_document(slug, client_id, store)
+    _vereis_niet_afgerond(doc)
 
     # Zoek het element op in de lijst.
     element_idx = next((i for i, e in enumerate(doc.elementen) if e.id == element_id), None)
@@ -348,6 +364,144 @@ async def registreer_beslissing(
 
     # Return de in-memory staat (elementen al bijgewerkt) — vermijdt een extra SELECT.
     return doc.model_copy(update={"status": nieuwe_status, "bijgewerkt": nu().isoformat()})
+
+
+@router.post(
+    "/{slug}/elementen",
+    response_model=AnnotatieDocument,
+    status_code=status.HTTP_201_CREATED,
+)
+async def voeg_element_toe(
+    slug: str,
+    body: MensElementInvoer,
+    client_id: str = Depends(huidige_gebruiker),
+    store: AnnotatieStore = Depends(get_store),
+) -> AnnotatieDocument:
+    """Eén element dat de jurist zelf aanmaakt (een tekstselectie in het documentpaneel) — apart
+    van `PUT`, want dat is de uitkomst van een agent-ronde en dit komt er los bij zonder de rest
+    te raken. Meteen `human_goedgekeurd`: de jurist hoeft zijn eigen markering niet nog eens goed
+    te keuren."""
+    doc = await _laad_eigen_document(slug, client_id, store)
+    _vereis_niet_afgerond(doc)
+
+    if body.klasse not in GELDIGE_JAS_KLASSEN:
+        raise HTTPException(422, f"Onbekende JAS-klasse: {body.klasse}")
+
+    element_id = uuid.uuid4().hex[:12]
+    nieuw_element = AnnotatieElement(
+        id=element_id,
+        klasse=body.klasse,
+        tekst=body.tekst,
+        lid=body.lid,
+        toelichting=body.toelichting,
+        vindplaats=body.vindplaats,
+        span=body.span,
+        herkomst="mens",
+        levenscyclus=Levenscyclus.human_goedgekeurd,
+    )
+    nieuwe_elementen = [*doc.elementen, nieuw_element]
+    nieuwe_status = _bereken_status(nieuwe_elementen)
+    await store.vervang_elementen(slug, nieuwe_elementen, nieuwe_status)
+    await store.schrijf_audit(
+        slug,
+        client_id,
+        actor=client_id,
+        actie="element-toegevoegd",
+        element_id=element_id,
+        detail={"klasse": body.klasse, "tekst": body.tekst, "lid": body.lid},
+    )
+    return doc.model_copy(update={"elementen": nieuwe_elementen, "status": nieuwe_status})
+
+
+@router.delete("/{slug}/elementen/{element_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def verwijder_element(
+    slug: str,
+    element_id: str,
+    client_id: str = Depends(huidige_gebruiker),
+    store: AnnotatieStore = Depends(get_store),
+) -> None:
+    """Verwijder een EIGEN markering (`herkomst == "mens"`). Een agent-voorstel (`herkomst ==
+    "agent"`, gezet door `PUT .../elementen`) verdwijnt niet via deze route: die verwerp je via
+    de beslissing-endpoint (`afwijzen`), zodat het auditspoor laat zien dát er een voorstel was
+    en wat ermee gebeurde. Documenteigenaarschap is al door `_laad_eigen_document` afgedwongen —
+    dit is dus geen tweede identiteitscheck, maar een origin-type-check binnen je eigen
+    document."""
+    doc = await _laad_eigen_document(slug, client_id, store)
+    _vereis_niet_afgerond(doc)
+
+    element = next((e for e in doc.elementen if e.id == element_id), None)
+    if element is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Element '{element_id}' niet gevonden.")
+    if element.herkomst != "mens":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Alleen je eigen markeringen kun je verwijderen; verwerp een agent-voorstel.",
+        )
+
+    nieuwe_elementen = [e for e in doc.elementen if e.id != element_id]
+    nieuwe_status = _bereken_status(nieuwe_elementen)
+    await store.vervang_elementen(slug, nieuwe_elementen, nieuwe_status)
+    await store.schrijf_audit(
+        slug,
+        client_id,
+        actor=client_id,
+        actie="element-verwijderd",
+        element_id=element_id,
+        detail={"klasse": element.klasse, "tekst": element.tekst},
+    )
+
+
+@router.post("/{slug}/status", response_model=AnnotatieDocument)
+async def zet_status(
+    slug: str,
+    body: StatusInvoer,
+    client_id: str = Depends(huidige_gebruiker),
+    store: AnnotatieStore = Depends(get_store),
+) -> AnnotatieDocument:
+    """De annotatie afronden of weer heropenen — een expliciete handeling van de jurist, geen
+    afgeleide van "alle elementen beslist" (dat is niet hetzelfde als tevreden zijn: er kan nog
+    een agent-ronde komen). Heropenen kan altijd; een knop die niet terug kan is een knop die
+    niemand durft te gebruiken. Zie `_vereis_niet_afgerond` voor het schrijf-slot dat hierdoor
+    ontstaat."""
+    doc = await _laad_eigen_document(slug, client_id, store)
+
+    nieuwe_status = (
+        DocumentStatus.geaccordeerd if body.geaccordeerd else _bereken_status(doc.elementen)
+    )
+    await store.vervang_elementen(slug, doc.elementen, nieuwe_status)
+    await store.schrijf_audit(
+        slug,
+        client_id,
+        actor=client_id,
+        actie="document-afgerond" if body.geaccordeerd else "document-heropend",
+        detail={"aantal_elementen": len(doc.elementen)},
+    )
+    return doc.model_copy(update={"status": nieuwe_status})
+
+
+@router.post("/{slug}/export")
+async def exporteer_document(
+    slug: str,
+    formaat: Exportformaat = Query(Exportformaat.pdf),
+    client_id: str = Depends(huidige_gebruiker),
+    store: AnnotatieStore = Depends(get_store),
+):
+    """Het hele document als bestand: de markeringen als tabel plus het volledige spoor. Werkt
+    in elke fase — een document dat nog in review is exporteert gewoon, met de telling "te
+    beoordelen" in de kop, zodat een concept nooit als eindproduct kan worden gelezen.
+
+    Anders dan de referentie: die kreeg de wettekst per lid van de client meegestuurd (haar `api`
+    had geen graafverbinding). Lexplainables' `annotatie`-domein heeft dat wél (`graphdb.py`,
+    story 037) en haalt de wettekst dus zelf op — ontbreekt hij (artikel niet in de graaf, of de
+    graaf onbereikbaar), dan exporteert het document gewoon zonder wettekst-blok in plaats van
+    de hele export te laten falen."""
+    doc = await _laad_eigen_document(slug, client_id, store)
+    audit = await store.lees_audit(slug)
+    try:
+        wetsartikel = await haal_wetsartikel_op(doc.bwb_id, doc.artikel)
+    except (WetsartikelNietGevonden, GraphDbNietBereikbaar):
+        wetsartikel = None
+    return bouw_export(doc, audit, wetsartikel, formaat=formaat)
 
 
 @router.get("/{slug}/audit", response_model=AuditlogOut)
